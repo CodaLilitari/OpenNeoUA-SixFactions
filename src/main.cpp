@@ -752,7 +752,8 @@ int main(int argc, char *argv[])
     // OpenNeoUA.ini is required: it carries the shipped configuration of the game.
     {
         const std::string openNeoUAIni = uaDataFirstOpenNeoUAIniPath();
-        if ( !std::ifstream(openNeoUAIni).good() )
+        // Use the same DOS-style separator and case handling as other game files.
+        if ( !FSMgr::iDir::fileExist(openNeoUAIni) )
         {
             const std::string message = "OpenNeoUA.ini was not found (" + openNeoUAIni +
                                         ").\nPut it in the Data folder and start the game again.";

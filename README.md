@@ -7,6 +7,8 @@ and matching maps with six authored starts. See the
 A dedicated `linux-build` branch and [Linux build instructions](docs/linux-build.md)
 are available. Windows and local Ubuntu 26.04 builds and focused tests have passed.
 The extension is undergoing runtime validation; it is not yet a tested gameplay release.
+The [developed faction voice packs](docs/faction-audio.md) include two variants
+for each of 16 unit events per faction, with provenance and generation tools.
 
 <img width="1280" height="800" alt="Screenshot 2026-10-26 213324" src="https://github.com/user-attachments/assets/aa3a519e-0982-4282-8e36-10b7fa56fcb4" />
 
