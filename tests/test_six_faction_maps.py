@@ -53,6 +53,15 @@ POWER_BUILDINGS = {ident: {"power": power, "sector": sector}
 
 
 class SixFactionMapTests(unittest.TestCase):
+    def test_titles_remain_distinct_after_game_tokenization(self):
+        source = fixture().replace("title_default = Test", "title_default = Test\n title_english = Crosshill")
+        generated, _ = maps.generate(source)
+        # ScriptParser::ParseNextLine reads only the first '= \\t' token
+        # into p2. A suffix after a space disappears from the actual lobby.
+        titles = re.findall(r"(?mi)^\s*title_\w+\s*=\s*([^;\r\n]+)", generated)
+        parsed = [re.split(r"[= \t]+", value.strip())[0] for value in titles]
+        self.assertEqual(parsed, ["Test_Six_Factions", "Crosshill_Six_Factions"])
+
     def test_small_map_gains_two_separate_starts(self):
         source = fixture()
         generated, receipt = maps.generate(source)

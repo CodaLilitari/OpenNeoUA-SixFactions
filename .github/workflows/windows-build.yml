@@ -1,0 +1,46 @@
+name: Windows build and source package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [windows-build]
+    paths: ['.github/workflows/windows-build.yml', 'src/**', 'tests/**', 'tools/windows/**', 'tools/agent/**']
+
+permissions:
+  contents: read
+
+jobs:
+  windows-mingw64:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-python mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-SDL2_image mingw-w64-x86_64-SDL2_ttf
+            mingw-w64-x86_64-SDL2_net mingw-w64-x86_64-openal
+            mingw-w64-x86_64-libvorbis mingw-w64-x86_64-ffmpeg
+            mingw-w64-x86_64-lua
+      - name: Build, test and package outside the checkout
+        run: bash tools/windows/build.sh "$(cygpath "$RUNNER_TEMP")/openneoua-windows-build"
+      - name: Retain package and evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: OpenNeoUA-windows-x86_64
+          path: |
+            ${{ runner.temp }}/openneoua-windows-build/package/*
+            ${{ runner.temp }}/openneoua-windows-build/logs/*
+          if-no-files-found: warn
+          retention-days: 14

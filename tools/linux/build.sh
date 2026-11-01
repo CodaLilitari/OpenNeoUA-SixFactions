@@ -13,15 +13,18 @@ export TMPDIR="$lab/tmp"
 
 cmake -S "$source_root/src" -B "$lab/engine" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release '-DCMAKE_CXX_FLAGS_RELEASE=-O2 -DNDEBUG' \
+    -DOPENNEOUA_AGENT_FORK=six-factions \
     2>&1 | tee "$lab/logs/configure-engine.log"
 cmake --build "$lab/engine" --parallel "$jobs" 2>&1 | tee "$lab/logs/build-engine.log"
 cmake -S "$source_root/tests" -B "$lab/tests" -G Ninja \
-    -DCMAKE_BUILD_TYPE=Debug -DOPENNEOUA_TRANSPORT_TEST=ON \
+    -DCMAKE_BUILD_TYPE=Debug -DOPENNEOUA_TRANSPORT_TEST=ON -DOPENNEOUA_AGENT_BRIDGE_TEST=ON \
     2>&1 | tee "$lab/logs/configure-tests.log"
 cmake --build "$lab/tests" --parallel "$jobs" 2>&1 | tee "$lab/logs/build-tests.log"
 ctest --test-dir "$lab/tests" --output-on-failure 2>&1 | tee "$lab/logs/tests.log"
 PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_six_faction_maps.py" -v \
     2>&1 | tee "$lab/logs/map-tests.log"
+PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_agent_mcp.py" -v \
+    2>&1 | tee "$lab/logs/agent-mcp-tests.log"
 ldd "$lab/engine/OpenNeoUA" | tee "$lab/logs/runtime-libraries.log"
 python3 - "$lab/logs/runtime-libraries.log" <<'PY'
 from pathlib import Path

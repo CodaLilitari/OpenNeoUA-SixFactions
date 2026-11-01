@@ -1,5 +1,7 @@
 #include "world/net_factions.h"
 #include "world/net_faction_selection.h"
+#include "world/net_restore.h"
+#include "world/net_building_units.h"
 // Multiplayer game logic: message handling and synchronisation of units and sectors.
 #include <stdlib.h>
 #include <string.h>
@@ -768,75 +770,50 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
         return;
     }
 
-    int numb = 1;
-
-    yw_netAddVhclUpdData(updinf.data, 1, bhost);
-
-    for(NC_STACK_ypamissile* &miss : bhost->_missiles_list )
+    World::NetRestore::SnapshotWriter<vhclUpdData> writer(
+        updinf.data, sizeof(updinf.data) / sizeof(updinf.data[0]));
+    const auto append = [&](uint8_t type, NC_STACK_ypabact *bact)
     {
-        yw_netAddVhclUpdData(&updinf.data[numb], 4, miss);
-
-        numb++;
-
-        if ( numb >= 1023 )
-            break;
-    }
-
-    for(NC_STACK_ypabact* &comnd : bhost->_kidList)
+        vhclUpdData record = {};
+        yw_netAddVhclUpdData(&record, type, bact);
+        return writer.Append(record);
+    };
+    const auto buildSnapshot = [&]()
     {
-        bool isrobogun = false;
+        if (!append(1, bhost))
+            return false;
+        for (NC_STACK_ypamissile *miss : bhost->_missiles_list)
+            if (!append(4, miss))
+                return false;
 
-        if ( comnd->_bact_type == BACT_TYPES_GUN )
+        for (NC_STACK_ypabact *commander : bhost->_kidList)
         {
-            NC_STACK_ypagun *gn = dynamic_cast<NC_STACK_ypagun *>(comnd);
-            if ( gn )
-                isrobogun = gn->IsRoboGun();
-        }
-
-        if ( isrobogun )
-            yw_netAddVhclUpdData(&updinf.data[numb], 5, comnd);
-        else
-            yw_netAddVhclUpdData(&updinf.data[numb], 2, comnd);
-
-        numb++;
-
-        if ( numb >= 1023 )
-            break;
-
-        for(NC_STACK_ypamissile* &miss : comnd->_missiles_list)
-        {
-            yw_netAddVhclUpdData(&updinf.data[numb], 4, miss);
-
-            numb++;
-
-            if ( numb >= 1023 )
-                break;
-        }
-
-        for(NC_STACK_ypabact* &slv : comnd->_kidList)
-        {
-            yw_netAddVhclUpdData(&updinf.data[numb], 3, slv);
-
-            numb++;
-
-            if ( numb >= 1023 )
-                break;
-
-            for(NC_STACK_ypamissile* &miss : slv->_missiles_list)
+            NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>(commander);
+            if (!append(gun && gun->IsRoboGun() ? 5 : 2, commander))
+                return false;
+            for (NC_STACK_ypamissile *miss : commander->_missiles_list)
+                if (!append(4, miss))
+                    return false;
+            for (NC_STACK_ypabact *slave : commander->_kidList)
             {
-                yw_netAddVhclUpdData(&updinf.data[numb], 4, miss);
-
-                numb++;
-
-                if ( numb >= 1023 )
-                    break;
+                if (!append(3, slave))
+                    return false;
+                for (NC_STACK_ypamissile *miss : slave->_missiles_list)
+                    if (!append(4, miss))
+                        return false;
             }
         }
+        return writer.Finish();
+    };
+
+    if (!buildSnapshot())
+    {
+        // A partial replacement would silently discard the omitted units.
+        log_netlog("UPD: Snapshot exceeds capacity; complete update not sent\n");
+        return;
     }
 
-    updinf.data[numb].type = 0;
-    numb++;
-
+    const std::size_t numb = writer.Count();
     updinf.owner = owner;
     updinf.sz = ((char *)&updinf.data[numb] - (char *)&updinf);
 
@@ -852,151 +829,102 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
 bool yw_netRecvUpdate(NC_STACK_ypaworld *yw, uamessage_update *msg, int owner)
 {
     NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(owner);
+    if (!bhost || msg->num < 2 || msg->num > 1024)
+        return false;
 
-    if ( bhost )
+    const std::size_t hostType = msg->data[0].vhclID;
+    if (hostType >= yw->_vhclProtos.size() ||
+        yw->_vhclProtos[hostType].model_id != BACT_TYPES_ROBO ||
+        !yw->_vhclProtos[hostType].RoboProto)
+        return false;
+
+    // Validate the complete record topology before removing the existing
+    // station. The same plan supplies distinct turret slots and exact missile
+    // parents; neither depends on a mutable list iterator or stale lastBct.
+    std::vector<World::NetRestore::Step> plan;
+    if (!World::NetRestore::BuildPlan(msg->data, msg->num,
+            yw->_vhclProtos[hostType].RoboProto->guns.size(), plan))
+        return false;
+
+    yw->NetRemove(bhost);
+    NC_STACK_yparobo *currHost = nullptr;
+    std::vector<NC_STACK_ypabact *> restored(plan.size(), nullptr);
+    std::vector<NC_STACK_ypabact *> hostGuns;
+
+    for (std::size_t id = 0; id < plan.size(); ++id)
     {
-        yw->NetRemove(bhost);
+        vhclUpdData *dat = &msg->data[id];
+        ypaworld_arg146 request;
+        request.pos = dat->pos;
+        request.vehicle_id = dat->vhclID;
 
-        int id = 0;
-
-        NC_STACK_yparobo *currHost = nullptr;
-        NC_STACK_ypabact *currComm = nullptr;
-        World::RefBactList *hostList = nullptr;
-        World::RefBactList::iterator hostLstIt;
-        NC_STACK_ypabact *lastBct = nullptr;
-
-        while ( msg->data[id].type != 0 )
+        switch (dat->type)
         {
-            ypaworld_arg146 newVhcl;
-            ypaworld_arg146 newMiss;
-
-            vhclUpdData *dat = &msg->data[id];
-
-            switch ( dat->type )
+        case 1:
+        {
+            currHost = dynamic_cast<NC_STACK_yparobo *>(yw->ypaworld_func146(&request));
+            if (!currHost)
             {
-            case 1:
+                log_netlog("RESTORE: Unable to create robo\n");
+                return false;
+            }
+            for (NC_STACK_ypabact *child : currHost->_kidList)
             {
-                newVhcl.pos = dat->pos;
-                newVhcl.vehicle_id = dat->vhclID;
-
-                NC_STACK_ypabact *tmp = yw->ypaworld_func146(&newVhcl);
-
-                currHost = dynamic_cast<NC_STACK_yparobo *>(tmp);
-
-                if ( !currHost )
-                {
-                    log_netlog("RESTORE: Unable to create robo\n");
-                    return false;
-                }
-
-                lastBct = currHost;
-
-                hostList = &currHost->_kidList;
-
-                hostLstIt = hostList->begin(); //CheckIT may be it must iterate to first robogun?
-
-                if ( hostLstIt == hostList->end() )
-                    hostList = nullptr;
-
-                yw_netUpdDataVhcl(dat, currHost, owner, nullptr);
-
-                yw->ypaworld_func134(currHost);
+                NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>(child);
+                if (gun && gun->IsRoboGun())
+                    hostGuns.push_back(child);
             }
-            break;
+            yw_netUpdDataVhcl(dat, currHost, owner, nullptr);
+            yw->ypaworld_func134(currHost);
+            restored[id] = currHost;
+        }
+        break;
 
-            case 5:
+        case 5:
+        {
+            if (plan[id].gun >= hostGuns.size())
             {
-                if ( !hostList || hostLstIt == hostList->end())
-                    break;
-
-                yw_netUpdDataVhcl(dat, *hostLstIt, owner, currHost);
-
-                //Find next host gun
-                for (; hostLstIt != hostList->end(); hostLstIt++)
-                {
-                    NC_STACK_ypabact *bct = *hostLstIt;
-                    if ( bct->_bact_type == BACT_TYPES_GUN )
-                    {
-                        NC_STACK_ypagun *gn = dynamic_cast<NC_STACK_ypagun *>(bct);
-
-                        if (gn && gn->IsRoboGun())
-                            break;
-                    }
-                }
-
-                if ( hostLstIt == hostList->end() )
-                    hostList = nullptr;
+                log_netlog("RESTORE: Missing host gun\n");
+                return false;
             }
-            break;
+            NC_STACK_ypabact *gun = hostGuns[plan[id].gun];
+            yw_netUpdDataVhcl(dat, gun, owner, currHost);
+            restored[id] = gun;
+        }
+        break;
 
-            case 2:
+        case 2:
+        case 3:
+        {
+            NC_STACK_ypabact *unit = yw->ypaworld_func146(&request);
+            if (!unit)
             {
-                newVhcl.pos = dat->pos;
-                newVhcl.vehicle_id = dat->vhclID;
-                currComm = yw->ypaworld_func146(&newVhcl);
-
-                if ( !currComm )
-                {
-                    log_netlog("RESTORE: Unable to create cmdr\n");
-                    return false;
-                }
-
-                lastBct = currComm;
-
-                yw_netUpdDataVhcl(dat, currComm, owner, currHost);
-
-                currHost->AddSubject(currComm);
+                log_netlog("RESTORE: Unable to create vehicle\n");
+                return false;
             }
-            break;
+            yw_netUpdDataVhcl(dat, unit, owner, currHost);
+            restored[plan[id].parent]->AddSubject(unit);
+            restored[id] = unit;
+        }
+        break;
 
-            case 3:
+        case 4:
+        {
+            NC_STACK_ypamissile *missile = yw->ypaworld_func147(&request);
+            if (!missile)
             {
-                newVhcl.pos = dat->pos;
-                newVhcl.vehicle_id = dat->vhclID;
-
-                NC_STACK_ypabact *tmp = yw->ypaworld_func146(&newVhcl);
-                if ( !tmp )
-                {
-                    log_netlog("RESTORE: Unable to create slave\n");
-                    return false;
-                }
-
-                lastBct = tmp;
-
-                yw_netUpdDataVhcl(dat, tmp, owner, currHost);
-
-                currComm->AddSubject(tmp);
+                log_netlog("RESTORE: Unable to create weapon\n");
+                return false;
             }
-            break;
-
-            case 4:
-            {
-                newMiss.pos = dat->pos;
-                newMiss.vehicle_id = dat->vhclID;
-                NC_STACK_ypamissile *tmp = yw->ypaworld_func147(&newMiss);
-
-                if ( !tmp )
-                {
-                    log_netlog("RESTORE: Unable to create weapon\n");
-                    return false;
-                }
-
-                yw_netUpdDataVhcl(dat, tmp, owner, currHost);
-
-                tmp->_kidRef.Detach();
-                tmp->_parent = nullptr;
-
-                lastBct->_missiles_list.push_back(tmp);
-
-                tmp->SetLauncherBact(lastBct);
-            }
-            break;
-
-            default:
-                break;
-            }
-
-            id++;
+            NC_STACK_ypabact *launcher = restored[plan[id].parent];
+            yw_netUpdDataVhcl(dat, missile, owner, currHost);
+            missile->_kidRef.Detach();
+            missile->_parent = nullptr;
+            launcher->_missiles_list.push_back(missile);
+            missile->SetLauncherBact(launcher);
+            restored[id] = missile;
+        }
+        break;
         }
     }
     return true;
@@ -2040,62 +1968,44 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
 
         if ( bhost )
         {
-            ypaworld_arg146 newVhcl;
-            newVhcl.vehicle_id = bvMsg->vhcl[0].protoID;
-            newVhcl.pos = bvMsg->vhcl[0].pos;
-
-            NC_STACK_ypabact *kmnd = yw->ypaworld_func146(&newVhcl);
-            if ( kmnd )
+            NC_STACK_ypabact *kmnd = nullptr;
+            for (const auto &step : World::NetBuildingUnits::BuildPlan(bvMsg->vhcl))
             {
-                NC_STACK_ypagun *kmnd_gn = dynamic_cast<NC_STACK_ypagun *>(kmnd);
+                const auto &record = bvMsg->vhcl[step.recordIndex];
+                ypaworld_arg146 newVhcl;
+                newVhcl.vehicle_id = record.protoID;
+                newVhcl.pos = record.pos;
 
-                if (kmnd_gn)
-                    kmnd_gn->ypagun_func128(bvMsg->vhcl[0].base, false);
+                NC_STACK_ypabact *unit = yw->ypaworld_func146(&newVhcl);
+                if (!unit)
+                {
+                    if (step.commander)
+                        break;
+                    continue;
+                }
+
+                NC_STACK_ypagun *gun = dynamic_cast<NC_STACK_ypagun *>(unit);
+                if (gun)
+                    gun->ypagun_func128(record.base, false);
 
                 setState_msg ssms;
                 ssms.newStatus = BACT_STATUS_CREATE;
                 ssms.setFlags = 0;
                 ssms.unsetFlags = 0;
-                kmnd->SetStateInternal(&ssms);
+                unit->SetStateInternal(&ssms);
+                unit->_gid = record.id;
+                unit->_owner = bvMsg->owner;
+                unit->_host_station = dynamic_cast<NC_STACK_yparobo *>(bhost);
 
-                kmnd->_gid = bvMsg->vhcl[0].id;
-                kmnd->_owner = bvMsg->owner;
-                kmnd->_host_station = dynamic_cast<NC_STACK_yparobo *>(bhost);
-
-                bhost->AddSubject(kmnd);
-
-                netDebug_AddCreated(bhost->_owner, kmnd->_gid);
-
-                int idid = 0;
-                while (bvMsg->vhcl[idid].protoID != 0)
+                if (step.commander)
                 {
-                    newVhcl.vehicle_id = bvMsg->vhcl[idid].protoID;
-                    newVhcl.pos = bvMsg->vhcl[idid].pos;
-
-                    NC_STACK_ypabact *slv = yw->ypaworld_func146(&newVhcl);
-
-                    if ( slv )
-                    {
-                        NC_STACK_ypagun *slv_gn = dynamic_cast<NC_STACK_ypagun *>(slv);
-
-                        if (slv_gn)
-                            slv_gn->ypagun_func128(bvMsg->vhcl[idid].base, false);
-
-                        ssms.newStatus = BACT_STATUS_CREATE;
-                        ssms.setFlags = 0;
-                        ssms.unsetFlags = 0;
-                        slv->SetStateInternal(&ssms);
-
-                        slv->_gid = bvMsg->vhcl[idid].id;
-                        slv->_owner = bvMsg->owner;
-                        slv->_host_station = dynamic_cast<NC_STACK_yparobo *>(bhost);
-
-                        kmnd->AddSubject(slv);
-
-                        netDebug_AddCreated(bhost->_owner, slv->_gid);
-                    }
-                    idid++;
+                    kmnd = unit;
+                    bhost->AddSubject(unit);
                 }
+                else
+                    kmnd->AddSubject(unit);
+
+                netDebug_AddCreated(bhost->_owner, unit->_gid);
             }
         }
         else
@@ -2643,9 +2553,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         }
         else
         {
-            yw_netRecvUpdate(yw, updMsg, updMsg->owner);
-
-            if ( yw )
+            if ( yw_netRecvUpdate(yw, updMsg, updMsg->owner) )
             {
                 log_netlog("Received Update, tried successfully to restore vehicle structure\n");
             }

@@ -266,7 +266,8 @@ def generate(text, power_buildings=None):
     for a, b, body in sorted(replacements, reverse=True):
         text = text[:a] + body + text[b:]
     text = re.sub(r"(?mi)^([ \t]*title_\w+[ \t]*=[ \t]*)([^;\r\n]+)",
-                  lambda m: m[1] + m[2].strip() + " [Six Factions]", text)
+                  # ScriptParser reads a single token; whitespace truncates a title.
+                  lambda m: m[1] + re.sub(r"[= \t]+", "_", m[2].strip()) + "_Six_Factions", text)
     # Clear a latent owner-5 build list before writing the explicit new scenario roster.
     for match in reversed(scopes(text, "begin_enable")):
         if re.match(r"\s*begin_enable\s+[25]\b", match[0], re.I):

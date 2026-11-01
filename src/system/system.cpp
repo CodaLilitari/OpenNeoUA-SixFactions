@@ -12,6 +12,7 @@
 #include "fsmgr.h"
 #include "inivals.h"
 #include "common/utils.h"
+#include "../agent/bridge.h"
 
 
 namespace System
@@ -493,6 +494,7 @@ Common::Point GetResolution()
 
 void Flip()
 {
+    Agent::BeforeSwap();
     SDL_GL_SwapWindow(window);
 }
 

@@ -46,6 +46,7 @@
 #include "world/blacksecttint.h"
 #include "world/energyfx.h"
 #include "common/crashdiag.h"
+#include "agent/bridge.h"
 
 namespace
 {
@@ -786,8 +787,45 @@ int main(int argc, char *argv[])
     ypaworld->LoadGuiFonts();
     ypaworld->CreateNewGuiElements();
 
-    while ( ProcessNextFrame() && !System::ProcessEvents() )
+    Agent::Init();
+    System::EventsAddHandler(Agent::EventFilter, true);
+    while ( ProcessNextFrame() )
+    {
+        Agent::Snapshot snapshot;
+        snapshot.screen = GameScreenMode == GAME_SCREEN_MODE_MENU ? "menu" :
+            GameScreenMode == GAME_SCREEN_MODE_GAME ? "game" :
+            GameScreenMode == GAME_SCREEN_MODE_REPLAY ? "replay" : "unknown";
+        if (GameScreenMode == GAME_SCREEN_MODE_GAME && ypaworld)
+        {
+            snapshot.level = ypaworld->GetLevelInfo().LevelID;
+            snapshot.owner = ypaworld->GetPlayerOwner();
+            const auto *unit = ypaworld->_userUnit;
+            if (unit && unit->_owner == snapshot.owner)
+            {
+                snapshot.localUnit = true;
+                snapshot.unitId = unit->_gid;
+                snapshot.prototype = unit->_vehicleID;
+                snapshot.unitOwner = unit->_owner;
+                snapshot.energy = unit->_energy;
+                snapshot.x = unit->_position.x;
+                snapshot.y = unit->_position.y;
+                snapshot.z = unit->_position.z;
+            }
+            const auto *host = ypaworld->_userRobo;
+            if (host && host->_owner == snapshot.owner)
+            {
+                snapshot.localHost = true;
+                snapshot.hostEnergy = host->_energy;
+            }
+        }
+        Agent::AfterFrame(snapshot);
+        Agent::BeforeEvents();
+        if (System::ProcessEvents()) break;
         System::Frames.EndFrame();
+    }
+    Agent::Shutdown();
+    System::ProcessEvents(); // Dispatch automatic releases before input is destroyed.
+    System::EventsDeleteHandler(Agent::EventFilter);
 
     CrashDiag::DisarmWatchdog();
     CrashDiag::SetPhase("Shutdown");
