@@ -1,3 +1,5 @@
+#include "world/net_factions.h"
+#include "world/net_protocol.h"
 // Multiplayer provider layer (sessions, players, messages) used by the network game.
 #include <inttypes.h>
 #include <stdio.h>
@@ -10,8 +12,6 @@
 #include "game/yw_net.h"
 #include "system/inivals.h"
 #include "locale/locale.h"
-
-const char *SERV_STR = "UA:SOURCE TEST NETWORK";
 
 size_t NC_STACK_windp::Init(IDVList &stak)
 {
@@ -103,13 +103,13 @@ size_t NC_STACK_windp::SetMode(bool hosting)
     if (hosting)
     {
         connType = 1;
-        zhost = new ZNDNet::ZNDSingle(SERV_STR);
+        zhost = new ZNDNet::ZNDSingle(World::NetProtocol::ServiceId);
         zcon = zhost;
     }
     else
     {
         connType = 2;
-        zcli = new ZNDNet::ZNDClient(SERV_STR);
+        zcli = new ZNDNet::ZNDClient(World::NetProtocol::ServiceId);
         zcon = zcli;
     }
     return 1;
@@ -679,26 +679,8 @@ void UserData::yw_FractionInit()
 {
     const TMapRegionInfo &lvl = p_YW->_globalMapRegions.MapRegions[ netLevelID ];
 
-    FreeFraction = lvl.FractionsBits & ( World::OWNER_RESIST_BIT |   World::OWNER_GHOR_BIT
-                                     |   World::OWNER_MYKO_BIT   |   World::OWNER_TAER_BIT );
-
-    uint32_t frkt = 0;
-    if ( FreeFraction & World::OWNER_RESIST_BIT )
-    {
-        frkt = World::OWNER_RESIST_BIT;
-    }
-    else if ( FreeFraction & World::OWNER_GHOR_BIT )
-    {
-        frkt =  World::OWNER_GHOR_BIT;
-    }
-    else if ( FreeFraction & World::OWNER_MYKO_BIT )
-    {
-        frkt = World::OWNER_MYKO_BIT;
-    }
-    else if ( FreeFraction & World::OWNER_TAER_BIT )
-    {
-        frkt = World::OWNER_TAER_BIT;
-    }
+    FreeFraction = lvl.FractionsBits & World::NetFactions::Mask;
+    const uint32_t frkt = World::NetFactions::FirstAvailable(FreeFraction);
 
     SelectedFraction = frkt;
     FreeFraction &= ~frkt;
@@ -714,7 +696,7 @@ void UserData::AfterMapChoose()
         case 1:
         {
             std::string bff = fmt::sprintf("%d%s%s%s%s", netLevelID, "|", p_YW->_netDriver->GetMyName(), "|", p_YW->_buildDate);
-            p_YW->_netDriver->Host(bff, 4);
+            p_YW->_netDriver->Host(bff, World::CVMaxNetPlayers);
 
             p_YW->_isNetGame = true;
             netSel = -1;
@@ -755,81 +737,21 @@ void UserData::AfterMapChoose()
         network_listvw.selectedEntry = 0;
         netSel = -1;
 
-        bool selected = false;
+        FreeFraction = lvl.FractionsBits & World::NetFactions::Mask;
+        SelectedFraction = 0;
         int plid = 0;
-
-        if ( lvl.IsFraction(World::OWNER_RESIST) )
+        for (auto &player : lobbyPlayers) player.NetFraction = 0;
+        for (int owner : World::NetFactions::Owners)
         {
-            SelectedFraction = World::OWNER_RESIST_BIT;
-            FreeFraction &= ~World::OWNER_RESIST_BIT;
-            lobbyPlayers[ plid ].NetFraction = World::OWNER_RESIST_BIT;
-            numpl--;
-            plid++;
-            selected = true;
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_RESIST_BIT;
-        }
-
-        if ( lvl.IsFraction(World::OWNER_GHOR) )
-        {
-            if (numpl > 0)
+            const uint32_t bit = 1u << owner;
+            if ((FreeFraction & bit) && numpl > 0)
             {
-                numpl--;
-                FreeFraction &= ~World::OWNER_GHOR_BIT;
-                lobbyPlayers[ plid ].NetFraction = World::OWNER_GHOR_BIT;
-                plid++;
-                if (!selected)
-                {
-                    selected = true;
-                    SelectedFraction = World::OWNER_GHOR_BIT;
-                }
+                FreeFraction &= ~bit;
+                lobbyPlayers[plid].NetFraction = bit;
+                if (plid == p_YW->_netDriver->GetMyIndex()) SelectedFraction = bit;
+                ++plid;
+                --numpl;
             }
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_GHOR_BIT;
-        }
-
-        if ( lvl.IsFraction(World::OWNER_MYKO) )
-        {
-            if (numpl > 0)
-            {
-                numpl--;
-                FreeFraction &= ~World::OWNER_MYKO_BIT;
-                lobbyPlayers[ plid ].NetFraction = World::OWNER_MYKO_BIT;
-                plid++;
-                if (!selected)
-                {
-                    selected = true;
-                    SelectedFraction = World::OWNER_MYKO_BIT;
-                }
-            }
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_MYKO_BIT;
-        }
-
-        if ( lvl.IsFraction(World::OWNER_TAER) )
-        {
-            if (numpl > 0)
-            {
-                numpl--;
-                FreeFraction &= ~World::OWNER_TAER_BIT;
-                lobbyPlayers[ plid ].NetFraction = World::OWNER_TAER_BIT;
-                plid++;
-                if (!selected)
-                {
-                    selected = true;
-                    SelectedFraction = World::OWNER_TAER_BIT;
-                }
-            }
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_TAER_BIT;
         }
 
         for(TNetPlayerLobbyData &pl : lobbyPlayers)
@@ -863,81 +785,21 @@ void UserData::AfterMapChoose()
         network_listvw.selectedEntry = 0;
         netSel = -1;
 
-        bool selected = false;
+        FreeFraction = lvl.FractionsBits & World::NetFactions::Mask;
+        SelectedFraction = 0;
         int plid = 0;
-
-        if ( lvl.IsFraction(World::OWNER_RESIST) )
+        for (auto &player : lobbyPlayers) player.NetFraction = 0;
+        for (int owner : World::NetFactions::Owners)
         {
-            SelectedFraction = World::OWNER_RESIST_BIT;
-            FreeFraction &= ~World::OWNER_RESIST_BIT;
-            lobbyPlayers[ plid ].NetFraction = World::OWNER_RESIST_BIT;
-            numpl--;
-            plid++;
-            selected = true;
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_RESIST_BIT;
-        }
-
-        if ( lvl.IsFraction(World::OWNER_GHOR) )
-        {
-            if (numpl > 0)
+            const uint32_t bit = 1u << owner;
+            if ((FreeFraction & bit) && numpl > 0)
             {
-                numpl--;
-                FreeFraction &= ~World::OWNER_GHOR_BIT;
-                lobbyPlayers[ plid ].NetFraction = World::OWNER_GHOR_BIT;
-                plid++;
-                if (!selected)
-                {
-                    selected = true;
-                    SelectedFraction = World::OWNER_GHOR_BIT;
-                }
+                FreeFraction &= ~bit;
+                lobbyPlayers[plid].NetFraction = bit;
+                if (plid == p_YW->_netDriver->GetMyIndex()) SelectedFraction = bit;
+                ++plid;
+                --numpl;
             }
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_GHOR_BIT;
-        }
-
-        if ( lvl.IsFraction(World::OWNER_MYKO) )
-        {
-            if (numpl > 0)
-            {
-                numpl--;
-                FreeFraction &= ~World::OWNER_MYKO_BIT;
-                lobbyPlayers[ plid ].NetFraction = World::OWNER_MYKO_BIT;
-                plid++;
-                if (!selected)
-                {
-                    selected = true;
-                    SelectedFraction = World::OWNER_MYKO_BIT;
-                }
-            }
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_MYKO_BIT;
-        }
-
-        if ( lvl.IsFraction(World::OWNER_TAER) )
-        {
-            if (numpl > 0)
-            {
-                numpl--;
-                FreeFraction &= ~World::OWNER_TAER_BIT;
-                lobbyPlayers[ plid ].NetFraction = World::OWNER_TAER_BIT;
-                plid++;
-                if (!selected)
-                {
-                    selected = true;
-                    SelectedFraction = World::OWNER_TAER_BIT;
-                }
-            }
-        }
-        else
-        {
-            FreeFraction &= ~World::OWNER_TAER_BIT;
         }
 
         uamessage_lobbyInit limsg;
@@ -960,7 +822,7 @@ void UserData::AfterMapChoose()
 
             windp_openSessionMsg os;
             os.name = bff.c_str();
-            os.maxplayers = 4;
+            os.maxplayers = World::CVMaxNetPlayers;
 
             size_t res = p_YW->_netDriver->CreateSession(&os);
 
@@ -1433,6 +1295,12 @@ void UserData::yw_NetPrintStartInfo()
                 log_netlog("    %s and plays Ghorkov\n", name.c_str());
                 break;
 
+            case World::OWNER_BLACK_BIT:
+                log_netlog("    %s and plays Black Sect\n", name.c_str());
+                break;
+            case World::OWNER_SULG_BIT:
+                log_netlog("    %s and plays Sulgogars\n", name.c_str());
+                break;
             default:
                 log_netlog("    %s and plays an unknown race\n", name.c_str());
                 break;

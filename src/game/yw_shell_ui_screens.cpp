@@ -894,17 +894,17 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
             TileMap *v198 = GFX::Engine.GetTileset(8);
 
-            btn_64arg.tileset_down = 16;
-            btn_64arg.tileset_up = 16;
-            btn_64arg.field_3A = 16;
-            btn_64arg.button_type = NC_STACK_button::TYPE_CAPTION;
+            btn_64arg.tileset_down = 19;
+            btn_64arg.tileset_up = 18;
+            btn_64arg.field_3A = 30;
+            btn_64arg.button_type = NC_STACK_button::TYPE_RADIOBTN;
             btn_64arg.ypos = (15 * (vertMenuSpace + _fontH));
             btn_64arg.xpos = 0;
-            btn_64arg.width = dword_5A50B6 * 0.4 - 2 * buttonsSpace;
-            btn_64arg.caption = Locale::Text::Netdlg(Locale::NETDLG_SELRACE);
-            btn_64arg.caption2.clear();
-            btn_64arg.downCode = 0;
-            btn_64arg.flags = NC_STACK_button::FLAG_TEXT | NC_STACK_button::FLAG_RALIGN;
+            btn_64arg.width = dword_5A50B6 * 0.2 - 2 * buttonsSpace;
+            btn_64arg.caption = "Black Sect";
+            btn_64arg.caption2 = "Black Sect";
+            btn_64arg.downCode = 1260;
+            btn_64arg.flags = NC_STACK_button::FLAG_TEXT | NC_STACK_button::FLAG_BORDER | NC_STACK_button::FLAG_CENTER;
             btn_64arg.button_id = 1220;
             btn_64arg.txt_r = _iniColors[60].r;
             btn_64arg.txt_g = _iniColors[60].g;
@@ -912,11 +912,20 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
             if ( _GameShell->network_button->Add(&btn_64arg) )
             {
+                auto sulgButton = btn_64arg;
+                sulgButton.xpos = dword_5A50B6 * 0.2;
+                sulgButton.caption = "Sulgogars";
+                sulgButton.caption2 = "Sulgogars";
+                sulgButton.button_id = 1230;
+                sulgButton.downCode = 1261;
+                if (!_GameShell->network_button->Add(&sulgButton))
+                    return false;
+
                 btn_64arg.tileset_down = 8;
                 btn_64arg.tileset_up = 8;
                 btn_64arg.field_3A = 30;
                 btn_64arg.button_type = 4;
-                btn_64arg.xpos += btn_64arg.width + 2 * buttonsSpace;
+                btn_64arg.xpos = dword_5A50B6 * 0.4;
                 btn_64arg.width = v198->map[65].w;
                 btn_64arg.caption = "A";
                 btn_64arg.caption2 = "B";
@@ -1100,6 +1109,15 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
                                                                             if ( _GameShell->network_button->Add(&btn_64arg) )
                                                                             {
+                                                                                auto extraRow = btn_64arg;
+                                                                                for (int row = 4; row < 6; ++row)
+                                                                                {
+                                                                                    extraRow.ypos = (4 + row) * (_fontH + buttonsSpace);
+                                                                                    extraRow.button_id = 1231 + row - 4;
+                                                                                    if (!_GameShell->network_button->Add(&extraRow))
+                                                                                        return false;
+                                                                                }
+
                                                                                 btn_64arg.tileset_down = 8;
                                                                                 btn_64arg.tileset_up = 8;
                                                                                 btn_64arg.field_3A = 8;
@@ -1135,6 +1153,15 @@ bool NC_STACK_ypaworld::CreateNetworkControls()
 
                                                                                             if ( _GameShell->network_button->Add(&btn_64arg) )
                                                                                             {
+                                                                                                auto extraRow = btn_64arg;
+                                                                                                for (int row = 4; row < 6; ++row)
+                                                                                                {
+                                                                                                    extraRow.ypos = (4 + row) * (_fontH + buttonsSpace);
+                                                                                                    extraRow.button_id = 1233 + row - 4;
+                                                                                                    if (!_GameShell->network_button->Add(&extraRow))
+                                                                                                        return false;
+                                                                                                }
+
                                                                                                 btn_64arg.tileset_down = 19;
                                                                                                 btn_64arg.tileset_up = 18;
                                                                                                 btn_64arg.xpos = 0;

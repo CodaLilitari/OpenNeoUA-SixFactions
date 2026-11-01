@@ -1,5 +1,13 @@
 # OpenNeoUA
 
+This development fork adds six-player multiplayer with Black Sect and Sulgogars,
+alongside the four original multiplayer factions. All peers require this fork
+and matching maps with six authored starts. See the
+[six-faction implementation, map-generation instructions, and validation limits](docs/six-faction-multiplayer.md).
+A dedicated `linux-build` branch and [Linux build instructions](docs/linux-build.md)
+are available. Windows and local Ubuntu 26.04 builds and focused tests have passed.
+The extension is undergoing runtime validation; it is not yet a tested gameplay release.
+
 <img width="1280" height="800" alt="Screenshot 2026-10-26 213324" src="https://github.com/user-attachments/assets/aa3a519e-0982-4282-8e36-10b7fa56fcb4" />
 
 OpenNeoUA is an independent, open-source and non-commercial evolution of the `UA_source`/OpenUA engine for **Urban Assault**. It modernizes real engine limitations while preserving vanilla data, levels, scripts, saves and the original game feeling. A legitimate copy of the original game data is still required to play.

@@ -592,7 +592,7 @@ size_t NC_STACK_ypaworld::Init(IDVList &stak)
     ApplyNucleusViewDistanceOverrides();
     _doEnergyRecalc = stak.Get<bool>(YW_ATT_DOENERGYRECALC, true);
 
-    _buildDate = stak.Get<std::string>(YW_ATT_BUILD_DATE, "");
+    _buildDate = stak.Get<std::string>(YW_ATT_BUILD_DATE, "") + "-six-factions-mp1";
 
     for (char &chr : _buildDate)
     {
@@ -1724,6 +1724,16 @@ void sub_47C1EC(NC_STACK_ypaworld *yw, TMapGem *gemProt, int *a3, int *a4)
     case 4:
         *a3 = gemProt->NwVprotoNum4;
         *a4 = gemProt->NwBprotoNum4;
+        break;
+
+    case 2:
+        *a3 = gemProt->NwVprotoNum6;
+        *a4 = gemProt->NwBprotoNum6;
+        break;
+
+    case 5:
+        *a3 = gemProt->NwVprotoNum5;
+        *a4 = gemProt->NwBprotoNum5;
         break;
 
     default:

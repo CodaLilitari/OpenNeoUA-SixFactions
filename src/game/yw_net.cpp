@@ -1,3 +1,5 @@
+#include "world/net_factions.h"
+#include "world/net_faction_selection.h"
 // Multiplayer game logic: message handling and synchronisation of units and sectors.
 #include <stdlib.h>
 #include <string.h>
@@ -121,7 +123,7 @@ void yw_CheckCRCs(NC_STACK_ypaworld *yw)
 {
     UserData *usr = yw->_GameShell;
 
-    std::string strs[4];
+    std::string strs[World::CVMaxNetPlayers];
 
     if ( usr->takTime > 0 )
     {
@@ -131,7 +133,7 @@ void yw_CheckCRCs(NC_STACK_ypaworld *yw)
     {
         usr->takTime = 15000;
 
-        int plCnt = yw->_netDriver->GetPlayerCount();
+        const int plCnt = std::min<int>(yw->_netDriver->GetPlayerCount(), World::CVMaxNetPlayers);
 
         bool err = false;
         int errmsg = 0;
@@ -1194,6 +1196,19 @@ static bool yw_netValidateNormMsg(NC_STACK_ypaworld *yw, const void *data, size_
             return fail("invalid upgrade id");
         break;
     }
+
+    case UAMSG_FRACTION:
+    {
+        const auto *fractionMsg = static_cast<const uamessage_fraction *>(data);
+        if (World::NetFactions::OwnerOf(fractionMsg->newfrac) < 0 ||
+            (fractionMsg->freefrac != 0 && World::NetFactions::OwnerOf(fractionMsg->freefrac) < 0))
+            return fail("invalid lobby faction");
+        break;
+    }
+    case UAMSG_WELCOME:
+        if (World::NetFactions::OwnerOf(static_cast<const uamessage_welcome *>(data)->fraction) < 0)
+            return fail("invalid welcome faction");
+        break;
 
     case UAMSG_MESSAGE:
         if ( !memchr(static_cast<const uamessage_message *>(data)->message, 0,
@@ -2297,7 +2312,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
                     yw->_netEvent.Player2Name = yw->_GameShell->netPlayers[hdMsg->killerOwner].Name;
                 }
 
-                yw_arg159 arg159;
+                yw_arg159 arg159{};
                 arg159.unit = 0;
                 arg159.Priority = 50;
                 switch ( hdMsg->owner)
@@ -2315,7 +2330,12 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
                     arg159.MsgID = 87;
                     break;
                 case 2:
+                    arg159.MsgID = 11; // Generic enemy-host destruction voice.
+                    arg159.txt = "Sulgogar host station destroyed.";
+                    break;
                 case 5:
+                    arg159.MsgID = 11;
+                    arg159.txt = "Black Sect host station destroyed.";
                     break;
                 }
                 yw->ypaworld_func159(&arg159);
@@ -2483,10 +2503,13 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             lastVhcl = gemProt.NwVprotoNum4;
             lastBuild = gemProt.NwBprotoNum4;
             break;
-        case 2:
         case 5:
-            lastBuild = 0;
-            lastVhcl = 0;
+            lastVhcl = gemProt.NwVprotoNum5;
+            lastBuild = gemProt.NwBprotoNum5;
+            break;
+        case 2:
+            lastBuild = gemProt.NwBprotoNum6;
+            lastVhcl = gemProt.NwVprotoNum6;
             break;
         }
 
@@ -2559,29 +2582,15 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             yw->_GameShell->lobbyPlayers[indx].Welcomed = true;
         }
 
-        yw->_GameShell->FreeFraction &= ~wmMsg->fraction;
-
-        if ( yw->_GameShell->SelectedFraction == wmMsg->fraction )
+        const auto selection = World::NetFactions::SelectionAfterWelcome(
+            yw->_GameShell->SelectedFraction, wmMsg->fraction, yw->_GameShell->FreeFraction);
+        yw->_GameShell->SelectedFraction = selection.Selected;
+        yw->_GameShell->FreeFraction = selection.FreeMask;
+        if (!selection.CanAnnounce())
         {
-            if ( yw->_GameShell->FreeFraction & World::OWNER_RESIST_BIT )
-            {
-                yw->_GameShell->SelectedFraction = World::OWNER_RESIST_BIT;
-            }
-            else if ( yw->_GameShell->FreeFraction & World::OWNER_GHOR_BIT )
-            {
-                yw->_GameShell->SelectedFraction = World::OWNER_GHOR_BIT;
-            }
-            else if ( yw->_GameShell->FreeFraction & World::OWNER_MYKO_BIT )
-            {
-                yw->_GameShell->SelectedFraction = World::OWNER_MYKO_BIT;
-            }
-            else if ( yw->_GameShell->FreeFraction & World::OWNER_TAER_BIT )
-            {
-                yw->_GameShell->SelectedFraction = World::OWNER_TAER_BIT;
-            }
+            log_netlog("Faction announcement deferred: no valid selection after WELCOME.\n");
+            break;
         }
-
-        yw->_GameShell->FreeFraction &= ~yw->_GameShell->SelectedFraction;
 
         uamessage_fraction frMsg;
         frMsg.msgID = UAMSG_FRACTION;
@@ -2797,80 +2806,22 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
 
         index = 0;
 
-        if ( minf.IsFraction(World::OWNER_RESIST) )
+        yw->_GameShell->FreeFraction = minf.FractionsBits & World::NetFactions::Mask;
+        yw->_GameShell->SelectedFraction = 0;
+        for (auto &player : yw->_GameShell->lobbyPlayers)
+            player.NetFraction = 0;
+        for (int factionOwner : World::NetFactions::Owners)
         {
-            if ( plCount > 0 )
+            const uint32_t bit = 1u << factionOwner;
+            if ( (yw->_GameShell->FreeFraction & bit) && plCount > 0 )
             {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_RESIST_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_RESIST_BIT;
-
+                yw->_GameShell->FreeFraction &= ~bit;
+                yw->_GameShell->lobbyPlayers[index].NetFraction = bit;
                 if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_RESIST_BIT;
-
-                plCount--;
-                index++;
+                    yw->_GameShell->SelectedFraction = bit;
+                --plCount;
+                ++index;
             }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_RESIST_BIT;
-        }
-
-        if ( minf.IsFraction(World::OWNER_GHOR) )
-        {
-            if ( plCount > 0 )
-            {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_GHOR_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_GHOR_BIT;
-
-                if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_GHOR_BIT;
-
-                plCount--;
-                index++;
-            }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_GHOR_BIT;
-        }
-
-        if ( minf.IsFraction(World::OWNER_MYKO) )
-        {
-            if ( plCount > 0 )
-            {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_MYKO_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_MYKO_BIT;
-
-                if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_MYKO_BIT;
-
-                plCount--;
-                index++;
-            }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_MYKO_BIT;
-        }
-
-        if ( minf.IsFraction(World::OWNER_TAER) )
-        {
-            if ( plCount > 0 )
-            {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_TAER_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_TAER_BIT;
-
-                if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_TAER_BIT;
-
-                plCount--;
-                index++;
-            }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_TAER_BIT;
         }
 
         yw->SendCRC(yw->_GameShell->netLevelID);
@@ -2896,80 +2847,22 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         int plCount = yw->_netDriver->GetPlayerCount();
         int32_t index = 0;
 
-        if ( minf.IsFraction(World::OWNER_RESIST) )
+        yw->_GameShell->FreeFraction = minf.FractionsBits & World::NetFactions::Mask;
+        yw->_GameShell->SelectedFraction = 0;
+        for (auto &player : yw->_GameShell->lobbyPlayers)
+            player.NetFraction = 0;
+        for (int factionOwner : World::NetFactions::Owners)
         {
-            if ( plCount )
+            const uint32_t bit = 1u << factionOwner;
+            if ( (yw->_GameShell->FreeFraction & bit) && plCount > 0 )
             {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_RESIST_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_RESIST_BIT;
-
+                yw->_GameShell->FreeFraction &= ~bit;
+                yw->_GameShell->lobbyPlayers[index].NetFraction = bit;
                 if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_RESIST_BIT;
-
-                plCount--;
-                index++;
+                    yw->_GameShell->SelectedFraction = bit;
+                --plCount;
+                ++index;
             }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_RESIST_BIT;
-        }
-
-        if ( minf.IsFraction(World::OWNER_GHOR) )
-        {
-            if ( plCount )
-            {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_GHOR_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_GHOR_BIT;
-
-                if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_GHOR_BIT;
-
-                plCount--;
-                index++;
-            }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_GHOR_BIT;
-        }
-
-        if ( minf.IsFraction(World::OWNER_MYKO) )
-        {
-            if ( plCount )
-            {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_MYKO_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_MYKO_BIT;
-
-                if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_MYKO_BIT;
-
-                plCount--;
-                index++;
-            }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_MYKO_BIT;
-        }
-
-        if ( minf.IsFraction(World::OWNER_TAER) )
-        {
-            if ( plCount )
-            {
-                yw->_GameShell->FreeFraction &= ~World::OWNER_TAER_BIT;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = World::OWNER_TAER_BIT;
-
-                if ( index == yw->_netDriver->GetMyIndex() )
-                    yw->_GameShell->SelectedFraction = World::OWNER_TAER_BIT;
-
-                plCount--;
-                index++;
-            }
-        }
-        else
-        {
-            yw->_GameShell->FreeFraction &= ~World::OWNER_TAER_BIT;
         }
 
         yw->SendCRC(yw->_GameShell->netLevelID);
@@ -3116,7 +3009,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         yw->_netEvent.TimeStamp = yw->_timeStamp;
         yw->_netEvent.PlayerName = msg->senderName;
 
-        yw_arg159 arg159;
+        yw_arg159 arg159{};
         arg159.Priority = 50;
         arg159.unit = nullptr;
 
@@ -3136,6 +3029,14 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
 
         case 1:
             arg159.MsgID = 83;
+            break;
+
+        case 2:
+            arg159.txt = "Sulgogar player left the game.";
+            break;
+
+        case 5:
+            arg159.txt = "Black Sect player left the game.";
             break;
 
         default:
@@ -3724,22 +3625,11 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
             return false;
         }
 
-        switch ( selFraction )
+        owner = World::NetFactions::OwnerOf(selFraction);
+        if ( owner < 0 || (_levelInfo.OwnerMask & (1u << owner)) )
         {
-        case World::OWNER_RESIST_BIT:
-            owner = 1;
-            break;
-        case World::OWNER_GHOR_BIT:
-            owner = 6;
-            break;
-        case World::OWNER_MYKO_BIT:
-            owner = 3;
-            break;
-        case World::OWNER_TAER_BIT:
-            owner = 4;
-            break;
-        default:
-            break;
+            log_netlog("Invalid or duplicate multiplayer faction %d\n", selFraction);
+            return false;
         }
 
         selHost = nullptr;
@@ -3777,22 +3667,12 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
             log_netlog("Warning: Robo placed without y-correction\n");
 
         ypaworld_arg146 arg146;
-        switch ( selFraction )
+        arg146.vehicle_id = World::NetFactions::HostVehicle(owner, selHost->VhclID);
+        if ( arg146.vehicle_id <= 0 || (size_t)arg146.vehicle_id >= _vhclProtos.size() ||
+             _vhclProtos[arg146.vehicle_id].model_id != BACT_TYPES_ROBO )
         {
-        case World::OWNER_RESIST_BIT:
-            arg146.vehicle_id = 56;
-            break;
-        case World::OWNER_GHOR_BIT:
-            arg146.vehicle_id = 57;
-            break;
-        case World::OWNER_MYKO_BIT:
-            arg146.vehicle_id = 58;
-            break;
-        case World::OWNER_TAER_BIT:
-            arg146.vehicle_id = 60;
-            break;
-        default:
-            break;
+            log_netlog("Invalid multiplayer host station %d for owner %d\n", arg146.vehicle_id, owner);
+            return false;
         }
         arg146.pos = place;
 

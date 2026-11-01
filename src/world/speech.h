@@ -21,6 +21,10 @@ int EventIndexFromMsgID(int message);
 int EventIndexFromKey(const std::string &key);
 const char *EventKey(size_t index);
 std::string PackEventPath(const std::string &root, size_t event);
+// Explicit prototype packs take precedence over the new multiplayer defaults.
+// Owner IDs are faction IDs, not lobby slot indices.
+std::vector<std::string> UnitEventPaths(const std::string &authoredRoot, size_t event,
+                                      int owner, bool multiplayer);
 bool IsVariantFilename(const std::string &filename, const std::string &stem);
 const std::string &ChooseVariant(Variants &variants, unsigned int random);
 }

@@ -1,3 +1,4 @@
+#include "world/net_factions.h"
 // Game shell core: input binding order, shell init/deinit, background, open/close,
 // per-frame shell processing, info messages, GUI settings and fonts.
 // Screen controls are created in yw_shell_ui_options.cpp and yw_shell_ui_screens.cpp;
@@ -897,7 +898,7 @@ bool NC_STACK_ypaworld::OpenGameShell()
     {
         _GameShell->GameShellUiOpenNetwork();
         _GameShell->p_YW->_isNetGame = true;
-        _GameShell->FreeFraction = (World::OWNER_GHOR_BIT | World::OWNER_MYKO_BIT | World::OWNER_TAER_BIT);
+        _GameShell->FreeFraction = World::NetFactions::Mask & ~World::OWNER_RESIST_BIT;
         _GameShell->SelectedFraction = World::OWNER_RESIST_BIT;
     }
     else

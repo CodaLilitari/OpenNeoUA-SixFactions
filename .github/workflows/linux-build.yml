@@ -1,0 +1,39 @@
+name: Linux build and source package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ubuntu-22-package:
+    runs-on: ubuntu-24.04
+    container: ubuntu:22.04
+    timeout-minutes: 45
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      SOURCE_DATE_EPOCH: '0'
+      JOBS: '2'
+    steps:
+      - name: Install official Ubuntu build dependencies
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git build-essential cmake ninja-build pkg-config binutils python3 libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-net-dev libopenal-dev libvorbis-dev libgl1-mesa-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev liblua5.3-dev
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build, test, inspect dependencies and package
+        shell: bash
+        run: bash tools/linux/build.sh /tmp/openneoua-build-lab
+      - name: Retain package and evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: OpenNeoUA-ubuntu22-x86_64
+          path: |
+            /tmp/openneoua-build-lab/package/*
+            /tmp/openneoua-build-lab/logs/*
+          if-no-files-found: warn
+          retention-days: 14

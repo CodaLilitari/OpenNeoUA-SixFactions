@@ -510,14 +510,13 @@ void NC_STACK_ypaworld::VoiceMessagePlayMsg(NC_STACK_ypabact *unit, int priority
             {
                 uint8_t protoId = unit->_mimic_disguise_vehicleID ? unit->_mimic_disguise_vehicleID : unit->_vehicleID;
                 World::TVhclProto &vhclProto = _vhclProtos[protoId];
-                packVoice = !vhclProto.speech_voicepack.empty();
                 const int speechEvent = World::Speech::EventIndexFromMsgID(msgID);
 
                 if ( speechEvent >= 0 )
                 {
-                    const std::string paths[] = {
-                        World::Speech::PackEventPath(vhclProto.speech_voicepack, speechEvent)
-                    };
+                    const auto paths = World::Speech::UnitEventPaths(
+                        vhclProto.speech_voicepack, speechEvent, unit->_owner, _isNetGame);
+                    packVoice = !paths.empty();
                     for (const std::string &path : paths)
                     {
                         if ( path.empty() ) continue;
@@ -546,7 +545,7 @@ void NC_STACK_ypaworld::VoiceMessagePlayMsg(NC_STACK_ypabact *unit, int priority
             if ( !VoiceMessagePlayFile(fmt::sprintf("%x%x%x%x%x.wav", msgvals.v1, vo_type, msgvals.v3, msgvals.v4, v16), unit, priority, ignoreTimeScale) &&
                  packVoice && vo_type != 11 )
             {
-                // A configured pack with a missing combat event can use the
+                // An explicit or faction pack with a missing combat event can use the
                 // existing generic unit voice after its vanilla voice fails.
                 VoiceMessagePlayFile(fmt::sprintf("1b%x%x%x.wav", msgvals.v3, msgvals.v4, v16), unit, priority, ignoreTimeScale);
             }

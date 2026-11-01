@@ -85,6 +85,22 @@ bool IsVariantFilename(const std::string &filename, const std::string &stem)
     return positive;
 }
 
+std::vector<std::string> UnitEventPaths(const std::string &authoredRoot, size_t event,
+                                      int owner, bool multiplayer)
+{
+    std::vector<std::string> paths;
+    const std::string authored = PackEventPath(authoredRoot, event);
+    if (!authored.empty()) paths.push_back(authored);
+    if (multiplayer)
+    {
+        const char *root = owner == 5 ? "sounds/speech/voicepacks/black-sect-mp" :
+                           owner == 2 ? "sounds/speech/voicepacks/sulgogars-mp" : "";
+        const std::string faction = PackEventPath(root, event);
+        if (!faction.empty() && faction != authored) paths.push_back(faction);
+    }
+    return paths;
+}
+
 const std::string &ChooseVariant(Variants &variants, unsigned int random)
 {
     static const std::string empty;

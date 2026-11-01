@@ -1078,6 +1078,7 @@ public:
     void ypaworld_func151__sub7();
     void yw_FractionInit();
     void yw_netcleanup();
+    World::NetFactions::RosterCheck CheckNetLobbyRoster() const;
     void sub_46DC1C();
     void sub_46D960();
     void ShowOptionsMenu();
@@ -1471,10 +1472,14 @@ struct TMapGem
     int16_t NwVprotoNum2 = 0;
     int16_t NwVprotoNum3 = 0;
     int16_t NwVprotoNum4 = 0;
+    int16_t NwVprotoNum5 = 0; // optional Black Sect entry
+    int16_t NwVprotoNum6 = 0; // optional Sulgogar entry
     int16_t NwBprotoNum1 = 0;
     int16_t NwBprotoNum2 = 0;
     int16_t NwBprotoNum3 = 0;
     int16_t NwBprotoNum4 = 0;
+    int16_t NwBprotoNum5 = 0; // optional Black Sect entry
+    int16_t NwBprotoNum6 = 0; // optional Sulgogar entry
     Engine::StringList ActionsList;
     int Type = 0;
 };

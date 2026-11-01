@@ -1,3 +1,4 @@
+#include "world/net_factions.h"
 // Game shell menus: save/load, language, about, network entry, sounds and the big shell input handler (GameShellUiHandleInput).
 // Related areas live in yw_options.cpp (options, atmosphere and graphic profiles), yw_database.cpp (the database screen)
 // and yw_input_config.cpp (key configuration). Shared helpers: yw_shell_menus.h.
@@ -902,8 +903,41 @@ void UserData::sb_0x46aa8c()
     titel_button->ShowScreen();
 }
 
+World::NetFactions::RosterCheck UserData::CheckNetLobbyRoster() const
+{
+    if (!p_YW || !p_YW->_netDriver || netLevelID <= 0 ||
+        static_cast<size_t>(netLevelID) >= p_YW->_globalMapRegions.MapRegions.size())
+        return {};
+
+    const auto players = p_YW->_netDriver->GetPlayersData();
+    if (players.empty() || players.size() > lobbyPlayers.size())
+        return {};
+
+    std::array<World::NetFactions::RosterEntry, World::CVMaxNetPlayers> entries{};
+    for (size_t i = 0; i < players.size(); ++i)
+    {
+        const TDPPlayerData &player = players[i];
+        if (static_cast<size_t>(player.Index) >= lobbyPlayers.size())
+            return {};
+        entries[i] = {static_cast<int>(player.Index),
+                      player.IsItMe() ? SelectedFraction : lobbyPlayers[player.Index].NetFraction,
+                      player.IsItMe() || lobbyPlayers[player.Index].Ready};
+    }
+    return World::NetFactions::CheckRoster(
+        p_YW->_globalMapRegions.MapRegions[netLevelID].FractionsBits, entries.data(), players.size());
+}
+
 void UserData::sub_46DC1C()
 {
+    // Widget enablement was computed on an earlier frame. Re-read the roster
+    // before broadcasting LOAD, including the one-player confirmation path.
+    if (!isHost || !CheckNetLobbyRoster().CanStart())
+    {
+        netGameCanStart = false;
+        log_netlog("Network launch deferred: roster or readiness changed.\n");
+        return;
+    }
+
     uamessage_load lvlMsg;
     lvlMsg.msgID = UAMSG_LOAD;
     lvlMsg.owner = 0;
@@ -3234,8 +3268,8 @@ void UserData::GameShellUiHandleInput()
         break;
     case NETSCREEN_INSESSION:
         nInputMode = 1;
-        network_listvw.maxShownEntries = 6;
-        netListY = p_YW->_fontH * 9.5 + 2 * vertMenuSpace;
+        network_listvw.maxShownEntries = 3;
+        netListY = 10 * (p_YW->_fontH + vertMenuSpace);
         break;
     default:
         break;
@@ -3248,7 +3282,7 @@ void UserData::GameShellUiHandleInput()
     if ( r )
     {
 
-        if ( r.code == 1204 || r.code == 1205 || r.code == 1206 || r.code == 1207 )
+        if ( r.code == 1204 || r.code == 1205 || r.code == 1206 || r.code == 1207 || r.code == 1260 || r.code == 1261 )
         {
             fracMsg.msgID = UAMSG_FRACTION;
             fracMsg.owner = 0;
@@ -3297,6 +3331,21 @@ void UserData::GameShellUiHandleInput()
             FreeFraction &= ~World::OWNER_TAER_BIT;
 
             p_YW->NetBroadcastMessage(&fracMsg, sizeof(fracMsg), true);
+        }
+
+        else if ( (r.code == 1260 || r.code == 1261) && netSelMode == NETSCREEN_INSESSION &&
+                  netLevelID > 0 && netLevelID < 256 && (isHost || !rdyStart) )
+        {
+            const uint32_t selected = r.code == 1260 ? World::OWNER_BLACK_BIT : World::OWNER_SULG_BIT;
+            if (World::NetFactions::IsAvailable(selected, p_YW->_globalMapRegions.MapRegions[netLevelID].FractionsBits))
+            {
+                fracMsg.freefrac = SelectedFraction;
+                FreeFraction |= SelectedFraction;
+                fracMsg.newfrac = selected;
+                SelectedFraction = selected;
+                FreeFraction &= ~selected;
+                p_YW->NetBroadcastMessage(&fracMsg, sizeof(fracMsg), true);
+            }
         }
 
         switch ( netSelMode )
@@ -3810,6 +3859,8 @@ void UserData::GameShellUiHandleInput()
 
     v410.butID = 1220;
     network_button->Disable(&v410);
+    v410.butID = 1230;
+    network_button->Disable(&v410);
 
     v410.butID = 1206;
     network_button->Disable(&v410);
@@ -3853,6 +3904,11 @@ void UserData::GameShellUiHandleInput()
 
     v410.butID = 1217;
     network_button->Disable(&v410);
+    for (int id : {1231, 1232, 1233, 1234})
+    {
+        v410.butID = id;
+        network_button->Disable(&v410);
+    }
 
     if ( (netSelMode != NETSCREEN_SESSION_SELECT || p_YW->_netDriver->GetProvType() != 3)
             && (netSelMode != NETSCREEN_SESSION_SELECT || modemAskSession != 1 || p_YW->_netDriver->GetProvType() != 4)
@@ -4040,9 +4096,6 @@ void UserData::GameShellUiHandleInput()
             }
         }
 
-        v410.butID = 1220;
-        network_button->Enable(&v410);
-
         if ( netLevelID > 0 && netLevelID < 256 )
         {
 
@@ -4053,6 +4106,18 @@ void UserData::GameShellUiHandleInput()
             }
             else
             {
+                v410.butID = 1220;
+                if ( p_YW->_globalMapRegions.MapRegions[netLevelID].IsFraction(World::OWNER_BLACK) )
+                    network_button->Enable(&v410);
+                else
+                    network_button->Disable(&v410);
+
+                v410.butID = 1230;
+                if ( p_YW->_globalMapRegions.MapRegions[netLevelID].IsFraction(World::OWNER_SULG) )
+                    network_button->Enable(&v410);
+                else
+                    network_button->Disable(&v410);
+
                 v410.butID = 1206;
                 if ( p_YW->_globalMapRegions.MapRegions[ netLevelID ].IsFraction(World::OWNER_RESIST) )
                     network_button->Enable(&v410);
@@ -4094,6 +4159,12 @@ void UserData::GameShellUiHandleInput()
             case World::OWNER_TAER_BIT:
                 v408.butID = 1209;
                 break;
+            case World::OWNER_BLACK_BIT:
+                v408.butID = 1220;
+                break;
+            case World::OWNER_SULG_BIT:
+                v408.butID = 1230;
+                break;
 
             default:
                 break;
@@ -4105,81 +4176,26 @@ void UserData::GameShellUiHandleInput()
                 network_button->SetState(&v408);
             }
 
-            int FractionErrorMask = 0;
-
-            netGameCanStart = true;
-            isWelcmd = true;
-
-            // First of all if fraction not allowed - fill
-            if ( !p_YW->_globalMapRegions.MapRegions[netLevelID].IsFraction(World::OWNER_RESIST) )
-                FractionErrorMask |= World::OWNER_RESIST_BIT;
-
-            if ( !p_YW->_globalMapRegions.MapRegions[netLevelID].IsFraction(World::OWNER_GHOR) )
-                FractionErrorMask |= World::OWNER_GHOR_BIT;
-
-            if ( !p_YW->_globalMapRegions.MapRegions[netLevelID].IsFraction(World::OWNER_MYKO) )
-                FractionErrorMask |= World::OWNER_MYKO_BIT;
-
-            if ( !p_YW->_globalMapRegions.MapRegions[netLevelID].IsFraction(World::OWNER_TAER) )
-                FractionErrorMask |= World::OWNER_TAER_BIT;
-
-            // Owner of a single faction bit, or -1.
-            auto ownerOfFraction = [](int fraction)
-            {
-                switch ( fraction )
-                {
-                case World::OWNER_RESIST_BIT: return (int)World::OWNER_RESIST;
-                case World::OWNER_GHOR_BIT:   return (int)World::OWNER_GHOR;
-                case World::OWNER_MYKO_BIT:   return (int)World::OWNER_MYKO;
-                case World::OWNER_TAER_BIT:   return (int)World::OWNER_TAER;
-                default:                      return -1;
-                }
-            };
-
-            // Lobby index of the player who took each faction first; -1 = nobody.
-            // A faction missing from the map is never taken, so it stays -1.
-            int FractionPlID[World::CVFractionsCount];
-            std::fill(std::begin(FractionPlID), std::end(FractionPlID), -1);
-
-            for ( TDPPlayerData &p : p_YW->_netDriver->GetPlayersData() )
-            {
-                int fraction;
-
-                if ( p.IsItMe() )
-                    fraction = SelectedFraction;
-                else
-                    fraction = lobbyPlayers[p.Index].NetFraction;
-
-                const int owner = ownerOfFraction(fraction);
-
-                if ( fraction & FractionErrorMask )
-                {
-                    // Faction not on the map, or already taken: both players are flagged.
-                    lobbyPlayers[p.Index].IsTrouble = true;
-                    netGameCanStart = false;
-
-                    if ( owner >= 0 && FractionPlID[owner] >= 0 )
-                        lobbyPlayers[ FractionPlID[owner] ].IsTrouble = true;
-                }
-                else
-                {
-                    lobbyPlayers[p.Index].IsTrouble = false;
-
-                    if ( owner >= 0 )
-                        FractionPlID[owner] = p.Index;
-                }
-
-                FractionErrorMask |= fraction;
-            }
         }
 
+        {
+            const auto roster = CheckNetLobbyRoster();
+            netGameCanStart = roster.CanStart();
+            for (size_t slot = 0; slot < lobbyPlayers.size(); ++slot)
+                lobbyPlayers[slot].IsTrouble = (roster.ConflictingSlots & (1u << slot)) != 0;
+        }
+
+        isWelcmd = true;
         for ( TDPPlayerData &p : p_YW->_netDriver->GetPlayersData() )
         {
+            if (static_cast<size_t>(p.Index) >= lobbyPlayers.size())
+            {
+                netGameCanStart = false;
+                isWelcmd = false;
+                continue;
+            }
             if ( !p.IsItMe() )
             {
-                if ( !lobbyPlayers[p.Index].Ready )
-                    netGameCanStart = false;
-
                 if ( !lobbyPlayers[p.Index].Welcomed )
                     isWelcmd = false;
             }
@@ -4245,6 +4261,11 @@ void UserData::GameShellUiHandleInput()
 
         v410.butID = 1217;
         network_button->Enable(&v410);
+        for (int id : {1231, 1232, 1233, 1234})
+        {
+            v410.butID = id;
+            network_button->Enable(&v410);
+        }
 
         for (size_t i = 0; i < World::CVMaxNetPlayers; i++)
         {
@@ -4285,10 +4306,24 @@ void UserData::GameShellUiHandleInput()
                     name = pData.name;
                 break;
 
-            default:
+            case 4:
+                v370 = 1233;
+                btID = 1231;
+                if ( v304 ) name = pData.name;
                 break;
+            case 5:
+                v370 = 1234;
+                btID = 1232;
+                if ( v304 ) name = pData.name;
+                break;
+            default:
+                continue;
             }
 
+            if ( v304 && (pData.IsItMe() ? SelectedFraction : lobbyPlayers[pData.Index].NetFraction) == World::OWNER_BLACK_BIT )
+                name += " [Black Sect]";
+            if ( v304 && (pData.IsItMe() ? SelectedFraction : lobbyPlayers[pData.Index].NetFraction) == World::OWNER_SULG_BIT )
+                name += " [Sulgogars]";
             network_button->SetText(btID, name);
 
             std::string v339("     "); // 5 spaces

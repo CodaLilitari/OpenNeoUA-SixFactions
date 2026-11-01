@@ -965,7 +965,15 @@ int LevelGemParser::Handle(ScriptParser::Parser &parser, const std::string &p1, 
                 {
                     _g->NwVprotoNum3 = parser.stol(tmp, nullptr, 0);
                     if ( stok.GetNext(&tmp) )
+                    {
                         _g->NwVprotoNum4 = parser.stol(tmp, nullptr, 0);
+                        if ( stok.GetNext(&tmp) )
+                        {
+                            _g->NwVprotoNum5 = parser.stol(tmp, nullptr, 0);
+                            if ( stok.GetNext(&tmp) )
+                                _g->NwVprotoNum6 = parser.stol(tmp, nullptr, 0);
+                        }
+                    }
                 }
             }
         }
@@ -984,7 +992,15 @@ int LevelGemParser::Handle(ScriptParser::Parser &parser, const std::string &p1, 
                 {
                     _g->NwBprotoNum3 = parser.stol(tmp, nullptr, 0);
                     if ( stok.GetNext(&tmp) )
+                    {
                         _g->NwBprotoNum4 = parser.stol(tmp, nullptr, 0);
+                        if ( stok.GetNext(&tmp) )
+                        {
+                            _g->NwBprotoNum5 = parser.stol(tmp, nullptr, 0);
+                            if ( stok.GetNext(&tmp) )
+                                _g->NwBprotoNum6 = parser.stol(tmp, nullptr, 0);
+                        }
+                    }
                 }
             }
         }

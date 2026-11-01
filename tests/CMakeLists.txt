@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.10)
+project(OpenNeoUAMultiplayerTests LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+enable_testing()
+add_executable(test_net_factions test_net_factions.cpp)
+add_test(NAME net_factions COMMAND test_net_factions)
+add_executable(test_speech_factions test_speech_factions.cpp ../src/world/speech.cpp)
+add_test(NAME speech_factions COMMAND test_speech_factions)
+
+option(OPENNEOUA_TRANSPORT_TEST "Test six real loopback UDP endpoints (requires SDL2/SDL2_net)" OFF)
+if(OPENNEOUA_TRANSPORT_TEST)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(NET_SDL REQUIRED IMPORTED_TARGET sdl2 SDL2_net)
+    add_executable(test_net_transport test_net_transport.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
+        ../src/netlib/single.cpp ../src/netlib/single_threads.cpp)
+    target_link_libraries(test_net_transport PRIVATE PkgConfig::NET_SDL)
+    add_test(NAME net_transport COMMAND test_net_transport)
+    set_tests_properties(net_transport PROPERTIES TIMEOUT 75)
+endif()

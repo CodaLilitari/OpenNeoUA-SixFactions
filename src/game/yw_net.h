@@ -382,7 +382,7 @@ struct uamessage_setLevel : uamessage_base
 {
     char hostName[64] = {0};
     uint32_t lvlID = 0;
-    uint8_t fractions[4] = {0};
+    uint8_t fractions[World::CVMaxNetPlayers] = {0};
 };
 
 typedef uamessage_setLevel uamessage_lobbyInit;

@@ -118,3 +118,13 @@
 !/Levels/Bg/
 /Levels/Bg/*
 !/Levels/Bg/Workshop.png
+
+# Six-faction extension sources, tests, and map-generation documentation.
+!/docs/
+!/tests/
+!/tools/
+__pycache__/
+*.py[cod]
+
+# Explicit manual Linux build workflow.
+!/.github/
