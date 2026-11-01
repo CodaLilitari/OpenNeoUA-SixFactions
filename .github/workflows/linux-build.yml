@@ -20,13 +20,18 @@ jobs:
         shell: bash
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates git build-essential cmake ninja-build pkg-config binutils python3 libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-net-dev libopenal-dev libvorbis-dev libgl1-mesa-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev liblua5.3-dev
+          apt-get install -y --no-install-recommends ca-certificates git build-essential cmake ninja-build pkg-config binutils python3 libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-net-dev libopenal-dev libvorbis-dev libgl1-mesa-dev libgl1-mesa-dri libglx-mesa0 libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev liblua5.3-dev
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Build, test, inspect dependencies and package
         shell: bash
         run: bash tools/linux/build.sh /tmp/openneoua-build-lab
+      - name: Test and bundle runtime libraries with software rendering
+        shell: bash
+        run: |
+          python3 -B tests/test_linux_runtime_bundle.py -v 2>&1 | tee /tmp/openneoua-build-lab/logs/runtime-bundle-tests.log
+          python3 tools/linux/bundle-runtime.py --source "$GITHUB_WORKSPACE" --binary /tmp/openneoua-build-lab/engine/OpenNeoUA --output /tmp/openneoua-build-lab/package/OpenNeoUA-linux-runtime.tar.gz --epoch "$SOURCE_DATE_EPOCH" --mesa-swrast /usr/lib/x86_64-linux-gnu/dri/swrast_dri.so 2>&1 | tee /tmp/openneoua-build-lab/logs/runtime-bundle.log
       - name: Retain package and evidence
         if: always()
         uses: actions/upload-artifact@v7.0.2

@@ -49,6 +49,12 @@ Choose a new package filename when rerunning the packager; it refuses overwrite.
 
 ## CI baseline
 
+The workflow also creates an optional [runtime dependency bundle](linux-runtime-bundle.md)
+with audited non-glibc libraries and Mesa software-rendering modules. It retains
+the host glibc/loader and X-server requirements; original game data is supplied
+separately. This is the more useful starting point for a sandbox without package
+installation access.
+
 The manual `Linux build and source package` workflow uses an Ubuntu 22.04
 container on an Ubuntu 24.04 hosted runner. This retains the older userspace
 baseline while avoiding the retiring Ubuntu 22.04 runner image. It requires
