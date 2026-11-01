@@ -55,7 +55,7 @@ permission change is performed by the game or adapter.
 | `game_observe` | Captures a completed rendered frame and local-player state. |
 | `game_key_press` | Holds a named key for 1–2000 ms, then releases it. |
 | `game_mouse_move` | Uses screenshot pixel coordinates; optional relative `dx`/`dy` move the view. |
-| `game_mouse_click` | Holds and releases left, middle or right at a pixel position. |
+| `game_mouse_click` | Positions the pointer, then holds and releases left, middle or right at that pixel position. |
 | `game_type_text` | Types 1–128 printable ASCII characters through the game text input. |
 | `game_release_all` | Cancels and releases agent-held controls. |
 
@@ -63,6 +63,15 @@ Observe after an action to establish its effect. A successful action receipt
 means input finished processing, not that the intended button or unit was hit.
 Mouse coordinates must fit the current screenshot. Text is paced across game
 frames because the game's text queue is small; slow rendering takes longer.
+Clicks emit an absolute motion event before the button press so legacy list
+selection sees the requested position. This motion has zero relative movement;
+use `game_mouse_move` with `dx`/`dy` when a camera turn is intended.
+
+The optional `OPENNEOUA_AGENT_MOUSE_TEST=ON` CMake test (together with
+`OPENNEOUA_AGENT_BRIDGE_TEST=ON`) checks this event order, release and bounds in
+a hidden native OpenGL window. It requires a working video driver; on Linux,
+run its CTest invocation under Xvfb. The ordinary file/queue tests do not require
+a display.
 
 ## Transport and failure handling
 

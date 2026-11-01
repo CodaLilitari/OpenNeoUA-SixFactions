@@ -280,6 +280,14 @@ bool Coordinates(Command &command) {
 }
 bool Dispatch(Command command) {
     if ((command.op == Op::Move || command.op == Op::Click) && !Coordinates(command)) return false;
+    if (command.op == Op::Click) {
+        // Legacy menus track their pointer in OnMouseMove, not OnMouseDown.
+        // Position it before the press without inventing relative camera input.
+        SDL_Event motion = {};
+        motion.type = SDL_MOUSEMOTION; motion.motion.windowID = WindowId();
+        motion.motion.x = command.b; motion.motion.y = command.c;
+        if (!Queue(motion)) return false;
+    }
     if (command.op == Op::Key || command.op == Op::Click) {
         heldCommand = command;
         held = Queue(command.op == Op::Key ? KeyEvent(command, true) : ButtonEvent(command, true));

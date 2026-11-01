@@ -54,7 +54,8 @@ commander death and promotion could therefore resolve the duplicate live ID.
 The receiver now consumes each of the bounded eight entries once. A lifecycle
 regression reproduces the former wrong-ID lookup, and the duplicate-entry and
 unbounded-array mutations fail. The local binary hashes above precede this
-last correction; its full engine and six-client rerun are pending.
+last correction. The subsequent full Linux build passed; its six-client rerun
+is in progress.
 
 The stock debug configuration changes F5–F8 behavior. A brief AI-ignore toggle
 was identified and restored in the first run; no combat correctness is claimed
@@ -69,6 +70,12 @@ for an older userspace baseline. Run 41361160000 succeeded at source revision
 hashes were independently checked. Every bundled ELF's maximum required GLIBC
 version is 2.35. This artifact predates the new agent hooks, snapshot repair,
 and map-title correction. It contains no generated original-data-derived maps.
+Newer run 41362951089 succeeded at revision
+`2b317835083a632d11ab6888b74cc7498bcb2c7e`, including the agent hooks and both
+network repairs. Its 1,617 packaged payload hashes and archive digest were
+independently checked. It retains the same GLIBC 2.35 maximum and 180 bundled
+libraries. Its executable SHA-256 is
+`4ed9029a433fd149efb743b3d3a808102734eff6153126c1fbc88da46ebd8fd6`.
 Future execution in another AI collaborator's sandbox has not yet occurred.
 
 The common agent module has focused Windows checks for command parsing,
@@ -87,8 +94,15 @@ real stdio adapter: rendered 640x480 images, multiplayer menu click and return,
 150 ms key hold, release and out-of-frame rejection. A normal Exit click ended
 the process with code zero before its input receipt could be written; the
 adapter correctly reported the missing receipt without retrying. This is
-native menu control, not proof of a Windows multiplayer match. Private-fork
-integration remains a separate check.
+native menu control, not proof of a Windows multiplayer match.
+
+The expanded menu run then found that legacy list selection reads the last
+mouse-motion position rather than the coordinates of a button event. Clicks
+now send an absolute motion event before the press, with zero relative motion.
+An optional native hidden-window regression failed on the previous bridge and
+passed on the correction; all seven selected Windows CTest checks passed.
+The CI artifact above predates this last click correction. Full-game list
+selection with the updated bridge remains a separate verification step.
 
 The committed engine adds the verified startup config-path repair to the
 reviewed six-faction candidate, plus two removed whitespace-only lines in
