@@ -128,3 +128,7 @@ __pycache__/
 
 # Explicit manual Linux build workflow.
 !/.github/
+
+# Original developed multiplayer faction cues.
+!/Sounds/Speech/Voicepacks/black-sect-mp/
+!/Sounds/Speech/Voicepacks/sulgogars-mp/

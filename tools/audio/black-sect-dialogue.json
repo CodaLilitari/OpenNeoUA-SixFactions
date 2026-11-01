@@ -1,0 +1,66 @@
+{
+  "unit_ready": [
+    "Unit ready.",
+    "Asset online."
+  ],
+  "unit_idle": [
+    "Standing by.",
+    "Holding position."
+  ],
+  "order_ack_friendly": [
+    "Route confirmed.",
+    "Moving to waypoint."
+  ],
+  "order_ack_enemy": [
+    "Attack order confirmed.",
+    "Closing to engage."
+  ],
+  "unit_control_entered": [
+    "Direct control active.",
+    "Manual link established."
+  ],
+  "enemy_sector_entered": [
+    "Enemy sector entered.",
+    "Crossing hostile boundary."
+  ],
+  "unit_recovered": [
+    "Unit recovered.",
+    "Link restored."
+  ],
+  "enemy_unit_spotted": [
+    "Enemy contact.",
+    "Hostile unit sighted."
+  ],
+  "enemy_host_found": [
+    "Enemy host located.",
+    "Host station identified."
+  ],
+  "request_support": [
+    "Support required.",
+    "Reinforcements requested."
+  ],
+  "unit_retreating": [
+    "Breaking contact.",
+    "Falling back."
+  ],
+  "unit_lost": [
+    "Unit lost.",
+    "Asset offline."
+  ],
+  "enemy_unit_engaged": [
+    "Engaging target.",
+    "Weapons on target."
+  ],
+  "enemy_unit_destroyed": [
+    "Target destroyed.",
+    "Hostile unit eliminated."
+  ],
+  "enemy_host_destroyed": [
+    "Enemy host destroyed.",
+    "Host station neutralized."
+  ],
+  "powerstation_captured": [
+    "Power station secured.",
+    "Grid node acquired."
+  ]
+}
