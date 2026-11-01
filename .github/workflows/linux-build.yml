@@ -2,6 +2,9 @@ name: Linux build and source package
 
 on:
   workflow_dispatch:
+  push:
+    branches: [linux-build]
+    paths: [.github/workflows/linux-build.yml]
 
 permissions:
   contents: read
