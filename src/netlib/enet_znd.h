@@ -16,6 +16,15 @@ namespace ZNDNet
 // broadcasts a roster control message so every peer sees the same user list.
 // ZND ids: host = 1, clients = transport peer id + 1.
 // Opt-in at runtime (OPENNEOUA_TRANSPORT=enet); ZNDNet stays the default.
+//
+// Topology is a star, like ZNDSingle: every game payload travels as
+//   type address(U64 LE) payload,  type 'D' = directed, 'B' = broadcast,
+// where the address is the destination on client->host 'D' frames and the
+// original sender on every host->client frame. The host delivers locally and
+// relays to the other clients, so three to six players see each other.
+// Roster frames are 'U' sesNameLen sesName countU16 { idU64 nameLen name }*.
+// One lock serializes every EnetTransport call: the pump thread services the
+// ENet host while the game thread sends, and ENet hosts are not thread-safe.
 class ZNDEnet : public ZNDNet
 {
 public:
@@ -56,8 +65,14 @@ private:
     void Pump();
     void SendRoster();
     void ApplyRoster(const std::uint8_t *data, std::size_t len);
+    void HostDeliver(std::uint64_t from, const std::uint8_t *data, std::size_t len,
+                     std::uint8_t channel);
+    bool SendFrame(std::uint32_t peer, std::uint8_t type, std::uint64_t address,
+                   const void *data, std::uint32_t sz, WireChannel channel);
     void LockUsers() const;
     void UnlockUsers() const;
+    void LockNet() const;
+    void UnlockNet() const;
 
     EnetTransport transport_;
     bool hosting_ = false;
@@ -72,6 +87,8 @@ private:
     SDL_Thread *pumpThread_ = nullptr;
     std::atomic_bool pumpEnd_{false};
     SDL_mutex *usersMutex_ = nullptr;
+    SDL_mutex *netMutex_ = nullptr; // guards transport_ (ENet is single-threaded)
+    bool sessionOpen_ = true;
 };
 
 }

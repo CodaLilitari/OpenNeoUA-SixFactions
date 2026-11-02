@@ -99,6 +99,19 @@ if(OPENNEOUA_ENET_ZND_TEST)
     endif()
     add_test(NAME enet_znd COMMAND test_enet_znd)
     set_tests_properties(enet_znd PROPERTIES TIMEOUT 60)
+
+    # Three-party star relay, directed sends and duplicate-callsign refusal.
+    add_executable(test_enet_znd_relay test_enet_znd_relay.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/enet_transport.cpp ../src/netlib/enet_znd.cpp
+        ${ENET_ZND_SOURCES})
+    target_include_directories(test_enet_znd_relay PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../src/third_party/enet/include)
+    target_link_libraries(test_enet_znd_relay PRIVATE PkgConfig::NET_SDL)
+    if(WIN32)
+        target_link_libraries(test_enet_znd_relay PRIVATE ws2_32 winmm)
+    endif()
+    add_test(NAME enet_znd_relay COMMAND test_enet_znd_relay)
+    set_tests_properties(enet_znd_relay PROPERTIES TIMEOUT 90)
 endif()
 
 option(OPENNEOUA_TRANSPORT_TEST "Test six real loopback UDP endpoints (requires SDL2/SDL2_net)" OFF)

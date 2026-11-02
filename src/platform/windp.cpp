@@ -296,8 +296,10 @@ size_t NC_STACK_windp::CloseSession(IDVPair *stak)
     //close session
     if (connType == 1)
     {
-        if (zhost)
-            if (zenet) zenet->CloseSession(0); else zhost->CloseSession(0);
+        if (zenet)
+            zenet->CloseSession(0);
+        else if (zhost)
+            zhost->CloseSession(0);
     }
     
     return 0;
@@ -463,8 +465,10 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
     {
         case ZNDNet::EVENT_SESSION_LIST:
         {
-            if (zcli)
-                if (zenet) zenet->GetSessions(_rawSessions); else if (zcli) zcli->GetSessions(_rawSessions);
+            if (zenet)
+                zenet->GetSessions(_rawSessions);
+            else if (zcli)
+                zcli->GetSessions(_rawSessions);
         }
         break;
 

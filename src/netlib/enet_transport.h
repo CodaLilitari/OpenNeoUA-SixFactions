@@ -15,9 +15,24 @@ namespace ZNDNet
 // validated before Connected is emitted, CONNECTED issues a 128-bit resume
 // token, and a silently dropped peer is orphaned for 60 s so a reconnect
 // with the token restores its peer id. Application payloads are opaque.
+//
+// Not thread-safe (ENet hosts are not): a caller that services Poll on one
+// thread and sends from another must serialize every call (see ZNDEnet).
 class EnetTransport : public INetTransport
 {
 public:
+    // Handshake refusal codes carried by 'R' and TransportEvent::reason.
+    enum Refusal : std::uint8_t
+    {
+        RefuseService = 1,  // different fork/service identity
+        RefuseVersion = 2,  // wire protocol or ENet framing version
+        RefuseName = 3,     // callsign already present in the session
+        RefuseFull = 4      // no free client slot, or session closed
+    };
+    // Bumped whenever the ENet-only framing changes (it is independent of
+    // the ZNDNet wire, so ZNDNet compatibility is unaffected).
+    enum : std::uint8_t { FramingVersion = 2 };
+
     explicit EnetTransport(const std::string &servstring);
     ~EnetTransport();
 
@@ -31,6 +46,11 @@ public:
     std::uint16_t BoundPort() const;
 
     std::uint32_t MyId() const { return myId_; }
+    // Host: broadcast to accepted peers except one (0 = nobody excluded).
+    bool BroadcastExcept(std::uint32_t exceptPeer, const void *data, std::size_t size,
+                         WireChannel channel);
+    // Host: refuse new (non-resume) handshakes while false.
+    void SetAcceptingNew(bool accept) { acceptingNew_ = accept; }
     // Client: graceful leave ('X' control) so the host frees the slot
     // immediately instead of orphaning it for resume.
     bool SendGoodbye();
@@ -69,6 +89,8 @@ private:
     std::vector<Orphan> orphans_;
     std::uint32_t nextId_ = 1;
     std::uint64_t tokenCounter_ = 0;
+    std::size_t maxClients_ = 0;
+    bool acceptingNew_ = true;
 
     ENetPeer *serverPeer_ = nullptr;
     bool clientAccepted_ = false;

@@ -17,7 +17,7 @@ cmake -S "$source_root/src" -B "$lab/engine" -G Ninja \
     2>&1 | tee "$lab/logs/configure-engine.log"
 cmake --build "$lab/engine" --parallel "$jobs" 2>&1 | tee "$lab/logs/build-engine.log"
 cmake -S "$source_root/tests" -B "$lab/tests" -G Ninja \
-    -DCMAKE_BUILD_TYPE=Debug -DOPENNEOUA_TRANSPORT_TEST=ON -DOPENNEOUA_AGENT_BRIDGE_TEST=ON \
+    -DCMAKE_BUILD_TYPE=Debug -DOPENNEOUA_TRANSPORT_TEST=ON -DOPENNEOUA_AGENT_BRIDGE_TEST=ON -DOPENNEOUA_ENET_TEST=ON -DOPENNEOUA_ENET_ZND_TEST=ON \
     2>&1 | tee "$lab/logs/configure-tests.log"
 cmake --build "$lab/tests" --parallel "$jobs" 2>&1 | tee "$lab/logs/build-tests.log"
 ctest --test-dir "$lab/tests" --output-on-failure 2>&1 | tee "$lab/logs/tests.log"

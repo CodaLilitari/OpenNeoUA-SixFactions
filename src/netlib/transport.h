@@ -21,6 +21,7 @@ struct TransportEvent
     Type type = Type::Data;
     std::uint32_t peer = 0; // host side: peer id; client side: 0 = host
     std::uint8_t channel = 0;
+    std::uint8_t reason = 0;          // Disconnected before acceptance: refusal code
     std::string name;                 // Connected on the host: peer name
     std::vector<std::uint8_t> data;   // Data only
 };

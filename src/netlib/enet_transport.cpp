@@ -64,7 +64,9 @@ bool EnetTransport::StartHost(const std::string &name, std::uint16_t port, std::
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     address.port = port;
-    host_ = enet_host_create(&address, maxPeers, 2, 0, 0);
+    // maxPeers counts accepted clients. ENet gets two spare slots so a
+    // surplus connection can still receive its refusal instead of timing out.
+    host_ = enet_host_create(&address, maxPeers + 2, 2, 0, 0);
     if (!host_)
     {
         EnetRelease();
@@ -72,6 +74,8 @@ bool EnetTransport::StartHost(const std::string &name, std::uint16_t port, std::
     }
     name_ = name;
     isHost_ = true;
+    maxClients_ = maxPeers;
+    acceptingNew_ = true;
     return true;
 }
 
@@ -176,7 +180,7 @@ void EnetTransport::GenerateToken(unsigned char out[16], std::uint32_t id)
 bool EnetTransport::HandleHandshake(PeerInfo &info, const std::uint8_t *data,
                                     std::size_t len, TransportEvent &out)
 {
-    // 'H' svcLen svc nameLen name verU16 token16
+    // 'H' svcLen svc nameLen name verU16 token16 framingU8
     if (len < 1 + 1 + 1 + 2 + 16 || data[0] != 'H')
         return false;
     const std::size_t svcLen = data[1];
@@ -185,11 +189,13 @@ bool EnetTransport::HandleHandshake(PeerInfo &info, const std::uint8_t *data,
     const std::string svc((const char *)data + 2, svcLen);
     const std::size_t nameOff = 2 + svcLen;
     const std::size_t nameLen = data[nameOff];
-    if (len != nameOff + 1 + nameLen + 2 + 16)
+    const std::size_t baseLen = nameOff + 1 + nameLen + 2 + 16;
+    if (len != baseLen && len != baseLen + 1)
         return false;
     const std::string name((const char *)data + nameOff + 1, nameLen);
     const std::uint16_t ver = GetU16(data + nameOff + 1 + nameLen);
     const std::uint8_t *token = data + nameOff + 1 + nameLen + 2;
+    const std::uint8_t framing = len == baseLen + 1 ? data[baseLen] : 0;
 
     auto reject = [&](std::uint8_t reason) {
         std::uint8_t msg[2] = { 'R', reason };
@@ -200,9 +206,9 @@ bool EnetTransport::HandleHandshake(PeerInfo &info, const std::uint8_t *data,
         return false;
     };
     if (svc != servString_)
-        return reject(1);
-    if (!World::NetProtocol::ProtoCompatible(ver))
-        return reject(2);
+        return reject(RefuseService);
+    if (!World::NetProtocol::ProtoCompatible(ver) || framing != FramingVersion)
+        return reject(RefuseVersion);
 
     World::NetProtocol::ResumeToken want;
     std::memcpy(want.b, token, 16);
@@ -235,6 +241,27 @@ bool EnetTransport::HandleHandshake(PeerInfo &info, const std::uint8_t *data,
             return true;
         }
     }
+
+    // A new identity (not a resume) needs an open session, a free client
+    // slot and a callsign nobody else in the session uses: lobby messages
+    // are addressed by name, so a duplicate would deadlock the join.
+    std::size_t acceptedClients = 0;
+    bool nameTaken = name.empty() || name == name_;
+    for (const auto &kv : peers_)
+    {
+        if (!kv.second.accepted)
+            continue;
+        ++acceptedClients;
+        if (kv.second.name == name)
+            nameTaken = true;
+    }
+    for (const Orphan &o : orphans_)
+        if (o.expiryMs > now && o.name == name)
+            nameTaken = true;
+    if (!acceptingNew_ || (maxClients_ && acceptedClients >= maxClients_))
+        return reject(RefuseFull);
+    if (nameTaken)
+        return reject(RefuseName);
 
     info.id = nextId_++;
     info.name = name;
@@ -289,6 +316,7 @@ bool EnetTransport::Poll(TransportEvent &out, std::uint32_t timeoutMs)
                 hs.insert(hs.end(), name_.begin(), name_.end());
                 PutU16(hs, (std::uint16_t)World::NetProtocol::ProtoVer);
                 hs.insert(hs.end(), myToken_, myToken_ + 16);
+                hs.push_back(FramingVersion);
                 ENetPacket *pkt = enet_packet_create(hs.data(), hs.size(),
                                                      ENET_PACKET_FLAG_RELIABLE);
                 enet_peer_send(ev.peer, 0, pkt);
@@ -342,6 +370,7 @@ bool EnetTransport::Poll(TransportEvent &out, std::uint32_t timeoutMs)
                 {
                     out.type = TransportEvent::Type::Disconnected;
                     out.peer = 0;
+                    out.reason = data[1];
                     emit = true;
                 }
             }
@@ -448,14 +477,31 @@ bool EnetTransport::Send(std::uint32_t peer, const void *data, std::size_t size,
 
 bool EnetTransport::Broadcast(const void *data, std::size_t size, WireChannel channel)
 {
+    return BroadcastExcept(0, data, size, channel);
+}
+
+bool EnetTransport::BroadcastExcept(std::uint32_t exceptPeer, const void *data,
+                                    std::size_t size, WireChannel channel)
+{
     if (!host_ || !data)
         return false;
     if (!isHost_)
         return Send(0, data, size, channel);
+    // Only peers that passed the handshake: enet_host_broadcast would also
+    // reach connections still being validated or already refused.
     const enet_uint32 flags = channel == WireChannel::Reliable
         ? ENET_PACKET_FLAG_RELIABLE : 0;
-    ENetPacket *pkt = enet_packet_create(data, size, flags);
-    enet_host_broadcast(host_, (std::uint8_t)channel, pkt);
+    ENetPacket *pkt = nullptr;
+    for (auto &kv : peers_)
+    {
+        if (!kv.second.accepted || kv.second.id == exceptPeer)
+            continue;
+        if (!pkt)
+            pkt = enet_packet_create(data, size, flags);
+        enet_peer_send(kv.first, (std::uint8_t)channel, pkt);
+    }
+    if (pkt && pkt->referenceCount == 0)
+        enet_packet_destroy(pkt);
     enet_host_flush(host_);
     return true;
 }
