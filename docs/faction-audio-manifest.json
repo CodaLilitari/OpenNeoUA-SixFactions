@@ -1,1485 +1,2387 @@
 {
-  "version": 3,
-  "collaboration": "Coda implementation with Lily dialogue and event-grammar review; Andrei approved developing the pilots.",
-  "source_review": "Lily_Audio_Crosshill_Linux_Review_2026-11-01.md",
-  "listening_status": "Technical analysis only by Coda and Lily; in-game listening still pending.",
-  "format": "PCM16 mono 22050 Hz",
-  "level_policy": "Provisional -18 LUFS routine / -17 LUFS strategic, true peak <= -3 dBFS. Stock references measured -14.4 to -11 LUFS; live speech-bus comparison pending.",
-  "black_voice": "Microsoft David Desktop - English (United States)",
-  "sulg_provenance": "Original procedural synthesis; no existing samples or actor imitation.",
-  "generator_sha256": "72fbcae13c1348e2a667d43157a9ff365323679cf548763daf53f591c769fbbf",
-  "cues": [
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_ready",
-      "variant": 1,
-      "phrase": "Unit ready.",
-      "rate": 0,
-      "file": "unit_ready_1.wav",
-      "duration_seconds": 0.839365,
-      "bytes": 37060,
-      "sha256": "00dcaf482bce58c864b4b6d2d8a06d5becdb27282c5a296946e03a65a8d16932",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.5,
-      "target_lufs": -18,
-      "gain_db": 14.1,
-      "pre_level": {
-        "integrated_lufs": -32.1,
-        "true_peak_dbfs": -17.6
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_ready",
-      "variant": 2,
-      "phrase": "Asset online.",
-      "rate": 0,
-      "file": "unit_ready_2.wav",
-      "duration_seconds": 1.055374,
-      "bytes": 46586,
-      "sha256": "38435ea7d56d873e7ff82fdbc02c15f82abe8cd2e5ddab8d0ab680e632a3cce7",
-      "integrated_lufs": -19.9,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 11.8,
-      "pre_level": {
-        "integrated_lufs": -31.7,
-        "true_peak_dbfs": -14.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_idle",
-      "variant": 1,
-      "phrase": "Standing by.",
-      "rate": 1,
-      "file": "unit_idle_1.wav",
-      "duration_seconds": 0.787438,
-      "bytes": 34770,
-      "sha256": "9fbc437b6c9f6b8af659535714a983d9ff4f56b562f98255dde54fe87fbcac56",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.9,
-      "target_lufs": -18,
-      "gain_db": 13.6,
-      "pre_level": {
-        "integrated_lufs": -31.6,
-        "true_peak_dbfs": -17.5
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_idle",
-      "variant": 2,
-      "phrase": "Holding position.",
-      "rate": 1,
-      "file": "unit_idle_2.wav",
-      "duration_seconds": 0.984807,
-      "bytes": 43474,
-      "sha256": "d0422456e714cab095906ccb9c5e72d84d12a536cff26901d5df35481b42abbb",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.9,
-      "target_lufs": -18,
-      "gain_db": 13.2,
-      "pre_level": {
-        "integrated_lufs": -31.2,
-        "true_peak_dbfs": -18.1
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "order_ack_friendly",
-      "variant": 1,
-      "phrase": "Route confirmed.",
-      "rate": 1,
-      "file": "order_ack_friendly_1.wav",
-      "duration_seconds": 0.864036,
-      "bytes": 38148,
-      "sha256": "060cb5975b94ca97b289de832d8cf7b5fdc7acb1de4db20731c407178dccf39e",
-      "integrated_lufs": -18.3,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 14.3,
-      "pre_level": {
-        "integrated_lufs": -32.6,
-        "true_peak_dbfs": -17.4
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "order_ack_friendly",
-      "variant": 2,
-      "phrase": "Moving to waypoint.",
-      "rate": 1,
-      "file": "order_ack_friendly_2.wav",
-      "duration_seconds": 1.08059,
-      "bytes": 47698,
-      "sha256": "d2ec89b28446e42f5d0c3903c77e2e95624cbecb8cb7192954dc929032f883ae",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.9,
-      "target_lufs": -18,
-      "gain_db": 14.0,
-      "pre_level": {
-        "integrated_lufs": -32.0,
-        "true_peak_dbfs": -17.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "order_ack_enemy",
-      "variant": 1,
-      "phrase": "Attack order confirmed.",
-      "rate": 1,
-      "file": "order_ack_enemy_1.wav",
-      "duration_seconds": 1.25356,
-      "bytes": 55326,
-      "sha256": "003304be5ef0713e92c40db910d98f6f33e9437316da05fb792d5f2b978bfcec",
-      "integrated_lufs": -19.1,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.5,
-      "pre_level": {
-        "integrated_lufs": -32.6,
-        "true_peak_dbfs": -16.6
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "order_ack_enemy",
-      "variant": 2,
-      "phrase": "Closing to engage.",
-      "rate": 1,
-      "file": "order_ack_enemy_2.wav",
-      "duration_seconds": 1.064853,
-      "bytes": 47004,
-      "sha256": "348dbbcefdd108729c2e036e3ad3f8635922647ed6ceef9f749d67457e07f76f",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.7,
-      "target_lufs": -18,
-      "gain_db": 13.4,
-      "pre_level": {
-        "integrated_lufs": -31.4,
-        "true_peak_dbfs": -18.1
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_control_entered",
-      "variant": 1,
-      "phrase": "Direct control active.",
-      "rate": 1,
-      "file": "unit_control_entered_1.wav",
-      "duration_seconds": 1.246984,
-      "bytes": 55036,
-      "sha256": "90d20d4a64942047518788c6b722d9b6a26017552ed8534c340c8f9519278029",
-      "integrated_lufs": -19.2,
-      "true_peak_dbfs": -3.2,
-      "target_lufs": -18,
-      "gain_db": 13.2,
-      "pre_level": {
-        "integrated_lufs": -32.4,
-        "true_peak_dbfs": -16.3
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_control_entered",
-      "variant": 2,
-      "phrase": "Manual link established.",
-      "rate": 1,
-      "file": "unit_control_entered_2.wav",
-      "duration_seconds": 1.360952,
-      "bytes": 60062,
-      "sha256": "95a07735d6f9c1a906975e9c44ce56f7da3eda285e751389a2a5e293cae72d59",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.8,
-      "target_lufs": -18,
-      "gain_db": 13.3,
-      "pre_level": {
-        "integrated_lufs": -31.3,
-        "true_peak_dbfs": -17.1
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_sector_entered",
-      "variant": 1,
-      "phrase": "Enemy sector entered.",
-      "rate": 0,
-      "file": "enemy_sector_entered_1.wav",
-      "duration_seconds": 1.318458,
-      "bytes": 58188,
-      "sha256": "443c67477193e2f774a1f0c0056e14b9919e167f2db277043e8c1ab9ba74da75",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.2,
-      "target_lufs": -18,
-      "gain_db": 13.7,
-      "pre_level": {
-        "integrated_lufs": -31.7,
-        "true_peak_dbfs": -16.8
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_sector_entered",
-      "variant": 2,
-      "phrase": "Crossing hostile boundary.",
-      "rate": 0,
-      "file": "enemy_sector_entered_2.wav",
-      "duration_seconds": 1.531746,
-      "bytes": 67594,
-      "sha256": "6562e0b21337977f3a5f857b779e045c08593286e9580581c7a86452d4ea2d1b",
-      "integrated_lufs": -18.1,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.5,
-      "pre_level": {
-        "integrated_lufs": -31.6,
-        "true_peak_dbfs": -16.6
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_recovered",
-      "variant": 1,
-      "phrase": "Unit recovered.",
-      "rate": 0,
-      "file": "unit_recovered_1.wav",
-      "duration_seconds": 1.020045,
-      "bytes": 45028,
-      "sha256": "a106640e1da484f0e114def8c850c6c9e0271c7277da4b54241ab40351449ce6",
-      "integrated_lufs": -19.2,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.5,
-      "pre_level": {
-        "integrated_lufs": -32.7,
-        "true_peak_dbfs": -16.6
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_recovered",
-      "variant": 2,
-      "phrase": "Link restored.",
-      "rate": 0,
-      "file": "unit_recovered_2.wav",
-      "duration_seconds": 0.96839,
-      "bytes": 42750,
-      "sha256": "e6d074c9c3151a73f42c01087cd00e75b6c1287df335575227980b4096f15558",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.6,
-      "target_lufs": -18,
-      "gain_db": 13.9,
-      "pre_level": {
-        "integrated_lufs": -31.9,
-        "true_peak_dbfs": -18.5
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_unit_spotted",
-      "variant": 1,
-      "phrase": "Enemy contact.",
-      "rate": 1,
-      "file": "enemy_unit_spotted_1.wav",
-      "duration_seconds": 0.978639,
-      "bytes": 43202,
-      "sha256": "367f89abfee3f12a7e68705bcf67e7705e8905f2d161b5a5bcc9bc689e60a6f4",
-      "integrated_lufs": -18.7,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.7,
-      "pre_level": {
-        "integrated_lufs": -32.4,
-        "true_peak_dbfs": -16.8
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_unit_spotted",
-      "variant": 2,
-      "phrase": "Hostile unit sighted.",
-      "rate": 1,
-      "file": "enemy_unit_spotted_2.wav",
-      "duration_seconds": 1.127846,
-      "bytes": 49782,
-      "sha256": "86670f6c75c5d5eceb4b812170f44cd49316f69e2a3f5d9961da1393c5e696d1",
-      "integrated_lufs": -18.4,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.2,
-      "pre_level": {
-        "integrated_lufs": -31.6,
-        "true_peak_dbfs": -16.3
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_host_found",
-      "variant": 1,
-      "phrase": "Enemy host located.",
-      "rate": 0,
-      "file": "enemy_host_found_1.wav",
-      "duration_seconds": 1.286893,
-      "bytes": 56796,
-      "sha256": "8a86608f134ef0837bb9f2d5040317e69cd7691a6509453a0835b4d55465aa37",
-      "integrated_lufs": -18.2,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.8,
-      "pre_level": {
-        "integrated_lufs": -32.0,
-        "true_peak_dbfs": -16.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_host_found",
-      "variant": 2,
-      "phrase": "Host station identified.",
-      "rate": 0,
-      "file": "enemy_host_found_2.wav",
-      "duration_seconds": 1.6278,
-      "bytes": 71830,
-      "sha256": "1541a6ea721d9e0a5b64a836272d47fa5e6ae75219cca12bcde50bac97d66ec8",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.7,
-      "target_lufs": -18,
-      "gain_db": 13.2,
-      "pre_level": {
-        "integrated_lufs": -31.2,
-        "true_peak_dbfs": -16.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "request_support",
-      "variant": 1,
-      "phrase": "Support required.",
-      "rate": 0,
-      "file": "request_support_1.wav",
-      "duration_seconds": 1.152608,
-      "bytes": 50874,
-      "sha256": "276984a501eb4a53f3070c41fe33201d03dc002fd7145d98bbbd33952cea3d35",
-      "integrated_lufs": -18.6,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.6,
-      "pre_level": {
-        "integrated_lufs": -32.2,
-        "true_peak_dbfs": -16.7
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "request_support",
-      "variant": 2,
-      "phrase": "Reinforcements requested.",
-      "rate": 0,
-      "file": "request_support_2.wav",
-      "duration_seconds": 1.609342,
-      "bytes": 71016,
-      "sha256": "64751e9064fa68b07278124bfcc8e105851718c3b9dfc7893131a2b83f97e039",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.2,
-      "target_lufs": -18,
-      "gain_db": 14.0,
-      "pre_level": {
-        "integrated_lufs": -32.0,
-        "true_peak_dbfs": -17.2
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_retreating",
-      "variant": 1,
-      "phrase": "Breaking contact.",
-      "rate": 0,
-      "file": "unit_retreating_1.wav",
-      "duration_seconds": 1.174785,
-      "bytes": 51852,
-      "sha256": "a5c9782924c11439cc8cf720f0fcb69d9b0cfffc01161e45a311b2e58349738e",
-      "integrated_lufs": -18.6,
-      "true_peak_dbfs": -3.2,
-      "target_lufs": -18,
-      "gain_db": 13.5,
-      "pre_level": {
-        "integrated_lufs": -32.1,
-        "true_peak_dbfs": -16.6
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_retreating",
-      "variant": 2,
-      "phrase": "Falling back.",
-      "rate": 0,
-      "file": "unit_retreating_2.wav",
-      "duration_seconds": 0.963764,
-      "bytes": 42546,
-      "sha256": "340e85885e447a1dea65406f369693eb260f2ac6e1a643802d905421892957b5",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.9,
-      "pre_level": {
-        "integrated_lufs": -31.9,
-        "true_peak_dbfs": -17.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_lost",
-      "variant": 1,
-      "phrase": "Unit lost.",
-      "rate": 0,
-      "file": "unit_lost_1.wav",
-      "duration_seconds": 0.861451,
-      "bytes": 38034,
-      "sha256": "84e4d1f52cd48631fac3cf4767a5e5a66bfac7cbd080c2b6321fce7fa3152222",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.2,
-      "target_lufs": -18,
-      "gain_db": 13.3,
-      "pre_level": {
-        "integrated_lufs": -31.3,
-        "true_peak_dbfs": -16.5
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "unit_lost",
-      "variant": 2,
-      "phrase": "Asset offline.",
-      "rate": 0,
-      "file": "unit_lost_2.wav",
-      "duration_seconds": 1.095692,
-      "bytes": 48364,
-      "sha256": "366e9158652624c7ec6590f279617613eada251c9981e6ef62c6e195bd958cb7",
-      "integrated_lufs": -20.2,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 11.8,
-      "pre_level": {
-        "integrated_lufs": -32.0,
-        "true_peak_dbfs": -14.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_unit_engaged",
-      "variant": 1,
-      "phrase": "Engaging target.",
-      "rate": 1,
-      "file": "enemy_unit_engaged_1.wav",
-      "duration_seconds": 0.979501,
-      "bytes": 43240,
-      "sha256": "4403add67a5791b95cc45f0166d180ff446d106e4d43257b2f75061e66433097",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.1,
-      "target_lufs": -18,
-      "gain_db": 13.4,
-      "pre_level": {
-        "integrated_lufs": -31.4,
-        "true_peak_dbfs": -17.5
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_unit_engaged",
-      "variant": 2,
-      "phrase": "Weapons on target.",
-      "rate": 1,
-      "file": "enemy_unit_engaged_2.wav",
-      "duration_seconds": 0.988844,
-      "bytes": 43652,
-      "sha256": "328796edda17bdbaf7f85fd96ec60317e6726a4aa0a515b2e59eca7251892979",
-      "integrated_lufs": -18.4,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 14.0,
-      "pre_level": {
-        "integrated_lufs": -32.4,
-        "true_peak_dbfs": -17.1
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_unit_destroyed",
-      "variant": 1,
-      "phrase": "Target destroyed.",
-      "rate": 1,
-      "file": "enemy_unit_destroyed_1.wav",
-      "duration_seconds": 0.988798,
-      "bytes": 43650,
-      "sha256": "ec5c05cc409599ee1e1aabe012079332d89f7e2ac0433fb680cdab5c29028006",
-      "integrated_lufs": -18.4,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.7,
-      "pre_level": {
-        "integrated_lufs": -32.1,
-        "true_peak_dbfs": -16.8
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_unit_destroyed",
-      "variant": 2,
-      "phrase": "Hostile unit eliminated.",
-      "rate": 1,
-      "file": "enemy_unit_destroyed_2.wav",
-      "duration_seconds": 1.333923,
-      "bytes": 58870,
-      "sha256": "0f687eeb55b424b2717bbb2456113a3b5401a6aafbf80feaf43a20c5e8e0a43b",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.6,
-      "target_lufs": -18,
-      "gain_db": 14.0,
-      "pre_level": {
-        "integrated_lufs": -32.0,
-        "true_peak_dbfs": -17.6
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_host_destroyed",
-      "variant": 1,
-      "phrase": "Enemy host destroyed.",
-      "rate": 0,
-      "file": "enemy_host_destroyed_1.wav",
-      "duration_seconds": 1.334739,
-      "bytes": 58906,
-      "sha256": "0793b80a8a94e9801fa04c70c63b65dff7694fbd92758798473349061f92584c",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.3,
-      "target_lufs": -18,
-      "gain_db": 13.6,
-      "pre_level": {
-        "integrated_lufs": -31.6,
-        "true_peak_dbfs": -16.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "enemy_host_destroyed",
-      "variant": 2,
-      "phrase": "Host station neutralized.",
-      "rate": 0,
-      "file": "enemy_host_destroyed_2.wav",
-      "duration_seconds": 1.704626,
-      "bytes": 75218,
-      "sha256": "dd8df4a6209565116c603cf0d7ee9ee29972a7370b0da109ea8a6c35042a1611",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.2,
-      "target_lufs": -18,
-      "gain_db": 13.0,
-      "pre_level": {
-        "integrated_lufs": -31.0,
-        "true_peak_dbfs": -17.2
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "powerstation_captured",
-      "variant": 1,
-      "phrase": "Power station secured.",
-      "rate": 0,
-      "file": "powerstation_captured_1.wav",
-      "duration_seconds": 1.60644,
-      "bytes": 70888,
-      "sha256": "7bbe555e625eb7b6ba2edd74dfc69d184536914f343e3887c50ff1e9bffb2bf4",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.9,
-      "target_lufs": -18,
-      "gain_db": 13.2,
-      "pre_level": {
-        "integrated_lufs": -31.2,
-        "true_peak_dbfs": -17.1
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "black-sect-mp",
-      "event": "powerstation_captured",
-      "variant": 2,
-      "phrase": "Grid node acquired.",
-      "rate": 0,
-      "file": "powerstation_captured_2.wav",
-      "duration_seconds": 1.161678,
-      "bytes": 51274,
-      "sha256": "f11366247f018e1b9629fc75c3fea2f52439893bdd3d27442af85df48d680e30",
-      "integrated_lufs": -18.3,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 13.6,
-      "pre_level": {
-        "integrated_lufs": -31.9,
-        "true_peak_dbfs": -16.7
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_ready",
-      "variant": 1,
-      "file": "unit_ready_1.wav",
-      "grammar": "three rising open calls",
-      "seed": 18262771115917775435,
-      "duration_seconds": 0.64,
-      "bytes": 28268,
-      "sha256": "65da96feaf1f49df3426edc522789a4cc2fe3cbe42d3f5b43cc5926913b134fd",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.5,
-      "target_lufs": -18,
-      "gain_db": 6.4,
-      "pre_level": {
-        "integrated_lufs": -24.4,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_ready",
-      "variant": 2,
-      "file": "unit_ready_2.wav",
-      "grammar": "three rising open calls",
-      "seed": 14982042561647752657,
-      "duration_seconds": 0.64,
-      "bytes": 28268,
-      "sha256": "1b656a1e7f3591ddc5ba4b1eb646624455faa31bb69bf45ca48cd17c3a598f75",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.4,
-      "target_lufs": -18,
-      "gain_db": 6.6,
-      "pre_level": {
-        "integrated_lufs": -24.6,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_idle",
-      "variant": 1,
-      "file": "unit_idle_1.wav",
-      "grammar": "two quiet questioning warbles",
-      "seed": 3081143384268524863,
-      "duration_seconds": 0.6,
-      "bytes": 26504,
-      "sha256": "474c7626e1be737528e024e87a6b638a68e5d51497ce85d6dacbac1d52be2c08",
-      "integrated_lufs": -19.0,
-      "true_peak_dbfs": -4.1,
-      "target_lufs": -19,
-      "gain_db": 7.6,
-      "pre_level": {
-        "integrated_lufs": -26.6,
-        "true_peak_dbfs": -11.7
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_idle",
-      "variant": 2,
-      "file": "unit_idle_2.wav",
-      "grammar": "two quiet questioning warbles",
-      "seed": 6417978161828708037,
-      "duration_seconds": 0.6,
-      "bytes": 26504,
-      "sha256": "114514bf64267c855a5edabd49c83b61bad34c6f45c172c4f940825b79109b2f",
-      "integrated_lufs": -19.0,
-      "true_peak_dbfs": -3.9,
-      "target_lufs": -19,
-      "gain_db": 7.8,
-      "pre_level": {
-        "integrated_lufs": -26.8,
-        "true_peak_dbfs": -11.7
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "order_ack_friendly",
-      "variant": 1,
-      "file": "order_ack_friendly_1.wav",
-      "grammar": "calm two-note assent",
-      "seed": 8917408973934891939,
-      "duration_seconds": 0.4,
-      "bytes": 17684,
-      "sha256": "6ed86df148716052a1964572647e66a5913f0a11a075638c5f39ff7d9b945dac",
-      "integrated_lufs": -18.5,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 6.9,
-      "pre_level": {
-        "integrated_lufs": -25.4,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "order_ack_friendly",
-      "variant": 2,
-      "file": "order_ack_friendly_2.wav",
-      "grammar": "calm two-note assent",
-      "seed": 16712123328762640946,
-      "duration_seconds": 0.4,
-      "bytes": 17684,
-      "sha256": "0f169dd10b73c79ff4580d5549e52e23906b0ab2ebd34bce810bf4f479b54f55",
-      "integrated_lufs": -18.6,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 6.9,
-      "pre_level": {
-        "integrated_lufs": -25.5,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "order_ack_enemy",
-      "variant": 1,
-      "file": "order_ack_enemy_1.wav",
-      "grammar": "low membrane impact and descending closure",
-      "seed": 14169520957261213909,
-      "duration_seconds": 0.510023,
-      "bytes": 22536,
-      "sha256": "dcafc088fc67aedddb4ff1c190603c67d05eabf16ebfea959b4eb5ca440ddd86",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.4,
-      "target_lufs": -18,
-      "gain_db": 5.6,
-      "pre_level": {
-        "integrated_lufs": -23.6,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "order_ack_enemy",
-      "variant": 2,
-      "file": "order_ack_enemy_2.wav",
-      "grammar": "low membrane impact and descending closure",
-      "seed": 18060083075883620585,
-      "duration_seconds": 0.510023,
-      "bytes": 22536,
-      "sha256": "4fcc7a8fd27989ee005fdce720aff091636bb8a506dbaa48d3e57dde3fae2ee3",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.5,
-      "target_lufs": -18,
-      "gain_db": 5.5,
-      "pre_level": {
-        "integrated_lufs": -23.5,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_control_entered",
-      "variant": 1,
-      "file": "unit_control_entered_1.wav",
-      "grammar": "one membrane click and sustained rising vowel",
-      "seed": 4703959802949285066,
-      "duration_seconds": 0.62,
-      "bytes": 27386,
-      "sha256": "34fc2b21431c8d6f56dae8c428de1310c25a12795ee59d4d09b108258cd9e415",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.9,
-      "target_lufs": -18,
-      "gain_db": 5.0,
-      "pre_level": {
-        "integrated_lufs": -23.0,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_control_entered",
-      "variant": 2,
-      "file": "unit_control_entered_2.wav",
-      "grammar": "one membrane click and sustained rising vowel",
-      "seed": 12623033379012060393,
-      "duration_seconds": 0.62,
-      "bytes": 27386,
-      "sha256": "35ac1419cd5a41fd9f1e6c717b7d99d382a551d6f546cf392f27b86a953b72f1",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.8,
-      "target_lufs": -18,
-      "gain_db": 5.2,
-      "pre_level": {
-        "integrated_lufs": -23.2,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_sector_entered",
-      "variant": 1,
-      "file": "enemy_sector_entered_1.wav",
-      "grammar": "two membrane clicks and short warning rise",
-      "seed": 16421783185188685889,
-      "duration_seconds": 0.550023,
-      "bytes": 24300,
-      "sha256": "4a0269ae25171a1cce93aa6998bae0ab1d7ca04330582bcc989ca42e5c2a1455",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.5,
-      "target_lufs": -18,
-      "gain_db": 5.5,
-      "pre_level": {
-        "integrated_lufs": -23.5,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_sector_entered",
-      "variant": 2,
-      "file": "enemy_sector_entered_2.wav",
-      "grammar": "two membrane clicks and short warning rise",
-      "seed": 4940179937352533143,
-      "duration_seconds": 0.550023,
-      "bytes": 24300,
-      "sha256": "814dbb5b346c04653f33ad9b3518e6c403fe35d04db05fccb4d13db9518e0a8d",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.1,
-      "target_lufs": -18,
-      "gain_db": 5.9,
-      "pre_level": {
-        "integrated_lufs": -23.9,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_recovered",
-      "variant": 1,
-      "file": "unit_recovered_1.wav",
-      "grammar": "smooth fall then rise",
-      "seed": 8127250828566236153,
-      "duration_seconds": 0.76,
-      "bytes": 33560,
-      "sha256": "ccb98af36a11d24a96f0828d46399cdfa578c6d3073e77b7c333fc0c69e022b0",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -5.0,
-      "target_lufs": -18,
-      "gain_db": 5.0,
-      "pre_level": {
-        "integrated_lufs": -23.0,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_recovered",
-      "variant": 2,
-      "file": "unit_recovered_2.wav",
-      "grammar": "smooth fall then rise",
-      "seed": 6304338630659603856,
-      "duration_seconds": 0.76,
-      "bytes": 33560,
-      "sha256": "7767f7b2dec62f10e1870f4c31c2299f6ccae5c07ec6ede31f31e582740b12b6",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.8,
-      "target_lufs": -18,
-      "gain_db": 5.2,
-      "pre_level": {
-        "integrated_lufs": -23.2,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_unit_spotted",
-      "variant": 1,
-      "file": "enemy_unit_spotted_1.wav",
-      "grammar": "three quick rising warning pulses",
-      "seed": 15221164609268788701,
-      "duration_seconds": 0.52,
-      "bytes": 22976,
-      "sha256": "88363f2f5f8d2191e72ba0e945c6c8a7aaf310a6bf4ebb80bc49970fcb903a36",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.3,
-      "target_lufs": -18,
-      "gain_db": 6.6,
-      "pre_level": {
-        "integrated_lufs": -24.6,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_unit_spotted",
-      "variant": 2,
-      "file": "enemy_unit_spotted_2.wav",
-      "grammar": "three quick rising warning pulses",
-      "seed": 1028116655611169969,
-      "duration_seconds": 0.52,
-      "bytes": 22976,
-      "sha256": "031801736cb58840c2bc56e44c306d8bac6c0322f56d1a99169ab508708db8a4",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 6.8,
-      "pre_level": {
-        "integrated_lufs": -24.8,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_host_found",
-      "variant": 1,
-      "file": "enemy_host_found_1.wav",
-      "grammar": "low warning followed by long high call",
-      "seed": 2923007896788580064,
-      "duration_seconds": 0.830023,
-      "bytes": 36648,
-      "sha256": "c06d65eaa96d8e05ff06f4bd25fa23222452aad6655f5e656b50551c1c3e27e4",
-      "integrated_lufs": -17.0,
-      "true_peak_dbfs": -4.8,
-      "target_lufs": -17,
-      "gain_db": 5.2,
-      "pre_level": {
-        "integrated_lufs": -22.2,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_host_found",
-      "variant": 2,
-      "file": "enemy_host_found_2.wav",
-      "grammar": "low warning followed by long high call",
-      "seed": 7729572424869883622,
-      "duration_seconds": 0.830023,
-      "bytes": 36648,
-      "sha256": "c7a89e9dde272ee22049412d806d42adbbb886b6b3459fd9742d08283cffa224",
-      "integrated_lufs": -17.0,
-      "true_peak_dbfs": -4.6,
-      "target_lufs": -17,
-      "gain_db": 5.3,
-      "pre_level": {
-        "integrated_lufs": -22.3,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "request_support",
-      "variant": 1,
-      "file": "request_support_1.wav",
-      "grammar": "low call followed by two answer chirps",
-      "seed": 15474876063246722162,
-      "duration_seconds": 0.96,
-      "bytes": 42380,
-      "sha256": "437dcb62dcbef566d7b737956e1bfa02610207bf03c9f92f11270c18f26954e0",
-      "integrated_lufs": -18.4,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 6.9,
-      "pre_level": {
-        "integrated_lufs": -25.3,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "request_support",
-      "variant": 2,
-      "file": "request_support_2.wav",
-      "grammar": "low call followed by two answer chirps",
-      "seed": 14268815310276897043,
-      "duration_seconds": 0.96,
-      "bytes": 42380,
-      "sha256": "234779ebabd1780e525082242fff2b06ab0b25f861242eaada154a9fa5af16af",
-      "integrated_lufs": -18.6,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 6.9,
-      "pre_level": {
-        "integrated_lufs": -25.5,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_retreating",
-      "variant": 1,
-      "file": "unit_retreating_1.wav",
-      "grammar": "two descending withdrawing calls",
-      "seed": 4668186397236811344,
-      "duration_seconds": 0.649977,
-      "bytes": 28708,
-      "sha256": "a61fbb73990c55a39710005ca36ea8abb99e2cdd0f80534017515f39c3ce8065",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.3,
-      "target_lufs": -18,
-      "gain_db": 5.7,
-      "pre_level": {
-        "integrated_lufs": -23.7,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_retreating",
-      "variant": 2,
-      "file": "unit_retreating_2.wav",
-      "grammar": "two descending withdrawing calls",
-      "seed": 73318887675903528,
-      "duration_seconds": 0.649977,
-      "bytes": 28708,
-      "sha256": "7ca4b9c37340340d4d1ba9ea713757fc81d7791b640601d320686377201e5e2d",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -4.2,
-      "target_lufs": -18,
-      "gain_db": 5.8,
-      "pre_level": {
-        "integrated_lufs": -23.8,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_lost",
-      "variant": 1,
-      "file": "unit_lost_1.wav",
-      "grammar": "long low falling hollow exhalation",
-      "seed": 229713174109038304,
-      "duration_seconds": 0.9,
-      "bytes": 39734,
-      "sha256": "4a21332572b4c8972697d99f4f8ad089f2950217824c9b555cd5fb3b465af81f",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -5.7,
-      "target_lufs": -18,
-      "gain_db": 5.1,
-      "pre_level": {
-        "integrated_lufs": -23.1,
-        "true_peak_dbfs": -10.8
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "unit_lost",
-      "variant": 2,
-      "file": "unit_lost_2.wav",
-      "grammar": "long low falling hollow exhalation",
-      "seed": 9972245258609396105,
-      "duration_seconds": 0.9,
-      "bytes": 39734,
-      "sha256": "ed3869d8421310f453bcf4aa1ddefa93c0941df55ea69ac4edbee6ffad9eabb4",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -5.5,
-      "target_lufs": -18,
-      "gain_db": 5.4,
-      "pre_level": {
-        "integrated_lufs": -23.4,
-        "true_peak_dbfs": -10.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_unit_engaged",
-      "variant": 1,
-      "file": "enemy_unit_engaged_1.wav",
-      "grammar": "four compact alternating combat pulses",
-      "seed": 2851717685156216681,
-      "duration_seconds": 0.670023,
-      "bytes": 29592,
-      "sha256": "a6906342ea26f1762514f20cc6007c8140a062cc00b277e01ba8a9964966d242",
-      "integrated_lufs": -18.8,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 6.8,
-      "pre_level": {
-        "integrated_lufs": -25.6,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_unit_engaged",
-      "variant": 2,
-      "file": "enemy_unit_engaged_2.wav",
-      "grammar": "four compact alternating combat pulses",
-      "seed": 11220708732846534925,
-      "duration_seconds": 0.670023,
-      "bytes": 29592,
-      "sha256": "edf332c64b899090c10dc39e6de74e788fb13f67e8691ca3ffaeb21b083a1e8a",
-      "integrated_lufs": -19.2,
-      "true_peak_dbfs": -3.1,
-      "target_lufs": -18,
-      "gain_db": 6.8,
-      "pre_level": {
-        "integrated_lufs": -26.0,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_unit_destroyed",
-      "variant": 1,
-      "file": "enemy_unit_destroyed_1.wav",
-      "grammar": "decisive pulse with falling tail",
-      "seed": 11116569182792228554,
-      "duration_seconds": 0.52,
-      "bytes": 22976,
-      "sha256": "d44d8ce9cca07cb12de959a9d6be5f79f5ef86c23e98bfdd47e0fa28e4c85125",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -5.7,
-      "target_lufs": -18,
-      "gain_db": 4.3,
-      "pre_level": {
-        "integrated_lufs": -22.3,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_unit_destroyed",
-      "variant": 2,
-      "file": "enemy_unit_destroyed_2.wav",
-      "grammar": "decisive pulse with falling tail",
-      "seed": 16272580884418502550,
-      "duration_seconds": 0.52,
-      "bytes": 22976,
-      "sha256": "dd76d88030a185dd59b47513c9737748a7be42ee9e3ff1b542f8611c61f4536c",
-      "integrated_lufs": -18.0,
-      "true_peak_dbfs": -5.5,
-      "target_lufs": -18,
-      "gain_db": 4.3,
-      "pre_level": {
-        "integrated_lufs": -22.3,
-        "true_peak_dbfs": -9.8
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_host_destroyed",
-      "variant": 1,
-      "file": "enemy_host_destroyed_1.wav",
-      "grammar": "broad three-step victory resonance",
-      "seed": 10273538495097570233,
-      "duration_seconds": 1.169977,
-      "bytes": 51640,
-      "sha256": "063a5a6867042a5f64174989b59d176a4986f1bacaad781dfa14841a68bc44fb",
-      "integrated_lufs": -17.0,
-      "true_peak_dbfs": -3.8,
-      "target_lufs": -17,
-      "gain_db": 6.1,
-      "pre_level": {
-        "integrated_lufs": -23.1,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "enemy_host_destroyed",
-      "variant": 2,
-      "file": "enemy_host_destroyed_2.wav",
-      "grammar": "broad three-step victory resonance",
-      "seed": 7730300846152415125,
-      "duration_seconds": 1.169977,
-      "bytes": 51640,
-      "sha256": "e01a607eb27deafc5f01c12e0d6ae884bef50b82e248bccfa28476e32b1bfb35",
-      "integrated_lufs": -17.0,
-      "true_peak_dbfs": -3.8,
-      "target_lufs": -17,
-      "gain_db": 6.2,
-      "pre_level": {
-        "integrated_lufs": -23.2,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "powerstation_captured",
-      "variant": 1,
-      "file": "powerstation_captured_1.wav",
-      "grammar": "one continuous rising energy bloom",
-      "seed": 4225762911986744050,
-      "duration_seconds": 1.049977,
-      "bytes": 46348,
-      "sha256": "26251146f59063d7ef49b5f394d8efb80c0ba880f8c6081ef14d1f413d9343f1",
-      "integrated_lufs": -17.0,
-      "true_peak_dbfs": -5.2,
-      "target_lufs": -17,
-      "gain_db": 4.7,
-      "pre_level": {
-        "integrated_lufs": -21.7,
-        "true_peak_dbfs": -9.9
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
-    },
-    {
-      "faction": "sulgogars-mp",
-      "event": "powerstation_captured",
-      "variant": 2,
-      "file": "powerstation_captured_2.wav",
-      "grammar": "one continuous rising energy bloom",
-      "seed": 2095735066376687845,
-      "duration_seconds": 1.049977,
-      "bytes": 46348,
-      "sha256": "53ee0d1fe6f8952c61e0b4e16b58f0c5d53d83a786d4fbb5b1f5733b763cc447",
-      "integrated_lufs": -17.0,
-      "true_peak_dbfs": -5.1,
-      "target_lufs": -17,
-      "gain_db": 4.9,
-      "pre_level": {
-        "integrated_lufs": -21.9,
-        "true_peak_dbfs": -10.0
-      },
-      "dc_mean_samples": 0,
-      "clipped_samples": 0,
-      "first_sample": 0,
-      "last_sample": 0
+ "version": 4,
+ "pack": "Suno + REAPER candidate pack (REAPER lab run v03-full-candidate-2026-11-02)",
+ "collaboration": "Coda built the REAPER lab, the v02 cuts, the production plan and the reviewed cue contract; Red generated the remaining Suno takes, selected and verified cuts, rendered natively in REAPER and integrated.",
+ "listening_status": "Nobody has heard these files. Black lines are ASR-verified (base.en, small.en, medium.en on the final files); Sulgogar calls are signal- and spectrogram-selected with a per-slot confidence. Auditory and in-game acceptance remain with Andrei.",
+ "format": "PCM16 mono 22050 Hz",
+ "level_policy": "-18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target).",
+ "black_voice": "Suno v6 (Songs Advanced, spoken word, male) takes separated with Demucs htdemucs vocal stems; four lines are Coda v02 cuts of her own Suno vocal estimates.",
+ "sulg_provenance": "Suno v6 creature-call takes used unseparated; three Coda v02 salvage fragments kept.",
+ "render": {
+  "project_sha256": "9e684755e4bbb6bb6d4596b998ecc0729e0b1306bc95e9e9e1176abf0d4d6a32",
+  "master_sha256": "1e461dcb407ee1ef52da9793d02503a4c0074388b3c57dfd6a8bf06801e47e64",
+  "method": "Native REAPER 7.79 render through the TwelveTake bridge; per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz."
+ },
+ "previous": "Version 3 (Microsoft David SAPI Black Sect, procedural Sulgogars) remains on red/review-fixes and in history.",
+ "cues": [
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_ready",
+   "variant": 1,
+   "file": "unit_ready_1.wav",
+   "phrase": "Unit ready.",
+   "motif": null,
+   "duration_seconds": 1.170023,
+   "bytes": 51642,
+   "sha256": "a01377e8f04461f95e7413fd3b837d2b0ad1ea46d1485a68584b0ab626dcb6d2",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -5.4,
+   "target_lufs": -18.0,
+   "gain_db": 0.4,
+   "pre_level": {
+    "integrated_lufs": -18.4,
+    "true_peak_dbfs": -5.5
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-d67a3992-e79c-4fb1-855a-d7460bba987a.wav",
+    "sha256": "573d435a8f16dcb68510f9dcd6e7766bb1769f32e2e850fa36e243c3902cb641",
+    "parts": [
+     {
+      "start": 0.02,
+      "end": 1.19,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Unit ready.",
+     "small.en": "Unit ready.",
+     "medium.en": "Unit ready."
     }
-  ]
+   },
+   "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
+   "music_under_voice_db": -3.5
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_ready",
+   "variant": 2,
+   "file": "unit_ready_2.wav",
+   "phrase": "Asset online.",
+   "motif": null,
+   "duration_seconds": 1.86,
+   "bytes": 82070,
+   "sha256": "31a13c7703eb08a14623c148a7740dbfe87500df54f34ccd4e740b74b2d82727",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -6.4,
+   "target_lufs": -18.0,
+   "gain_db": 0.6,
+   "pre_level": {
+    "integrated_lufs": -18.6,
+    "true_peak_dbfs": -6.7
+   },
+   "source": {
+    "file": "audio-reaper/Projects/Media/BlackSect-B-vocals-estimate.wav",
+    "sha256": "06d606785d38049a2c5b90e13b56272d966a3e439e30e92d5b99d662c3f43a11",
+    "parts": [
+     {
+      "start": 2.24,
+      "end": 4.1,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Coda (cut) + Red (ASR round-trip, 2026-11-02)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "As said, online.",
+     "small.en": "Asset online.",
+     "medium.en": "Asset online."
+    }
+   },
+   "origin": "Coda v02 cut Black-B-01"
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_idle",
+   "variant": 1,
+   "file": "unit_idle_1.wav",
+   "phrase": "Standing by.",
+   "motif": null,
+   "duration_seconds": 1.08,
+   "bytes": 47672,
+   "sha256": "77efe2e0bdc977068cedf6764aff70141524e7a140ea1db4a95d7383a3335686",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -7.8,
+   "target_lufs": -18.0,
+   "gain_db": -1.8,
+   "pre_level": {
+    "integrated_lufs": -16.2,
+    "true_peak_dbfs": -6.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-dd2c97e0-4df3-473f-acf6-767eb97d3b19.wav",
+    "sha256": "ccb881f42c45ad24efa2ac8cdf063d8feff75a55d01009b01dbd25466554bfef",
+    "parts": [
+     {
+      "start": 0.0,
+      "end": 1.08,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Standing by.",
+     "small.en": "Standing by.",
+     "medium.en": "Standing by."
+    }
+   },
+   "origin": "Suno take dd2c97e0-4df3-473f-acf6-767eb97d3b19",
+   "music_under_voice_db": -44.1
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_idle",
+   "variant": 2,
+   "file": "unit_idle_2.wav",
+   "phrase": "Holding position.",
+   "motif": null,
+   "duration_seconds": 1.5,
+   "bytes": 66194,
+   "sha256": "18cefa0206fdec8b14aa726c1a5a6b9f2d6585b9a21cc8462f50b4374431d0c0",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -7.6,
+   "target_lufs": -18.0,
+   "gain_db": 0.1,
+   "pre_level": {
+    "integrated_lufs": -18.1,
+    "true_peak_dbfs": -7.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5177937c-f35e-4113-b6d4-6822507b9d4b.wav",
+    "sha256": "efe077bce7acfdf0baef87ec1a87421b46e92aae8ae53ff61abae5cbc3882777",
+    "parts": [
+     {
+      "start": 4.47,
+      "end": 5.97,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Holding position.",
+     "small.en": "Holding position.",
+     "medium.en": "Holding position."
+    }
+   },
+   "origin": "Suno take 5177937c-f35e-4113-b6d4-6822507b9d4b",
+   "music_under_voice_db": 0.5
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "order_ack_friendly",
+   "variant": 1,
+   "file": "order_ack_friendly_1.wav",
+   "phrase": "Route confirmed.",
+   "motif": null,
+   "duration_seconds": 1.270023,
+   "bytes": 56052,
+   "sha256": "4637fefb2730841eebffa891a8b3345b2c4adb72b49ffbf1c8f1ccd3cc316840",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -7.6,
+   "target_lufs": -18.0,
+   "gain_db": 2.1,
+   "pre_level": {
+    "integrated_lufs": -20.1,
+    "true_peak_dbfs": -9.7
+   },
+   "source": {
+    "file": "audio-reaper/Projects/Media/BlackSect-A-vocals-estimate.wav",
+    "sha256": "9546bb8642b71f70464398a0182ecfa16fca74393975338dd80ec1c52e972357",
+    "parts": [
+     {
+      "start": 4.13,
+      "end": 5.4,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Coda (cut) + Red (ASR round-trip, 2026-11-02)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "Road confirmed.",
+     "small.en": "Route confirmed.",
+     "medium.en": "Route confirmed."
+    }
+   },
+   "origin": "Coda v02 cut Black-A-02"
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "order_ack_friendly",
+   "variant": 2,
+   "file": "order_ack_friendly_2.wav",
+   "phrase": "Moving to waypoint.",
+   "motif": null,
+   "duration_seconds": 1.350023,
+   "bytes": 59580,
+   "sha256": "6ba2a4cd4ac65aaa99738d19cf7bcf24b926424cda9731c2c07637302b88e823",
+   "integrated_lufs_dual_mono": -18.7,
+   "true_peak_dbfs": -6.3,
+   "target_lufs": -18.0,
+   "gain_db": 2.0,
+   "pre_level": {
+    "integrated_lufs": -20.0,
+    "true_peak_dbfs": -7.9
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-d67a3992-e79c-4fb1-855a-d7460bba987a.wav",
+    "sha256": "573d435a8f16dcb68510f9dcd6e7766bb1769f32e2e850fa36e243c3902cb641",
+    "parts": [
+     {
+      "start": 2.51,
+      "end": 3.86,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Moving to waypoint.",
+     "small.en": "Moving to Waypoint.",
+     "medium.en": "Moving to waypoint."
+    }
+   },
+   "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
+   "music_under_voice_db": 1.9
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "order_ack_enemy",
+   "variant": 1,
+   "file": "order_ack_enemy_1.wav",
+   "phrase": "Attack order confirmed.",
+   "motif": null,
+   "duration_seconds": 2.010023,
+   "bytes": 88686,
+   "sha256": "d29153b3a82b8ff8d0dd632f4ce0f3da8b451ed839fce7a8ade254cadfa62e3f",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -7.7,
+   "target_lufs": -18.0,
+   "gain_db": 0.7,
+   "pre_level": {
+    "integrated_lufs": -18.7,
+    "true_peak_dbfs": -8.4
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5177937c-f35e-4113-b6d4-6822507b9d4b.wav",
+    "sha256": "efe077bce7acfdf0baef87ec1a87421b46e92aae8ae53ff61abae5cbc3882777",
+    "parts": [
+     {
+      "start": 8.05,
+      "end": 10.06,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Attack order confirmed.",
+     "small.en": "Attack order confirmed.",
+     "medium.en": "Attack order confirmed."
+    }
+   },
+   "origin": "Suno take 5177937c-f35e-4113-b6d4-6822507b9d4b",
+   "music_under_voice_db": -0.7
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "order_ack_enemy",
+   "variant": 2,
+   "file": "order_ack_enemy_2.wav",
+   "phrase": "Closing to engage.",
+   "motif": null,
+   "duration_seconds": 1.650023,
+   "bytes": 72810,
+   "sha256": "50fcbe6a5b3bb455a34526d4a81d110246b26affa29080967d46f14effcfbc86",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -4.9,
+   "target_lufs": -18.0,
+   "gain_db": 0.1,
+   "pre_level": {
+    "integrated_lufs": -18.1,
+    "true_peak_dbfs": -5.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-dd2c97e0-4df3-473f-acf6-767eb97d3b19.wav",
+    "sha256": "ccb881f42c45ad24efa2ac8cdf063d8feff75a55d01009b01dbd25466554bfef",
+    "parts": [
+     {
+      "start": 5.72,
+      "end": 7.37,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Closing to engage.",
+     "small.en": "Closing to engage.",
+     "medium.en": "Closing to engage."
+    }
+   },
+   "origin": "Suno take dd2c97e0-4df3-473f-acf6-767eb97d3b19",
+   "music_under_voice_db": -16.8
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_control_entered",
+   "variant": 1,
+   "file": "unit_control_entered_1.wav",
+   "phrase": "Direct control active.",
+   "motif": null,
+   "duration_seconds": 1.88,
+   "bytes": 82952,
+   "sha256": "2116db4326ac7e687dff3e1144bd9841df7c230d5acf1e7dbbdb4063c01546cd",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": 1.2,
+   "pre_level": {
+    "integrated_lufs": -19.2,
+    "true_peak_dbfs": -7.7
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5ee4c7a0-37d4-4614-90f9-f88311388ece.wav",
+    "sha256": "777882c0f06806c8c174972078bfd6227e02cb4d62b1e00f485f944a31ba454c",
+    "parts": [
+     {
+      "start": 1.39,
+      "end": 3.27,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Direct control active.",
+     "small.en": "Direct control active.",
+     "medium.en": "Direct control active."
+    }
+   },
+   "origin": "Suno take 5ee4c7a0-37d4-4614-90f9-f88311388ece",
+   "music_under_voice_db": -8.5
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_control_entered",
+   "variant": 2,
+   "file": "unit_control_entered_2.wav",
+   "phrase": "Manual link established.",
+   "motif": null,
+   "duration_seconds": 1.870023,
+   "bytes": 82512,
+   "sha256": "206991630ab5af544633ce6984d04195eee0f0432a9d12322bda0c70f3b8e55e",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -7.6,
+   "target_lufs": -18.0,
+   "gain_db": 0.8,
+   "pre_level": {
+    "integrated_lufs": -18.8,
+    "true_peak_dbfs": -8.4
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-91868280-52e5-4d51-bf8f-6beba0cd808e.wav",
+    "sha256": "7b6832cbf82ac4cd7ee5fde19bae3bd0d2f7dd3ef5dfb9e33c12edd0691e79a9",
+    "parts": [
+     {
+      "start": 4.31,
+      "end": 6.18,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Manual link established.",
+     "small.en": "Manual link established.",
+     "medium.en": "Manual link established."
+    }
+   },
+   "origin": "Suno take 91868280-52e5-4d51-bf8f-6beba0cd808e",
+   "music_under_voice_db": 3.5
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_sector_entered",
+   "variant": 1,
+   "file": "enemy_sector_entered_1.wav",
+   "phrase": "Enemy sector entered.",
+   "motif": null,
+   "duration_seconds": 1.74,
+   "bytes": 76778,
+   "sha256": "a0390030b9f8e3235ecf875644eeff2d6dc7095b1fc3f9691c1ce4ba2564fb3f",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -7.1,
+   "target_lufs": -18.0,
+   "gain_db": 1.9,
+   "pre_level": {
+    "integrated_lufs": -19.9,
+    "true_peak_dbfs": -8.8
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-91868280-52e5-4d51-bf8f-6beba0cd808e.wav",
+    "sha256": "7b6832cbf82ac4cd7ee5fde19bae3bd0d2f7dd3ef5dfb9e33c12edd0691e79a9",
+    "parts": [
+     {
+      "start": 7.37,
+      "end": 9.11,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy sector entered.",
+     "small.en": "Enemy sector entered.",
+     "medium.en": "Enemy sector entered."
+    }
+   },
+   "origin": "Suno take 91868280-52e5-4d51-bf8f-6beba0cd808e",
+   "music_under_voice_db": -14.4
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_sector_entered",
+   "variant": 2,
+   "file": "enemy_sector_entered_2.wav",
+   "phrase": "Crossing hostile boundary.",
+   "motif": null,
+   "duration_seconds": 2.090023,
+   "bytes": 92214,
+   "sha256": "e80f10e6c8a6524796b39fbe745e84d899d941de7a60d5e261519bee129c9169",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -6.7,
+   "target_lufs": -18.0,
+   "gain_db": 1.9,
+   "pre_level": {
+    "integrated_lufs": -19.9,
+    "true_peak_dbfs": -8.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-91868280-52e5-4d51-bf8f-6beba0cd808e.wav",
+    "sha256": "7b6832cbf82ac4cd7ee5fde19bae3bd0d2f7dd3ef5dfb9e33c12edd0691e79a9",
+    "parts": [
+     {
+      "start": 9.88,
+      "end": 11.97,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Crossing hostile boundary.",
+     "small.en": "Crossing the hostile boundary.",
+     "medium.en": "Crossing hostile boundary."
+    }
+   },
+   "origin": "Suno take 91868280-52e5-4d51-bf8f-6beba0cd808e",
+   "music_under_voice_db": -3.2
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_recovered",
+   "variant": 1,
+   "file": "unit_recovered_1.wav",
+   "phrase": "Unit recovered.",
+   "motif": null,
+   "duration_seconds": 1.190023,
+   "bytes": 52524,
+   "sha256": "22178294cb5ba3852eab5aae6f04b6bc15098e1213ef196e32ca80e706691f1e",
+   "integrated_lufs_dual_mono": -18.8,
+   "true_peak_dbfs": -5.9,
+   "target_lufs": -18.0,
+   "gain_db": -0.6,
+   "pre_level": {
+    "integrated_lufs": -17.4,
+    "true_peak_dbfs": -5.1
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-e64f4ee5-6660-4759-8cae-57af978d11d3.wav",
+    "sha256": "98ffa61c26b5ada63e9f6c751404ba92111b3ab6a90ef747a8e1f553547b4a2a",
+    "parts": [
+     {
+      "start": 1.46,
+      "end": 2.65,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Unit recovered.",
+     "small.en": "Unit recovered.",
+     "medium.en": "Unit recovered."
+    }
+   },
+   "origin": "Suno take e64f4ee5-6660-4759-8cae-57af978d11d3",
+   "music_under_voice_db": -1.0
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_recovered",
+   "variant": 2,
+   "file": "unit_recovered_2.wav",
+   "phrase": "Ready to reengage.",
+   "motif": null,
+   "duration_seconds": 1.74,
+   "bytes": 76778,
+   "sha256": "62e90cfcfc407b2f5abeaecc393576621a04250e157322273af236822025eb7b",
+   "integrated_lufs_dual_mono": -18.5,
+   "true_peak_dbfs": -4.9,
+   "target_lufs": -18.0,
+   "gain_db": 1.5,
+   "pre_level": {
+    "integrated_lufs": -19.5,
+    "true_peak_dbfs": -5.8
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-e64f4ee5-6660-4759-8cae-57af978d11d3.wav",
+    "sha256": "98ffa61c26b5ada63e9f6c751404ba92111b3ab6a90ef747a8e1f553547b4a2a",
+    "parts": [
+     {
+      "start": 3.84,
+      "end": 5.58,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Ready to re-engage.",
+     "small.en": "Ready to re-engage.",
+     "medium.en": "Ready to reengage."
+    }
+   },
+   "origin": "Suno take e64f4ee5-6660-4759-8cae-57af978d11d3",
+   "music_under_voice_db": 4.8
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 1,
+   "file": "enemy_unit_spotted_1.wav",
+   "phrase": "Enemy contact.",
+   "motif": null,
+   "duration_seconds": 1.290023,
+   "bytes": 56934,
+   "sha256": "d87d047a486c02b01de74a666578e5d84d1cc9a100644b64c4a469bdfaff1ea5",
+   "integrated_lufs_dual_mono": -18.8,
+   "true_peak_dbfs": -5.6,
+   "target_lufs": -18.0,
+   "gain_db": 0.8,
+   "pre_level": {
+    "integrated_lufs": -18.8,
+    "true_peak_dbfs": -6.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-e64f4ee5-6660-4759-8cae-57af978d11d3.wav",
+    "sha256": "98ffa61c26b5ada63e9f6c751404ba92111b3ab6a90ef747a8e1f553547b4a2a",
+    "parts": [
+     {
+      "start": 6.52,
+      "end": 7.81,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy contact.",
+     "small.en": "Enemy contact.",
+     "medium.en": "Enemy contact."
+    }
+   },
+   "origin": "Suno take e64f4ee5-6660-4759-8cae-57af978d11d3",
+   "music_under_voice_db": 4.5
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 2,
+   "file": "enemy_unit_spotted_2.wav",
+   "phrase": "Hostile unit sighted.",
+   "motif": null,
+   "duration_seconds": 1.690023,
+   "bytes": 74574,
+   "sha256": "e4eba77db9968e10c6246cf1001559967d242b9f8b26b30b14836822c1205947",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -6.3,
+   "target_lufs": -18.0,
+   "gain_db": -0.2,
+   "pre_level": {
+    "integrated_lufs": -17.8,
+    "true_peak_dbfs": -6.1
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5ba883c8-fe4b-4afc-88d0-96ce256e7c17.wav",
+    "sha256": "e2acde5951a976d31a59c1e1ed6f943815ecd808956ad5521a668ef9a7e73e02",
+    "parts": [
+     {
+      "start": 13.16,
+      "end": 14.85,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "hostile unit sighted",
+     "small.en": "hostile unit sighted",
+     "medium.en": "Hostile unit sighted."
+    }
+   },
+   "origin": "Suno take 5ba883c8-fe4b-4afc-88d0-96ce256e7c17",
+   "music_under_voice_db": -13.3
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_host_found",
+   "variant": 1,
+   "file": "enemy_host_found_1.wav",
+   "phrase": "Enemy host located.",
+   "motif": null,
+   "duration_seconds": 1.670023,
+   "bytes": 73692,
+   "sha256": "e135ee1cec34fc5a54a5e9582bc412c85e99d0491f7c03a1cd2b33c5763b5511",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.9,
+   "target_lufs": -18.0,
+   "gain_db": 3.7,
+   "pre_level": {
+    "integrated_lufs": -21.7,
+    "true_peak_dbfs": -10.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-ba08296a-e32c-4f64-ae11-7051025dbb41.wav",
+    "sha256": "82c99eebea6db2a499572ae6587b76e4f83e523c86ae4c591d9e985fe3cf2350",
+    "parts": [
+     {
+      "start": 1.82,
+      "end": 3.49,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy host located.",
+     "small.en": "Enemy host located.",
+     "medium.en": "Enemy host located."
+    }
+   },
+   "origin": "Suno take ba08296a-e32c-4f64-ae11-7051025dbb41",
+   "music_under_voice_db": -19.0
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_host_found",
+   "variant": 2,
+   "file": "enemy_host_found_2.wav",
+   "phrase": "Host station identified.",
+   "motif": null,
+   "duration_seconds": 1.86,
+   "bytes": 82070,
+   "sha256": "2c6ae7e6066e4e08bac89df7be45b61c50eb54b4d28590f67724315d0e70e09a",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -7.2,
+   "target_lufs": -18.0,
+   "gain_db": 1.1,
+   "pre_level": {
+    "integrated_lufs": -19.1,
+    "true_peak_dbfs": -8.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-ad21193e-7864-4fc2-9085-7ec949292993.wav",
+    "sha256": "c59cdbbad7e296c1575253ab214db32e4829c25105e8ce4a1594a8345b281d3c",
+    "parts": [
+     {
+      "start": 5.82,
+      "end": 7.68,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Host station identified.",
+     "small.en": "Host station identified.",
+     "medium.en": "Host station identified."
+    }
+   },
+   "origin": "Suno take ad21193e-7864-4fc2-9085-7ec949292993",
+   "music_under_voice_db": 1.9
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "request_support",
+   "variant": 1,
+   "file": "request_support_1.wav",
+   "phrase": "Support required.",
+   "motif": null,
+   "duration_seconds": 1.710023,
+   "bytes": 75456,
+   "sha256": "025b6f55b1a8ef4139d4a531512144ac409378083a704b7b804cb1cea59ef06a",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -3.5,
+   "target_lufs": -18.0,
+   "gain_db": 1.6,
+   "pre_level": {
+    "integrated_lufs": -19.6,
+    "true_peak_dbfs": -5.1
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-d67a3992-e79c-4fb1-855a-d7460bba987a.wav",
+    "sha256": "573d435a8f16dcb68510f9dcd6e7766bb1769f32e2e850fa36e243c3902cb641",
+    "parts": [
+     {
+      "start": 4.7,
+      "end": 6.41,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Support required.",
+     "small.en": "Support required.",
+     "medium.en": "Support required."
+    }
+   },
+   "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
+   "music_under_voice_db": 2.7
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "request_support",
+   "variant": 2,
+   "file": "request_support_2.wav",
+   "phrase": "Reinforcements requested.",
+   "motif": null,
+   "duration_seconds": 1.630023,
+   "bytes": 71928,
+   "sha256": "d04dbd4ef5a763d0bbea3d177cdd3927810dea64b4508e9bdcd2b93314e8573d",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -7.6,
+   "target_lufs": -18.0,
+   "gain_db": 1.1,
+   "pre_level": {
+    "integrated_lufs": -19.1,
+    "true_peak_dbfs": -8.5
+   },
+   "source": {
+    "file": "audio-reaper/Projects/Media/BlackSect-A-vocals-estimate.wav",
+    "sha256": "9546bb8642b71f70464398a0182ecfa16fca74393975338dd80ec1c52e972357",
+    "parts": [
+     {
+      "start": 6.45,
+      "end": 8.08,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Coda (cut) + Red (ASR round-trip, 2026-11-02)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Reinforcements requested.",
+     "small.en": "Reinforcements requested.",
+     "medium.en": "Reinforcements requested"
+    }
+   },
+   "origin": "Coda v02 cut Black-A-03"
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_retreating",
+   "variant": 1,
+   "file": "unit_retreating_1.wav",
+   "phrase": "Breaking contact.",
+   "motif": null,
+   "duration_seconds": 1.110023,
+   "bytes": 48996,
+   "sha256": "74a182dcf717a8ccea0896cec769c6bf5f148720fa57f8dbe4e1938273ffae63",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.9,
+   "target_lufs": -18.0,
+   "gain_db": 1.7,
+   "pre_level": {
+    "integrated_lufs": -19.7,
+    "true_peak_dbfs": -6.2
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-ad21193e-7864-4fc2-9085-7ec949292993.wav",
+    "sha256": "c59cdbbad7e296c1575253ab214db32e4829c25105e8ce4a1594a8345b281d3c",
+    "parts": [
+     {
+      "start": 10.77,
+      "end": 11.88,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Breaking contact.",
+     "small.en": "Breaking Contact.",
+     "medium.en": "Breaking contact."
+    }
+   },
+   "origin": "Suno take ad21193e-7864-4fc2-9085-7ec949292993",
+   "music_under_voice_db": -16.7
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_retreating",
+   "variant": 2,
+   "file": "unit_retreating_2.wav",
+   "phrase": "Falling back.",
+   "motif": null,
+   "duration_seconds": 1.1,
+   "bytes": 48554,
+   "sha256": "28e1e0c48f088d4d747ed6c06b61aca6bd23d36a9e4f45aa98494672b8bd8dab",
+   "integrated_lufs_dual_mono": -18.5,
+   "true_peak_dbfs": -4.1,
+   "target_lufs": -18.0,
+   "gain_db": 3.2,
+   "pre_level": {
+    "integrated_lufs": -21.3,
+    "true_peak_dbfs": -6.7
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-ad21193e-7864-4fc2-9085-7ec949292993.wav",
+    "sha256": "c59cdbbad7e296c1575253ab214db32e4829c25105e8ce4a1594a8345b281d3c",
+    "parts": [
+     {
+      "start": 15.54,
+      "end": 16.64,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Falling back.",
+     "small.en": "falling back.",
+     "medium.en": "Falling back."
+    }
+   },
+   "origin": "Suno take ad21193e-7864-4fc2-9085-7ec949292993",
+   "music_under_voice_db": 0.5
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_lost",
+   "variant": 1,
+   "file": "unit_lost_1.wav",
+   "phrase": "Unit lost.",
+   "motif": null,
+   "duration_seconds": 1.470023,
+   "bytes": 64872,
+   "sha256": "8e9407c75178a582998a6725c56d4672612d80c5d2fd825b4a95bba44ede0479",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -7.3,
+   "target_lufs": -18.0,
+   "gain_db": 1.0,
+   "pre_level": {
+    "integrated_lufs": -19.0,
+    "true_peak_dbfs": -8.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-6b6f7c68-dbbf-423c-9bba-9e289981561d.wav",
+    "sha256": "a1abd8aaf30b669deb624a69b4dd1838646b7616545fbfd4e97c827628ba8248",
+    "parts": [
+     {
+      "start": 1.79,
+      "end": 3.26,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "Unit lost.",
+     "small.en": "You had lost.",
+     "medium.en": "Unit lost."
+    }
+   },
+   "origin": "Suno take 6b6f7c68-dbbf-423c-9bba-9e289981561d",
+   "music_under_voice_db": 2.8
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "unit_lost",
+   "variant": 2,
+   "file": "unit_lost_2.wav",
+   "phrase": "Asset offline.",
+   "motif": null,
+   "duration_seconds": 1.370023,
+   "bytes": 60462,
+   "sha256": "dc11cd412b304711d684e28a2e39abcfc177ae4a954c272743727545b5bf011e",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -8.2,
+   "target_lufs": -18.0,
+   "gain_db": 2.3,
+   "pre_level": {
+    "integrated_lufs": -20.3,
+    "true_peak_dbfs": -10.5
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-6b6f7c68-dbbf-423c-9bba-9e289981561d.wav",
+    "sha256": "a1abd8aaf30b669deb624a69b4dd1838646b7616545fbfd4e97c827628ba8248",
+    "parts": [
+     {
+      "start": 5.08,
+      "end": 6.45,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Asset offline.",
+     "small.en": "Asset offline.",
+     "medium.en": "Asset offline."
+    }
+   },
+   "origin": "Suno take 6b6f7c68-dbbf-423c-9bba-9e289981561d",
+   "music_under_voice_db": -1.0
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 1,
+   "file": "enemy_unit_engaged_1.wav",
+   "phrase": "Engaging target.",
+   "motif": null,
+   "duration_seconds": 1.590023,
+   "bytes": 70164,
+   "sha256": "3ce0ee2dafaca8af649a3468879ac17757f8dd437e430fe820b881ea595b5a5b",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -4.2,
+   "target_lufs": -18.0,
+   "gain_db": 4.4,
+   "pre_level": {
+    "integrated_lufs": -22.4,
+    "true_peak_dbfs": -8.5
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-6b6f7c68-dbbf-423c-9bba-9e289981561d.wav",
+    "sha256": "a1abd8aaf30b669deb624a69b4dd1838646b7616545fbfd4e97c827628ba8248",
+    "parts": [
+     {
+      "start": 9.75,
+      "end": 11.34,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Engaging target.",
+     "small.en": "Engaging target.",
+     "medium.en": "Engaging target."
+    }
+   },
+   "origin": "Suno take 6b6f7c68-dbbf-423c-9bba-9e289981561d",
+   "music_under_voice_db": 1.3
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 2,
+   "file": "enemy_unit_engaged_2.wav",
+   "phrase": "Weapons on target.",
+   "motif": null,
+   "duration_seconds": 1.530023,
+   "bytes": 67518,
+   "sha256": "054bd395b85273cf77ae5f2ed2a6267d8a779cdbef8eebfb2ccbec57f5ace7f5",
+   "integrated_lufs_dual_mono": -18.9,
+   "true_peak_dbfs": -3.5,
+   "target_lufs": -18.0,
+   "gain_db": 2.7,
+   "pre_level": {
+    "integrated_lufs": -21.5,
+    "true_peak_dbfs": -6.2
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-6e666826-064d-4ca4-8380-efa51951a998.wav",
+    "sha256": "626fe6ff33303a11ef7cc0322e417800682564542050f1a7b65e54fd1bccf95e",
+    "parts": [
+     {
+      "start": 13.61,
+      "end": 15.14,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Weapons on target.",
+     "small.en": "Weapons on target.",
+     "medium.en": "Weapons on target."
+    }
+   },
+   "origin": "Suno take 6e666826-064d-4ca4-8380-efa51951a998",
+   "music_under_voice_db": -1.4
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 1,
+   "file": "enemy_unit_destroyed_1.wav",
+   "phrase": "Target destroyed.",
+   "motif": null,
+   "duration_seconds": 1.74,
+   "bytes": 76778,
+   "sha256": "365b786c9de753b7bef8fe077eb8241aa74da17d19b23606ba35d2d7f17e05bd",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -7.5,
+   "target_lufs": -18.0,
+   "gain_db": 2.7,
+   "pre_level": {
+    "integrated_lufs": -20.7,
+    "true_peak_dbfs": -10.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-290933c5-1b87-4aea-8cda-981c52152215.wav",
+    "sha256": "a93cafd7c0e7fd8091f1431a9dcc8e7419d8b50296824a6e06b4098fa7bd7ac3",
+    "parts": [
+     {
+      "start": 1.92,
+      "end": 3.66,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Target destroyed.",
+     "small.en": "Target destroyed.",
+     "medium.en": "Target destroyed."
+    }
+   },
+   "origin": "Suno take 290933c5-1b87-4aea-8cda-981c52152215",
+   "music_under_voice_db": 2.8
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 2,
+   "file": "enemy_unit_destroyed_2.wav",
+   "phrase": "Hostile unit eliminated.",
+   "motif": null,
+   "duration_seconds": 2.230023,
+   "bytes": 98388,
+   "sha256": "dabd3acb3900c8bd4441ceb21e0b17dcb858a5da2230f8c00aa35c2f5505431f",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -6.2,
+   "target_lufs": -18.0,
+   "gain_db": 1.6,
+   "pre_level": {
+    "integrated_lufs": -19.6,
+    "true_peak_dbfs": -7.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-290933c5-1b87-4aea-8cda-981c52152215.wav",
+    "sha256": "a93cafd7c0e7fd8091f1431a9dcc8e7419d8b50296824a6e06b4098fa7bd7ac3",
+    "parts": [
+     {
+      "start": 5.04,
+      "end": 7.27,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Hostile unit eliminated.",
+     "small.en": "Hostile unit eliminated.",
+     "medium.en": "Hostel unit eliminated."
+    }
+   },
+   "origin": "Suno take 290933c5-1b87-4aea-8cda-981c52152215",
+   "music_under_voice_db": 3.8
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 1,
+   "file": "enemy_host_destroyed_1.wav",
+   "phrase": "Enemy host destroyed.",
+   "motif": null,
+   "duration_seconds": 2.630023,
+   "bytes": 116028,
+   "sha256": "1372b09e6d2764792446954fec5d5e9531574d2718519315490e2050d7bb3a94",
+   "integrated_lufs_dual_mono": -18.7,
+   "true_peak_dbfs": -6.6,
+   "target_lufs": -18.0,
+   "gain_db": 0.3,
+   "pre_level": {
+    "integrated_lufs": -18.3,
+    "true_peak_dbfs": -6.7
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-d67a3992-e79c-4fb1-855a-d7460bba987a.wav",
+    "sha256": "573d435a8f16dcb68510f9dcd6e7766bb1769f32e2e850fa36e243c3902cb641",
+    "parts": [
+     {
+      "start": 7.34,
+      "end": 9.97,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy host destroyed.",
+     "small.en": "Enemy host destroyed.",
+     "medium.en": "Enemy host destroyed."
+    }
+   },
+   "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
+   "music_under_voice_db": 2.2
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 2,
+   "file": "enemy_host_destroyed_2.wav",
+   "phrase": "Host station neutralized.",
+   "motif": null,
+   "duration_seconds": 2.490023,
+   "bytes": 109854,
+   "sha256": "17c2b36d44b97e4a04537abc7f9462f57e3eaf7a367822da77d0018390914f48",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -5.9,
+   "target_lufs": -18.0,
+   "gain_db": 1.4,
+   "pre_level": {
+    "integrated_lufs": -19.4,
+    "true_peak_dbfs": -7.3
+   },
+   "source": {
+    "file": "audio-reaper/Projects/Media/BlackSect-B-vocals-estimate.wav",
+    "sha256": "06d606785d38049a2c5b90e13b56272d966a3e439e30e92d5b99d662c3f43a11",
+    "parts": [
+     {
+      "start": 10.19,
+      "end": 12.68,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Coda (cut) + Red (ASR round-trip, 2026-11-02)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Host station, neutralized.",
+     "small.en": "Host station neutralized.",
+     "medium.en": "Host station neutralized."
+    }
+   },
+   "origin": "Coda v02 cut Black-B-04"
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "powerstation_captured",
+   "variant": 1,
+   "file": "powerstation_captured_1.wav",
+   "phrase": "Power station secured.",
+   "motif": null,
+   "duration_seconds": 1.830023,
+   "bytes": 80748,
+   "sha256": "1dfb3d8d929ad9a9c49b973ad9c5c526b385eb02c105d3c0020447620ae0094b",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.4,
+   "target_lufs": -18.0,
+   "gain_db": 1.6,
+   "pre_level": {
+    "integrated_lufs": -19.6,
+    "true_peak_dbfs": -6.1
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-423d6e42-5419-4bef-98cf-ac1549799dda.wav",
+    "sha256": "918f15de9d1986486530514eae6188eef7b11d73cc222072789454585abcc268",
+    "parts": [
+     {
+      "start": 8.65,
+      "end": 10.48,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Power station secured.",
+     "small.en": "Power station secured.",
+     "medium.en": "Power station secured."
+    }
+   },
+   "origin": "Suno take 423d6e42-5419-4bef-98cf-ac1549799dda",
+   "music_under_voice_db": -2.9
+  },
+  {
+   "faction": "black-sect-mp",
+   "event": "powerstation_captured",
+   "variant": 2,
+   "file": "powerstation_captured_2.wav",
+   "phrase": "Grid node acquired.",
+   "motif": null,
+   "duration_seconds": 1.530023,
+   "bytes": 67518,
+   "sha256": "87b811a7243ab558c3e1fa50d57ab0823b0d9730479881ebfb6335cfc477eba6",
+   "integrated_lufs_dual_mono": -18.5,
+   "true_peak_dbfs": -3.8,
+   "target_lufs": -18.0,
+   "gain_db": 2.4,
+   "pre_level": {
+    "integrated_lufs": -20.9,
+    "true_peak_dbfs": -5.9
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-423d6e42-5419-4bef-98cf-ac1549799dda.wav",
+    "sha256": "918f15de9d1986486530514eae6188eef7b11d73cc222072789454585abcc268",
+    "parts": [
+     {
+      "start": 12.45,
+      "end": 13.98,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Grid node acquired.",
+     "small.en": "Grid node acquired.",
+     "medium.en": "Grid node acquired."
+    }
+   },
+   "origin": "Suno take 423d6e42-5419-4bef-98cf-ac1549799dda",
+   "music_under_voice_db": 3.0
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_ready",
+   "variant": 1,
+   "file": "unit_ready_1.wav",
+   "phrase": null,
+   "motif": "Three open calls, each broader and higher",
+   "duration_seconds": 0.66,
+   "bytes": 29150,
+   "sha256": "328b1972682fbbca9382b788f434359fe6a8f80a2f1efe3c84efc8dcc8994f79",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.8,
+   "target_lufs": -18.0,
+   "gain_db": 0.0,
+   "pre_level": {
+    "integrated_lufs": -18.0,
+    "true_peak_dbfs": -4.8
+   },
+   "source": {
+    "file": "suno-554a8639-5962-4fd4-9165-4083dd228856.wav",
+    "sha256": "7427dad92654051d2c165f88290135727b35af74ab4bbb9221f7349fc63f185c",
+    "parts": [
+     {
+      "start": 4.12,
+      "end": 4.78,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_ready",
+   "variant": 2,
+   "file": "unit_ready_2.wav",
+   "phrase": null,
+   "motif": "Three open calls, each broader and higher",
+   "duration_seconds": 0.770023,
+   "bytes": 34002,
+   "sha256": "fdfab65c1fcc9f75b934647e8643c158fa49c96ed628cecd664b13a9b03dc9d2",
+   "integrated_lufs_dual_mono": -19.6,
+   "true_peak_dbfs": -6.2,
+   "target_lufs": -18.0,
+   "gain_db": -0.6,
+   "pre_level": {
+    "integrated_lufs": -17.4,
+    "true_peak_dbfs": -5.3
+   },
+   "source": {
+    "file": "suno-41d986c3-8f1a-439e-bef7-83bb777bdcf5.wav",
+    "sha256": "7caab97d39cd4f42b96fa205cb940a023d08819746fec5aa19e59cf7c121a954",
+    "parts": [
+     {
+      "start": 28.3,
+      "end": 29.07,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_idle",
+   "variant": 1,
+   "file": "unit_idle_1.wav",
+   "phrase": null,
+   "motif": "Two soft questioning warbles, second unresolved",
+   "duration_seconds": 0.9,
+   "bytes": 39734,
+   "sha256": "564f22fcb6d950ea34a7c3dbe883125d45751e41944033ea9b38a08b49970367",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -7.0,
+   "target_lufs": -18.0,
+   "gain_db": -2.5,
+   "pre_level": {
+    "integrated_lufs": -15.5,
+    "true_peak_dbfs": -4.5
+   },
+   "source": {
+    "file": "suno-093e3295-f927-4c90-ba73-c1425f1f7ebf.wav",
+    "sha256": "c0f40fff4aa4c8685fd7dd9518b52eca2d5e2615c0fabfa1d15d194170017f46",
+    "parts": [
+     {
+      "start": 23.76,
+      "end": 24.66,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_idle",
+   "variant": 2,
+   "file": "unit_idle_2.wav",
+   "phrase": null,
+   "motif": "Two soft questioning warbles, second unresolved",
+   "duration_seconds": 0.38,
+   "bytes": 16802,
+   "sha256": "3bd4f705e10c3a659c82749538a60fcd95fd371ecffc83f9c6a8705d5ccf2d2d",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -5.2,
+   "target_lufs": -18.0,
+   "gain_db": 1.59,
+   "pre_level": {
+    "integrated_lufs": -19.59,
+    "true_peak_dbfs": -6.4
+   },
+   "source": {
+    "file": "suno-f50c90d8-972c-4cdd-988b-ad866be3675b.wav",
+    "sha256": "364591f6f3711e868267ed109a0a63ca7e39aae1cb598ab27d89a7c737ff1eaf",
+    "parts": [
+     {
+      "start": 6.71,
+      "end": 7.09,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "order_ack_friendly",
+   "variant": 1,
+   "file": "order_ack_friendly_1.wav",
+   "phrase": null,
+   "motif": "Two calm equal-weight notes",
+   "duration_seconds": 0.72,
+   "bytes": 31796,
+   "sha256": "4107585c1b835f80e616093c0dfb8e1d8940d39fc3e6b2a44fe878757907fcfb",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -5.6,
+   "target_lufs": -18.0,
+   "gain_db": 3.1,
+   "pre_level": {
+    "integrated_lufs": -21.1,
+    "true_peak_dbfs": -8.4
+   },
+   "source": {
+    "file": "audio-reaper/Projects/Media/1c237902-4d7f-4066-8cd2-b59a693c0c7b_paid_wm.wav",
+    "sha256": "2ccb1601900b7a569ff5c6a68872a8af977fba76b3107e4d29a6c6a56eaeb44a",
+    "parts": [
+     {
+      "start": 0.24,
+      "end": 0.54,
+      "offset": 0.0
+     },
+     {
+      "start": 1.84,
+      "end": 2.14,
+      "offset": 0.42
+     }
+    ]
+   },
+   "reviewer": "Coda (cut, v02) + Red (signal check, 2026-11-02; not heard)",
+   "confidence": "under_evaluation",
+   "origin": "Coda v02 salvage Sulgogar-01"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "order_ack_friendly",
+   "variant": 2,
+   "file": "order_ack_friendly_2.wav",
+   "phrase": null,
+   "motif": "Two calm equal-weight notes",
+   "duration_seconds": 0.66,
+   "bytes": 29150,
+   "sha256": "976fe0540e7bda2cf48dc0e689ae4df33f147f9f0e265fde4b05725fc2e8f8c1",
+   "integrated_lufs_dual_mono": -18.6,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -0.5,
+   "pre_level": {
+    "integrated_lufs": -17.5,
+    "true_peak_dbfs": -5.7
+   },
+   "source": {
+    "file": "suno-554a8639-5962-4fd4-9165-4083dd228856.wav",
+    "sha256": "7427dad92654051d2c165f88290135727b35af74ab4bbb9221f7349fc63f185c",
+    "parts": [
+     {
+      "start": 19.27,
+      "end": 19.93,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "order_ack_enemy",
+   "variant": 1,
+   "file": "order_ack_enemy_1.wav",
+   "phrase": null,
+   "motif": "Low membrane impact, firm descending closure",
+   "duration_seconds": 0.58,
+   "bytes": 25622,
+   "sha256": "104e22c0db8cc16df8cc5c38fc0d2a6a78f82d73b6c13cebb0c396e1256d43ca",
+   "integrated_lufs_dual_mono": -19.4,
+   "true_peak_dbfs": -3.7,
+   "target_lufs": -18.0,
+   "gain_db": 1.6,
+   "pre_level": {
+    "integrated_lufs": -19.6,
+    "true_peak_dbfs": -5.3
+   },
+   "source": {
+    "file": "suno-6d016aa8-82bf-402e-9b6f-b1fe37b715ba.wav",
+    "sha256": "a4d79bffa90e6fb376f04aafd6a3755af33eb32a507639a51e52dec3f253c2b9",
+    "parts": [
+     {
+      "start": 30.94,
+      "end": 31.52,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "order_ack_enemy",
+   "variant": 2,
+   "file": "order_ack_enemy_2.wav",
+   "phrase": null,
+   "motif": "Low membrane impact, firm descending closure",
+   "duration_seconds": 0.56,
+   "bytes": 24740,
+   "sha256": "37180e4f541a9cdcf89bd2e8c76cfb074bd6187386652329857056fe2fec081c",
+   "integrated_lufs_dual_mono": -23.8,
+   "true_peak_dbfs": -4.3,
+   "target_lufs": -18.0,
+   "gain_db": 4.0,
+   "pre_level": {
+    "integrated_lufs": -25.9,
+    "true_peak_dbfs": -7.5
+   },
+   "source": {
+    "file": "suno-554a8639-5962-4fd4-9165-4083dd228856.wav",
+    "sha256": "7427dad92654051d2c165f88290135727b35af74ab4bbb9221f7349fc63f185c",
+    "parts": [
+     {
+      "start": 31.01,
+      "end": 31.57,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_control_entered",
+   "variant": 1,
+   "file": "unit_control_entered_1.wav",
+   "phrase": null,
+   "motif": "Close click, sustained rising vowel-formant",
+   "duration_seconds": 0.68,
+   "bytes": 30032,
+   "sha256": "58dcd5f7354ee23fba4cf5569bc5b8c2fe9508ec24cb5f5ab83febdc5d8a7265",
+   "integrated_lufs_dual_mono": -18.8,
+   "true_peak_dbfs": -8.5,
+   "target_lufs": -18.0,
+   "gain_db": 9.2,
+   "pre_level": {
+    "integrated_lufs": -27.2,
+    "true_peak_dbfs": -17.7
+   },
+   "source": {
+    "file": "audio-reaper/Projects/Media/1c237902-4d7f-4066-8cd2-b59a693c0c7b_paid_wm.wav",
+    "sha256": "2ccb1601900b7a569ff5c6a68872a8af977fba76b3107e4d29a6c6a56eaeb44a",
+    "parts": [
+     {
+      "start": 3.18,
+      "end": 3.86,
+      "offset": 0.0
+     }
+    ]
+   },
+   "reviewer": "Coda (cut, v02) + Red (signal check, 2026-11-02; not heard)",
+   "confidence": "under_evaluation",
+   "origin": "Coda v02 salvage Sulgogar-02"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_control_entered",
+   "variant": 2,
+   "file": "unit_control_entered_2.wav",
+   "phrase": null,
+   "motif": "Close click, sustained rising vowel-formant",
+   "duration_seconds": 0.670023,
+   "bytes": 29592,
+   "sha256": "f7b4ef65d48b02aaa6c2caf035d4843446134d307ec3be238900215f79e67a67",
+   "integrated_lufs_dual_mono": -18.9,
+   "true_peak_dbfs": -7.6,
+   "target_lufs": -18.0,
+   "gain_db": 8.8,
+   "pre_level": {
+    "integrated_lufs": -26.8,
+    "true_peak_dbfs": -16.3
+   },
+   "source": {
+    "file": "suno-093e3295-f927-4c90-ba73-c1425f1f7ebf.wav",
+    "sha256": "c0f40fff4aa4c8685fd7dd9518b52eca2d5e2615c0fabfa1d15d194170017f46",
+    "parts": [
+     {
+      "start": 0.06,
+      "end": 0.73,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "uncertain",
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_sector_entered",
+   "variant": 1,
+   "file": "enemy_sector_entered_1.wav",
+   "phrase": null,
+   "motif": "Two dry clicks, short warning rise",
+   "duration_seconds": 0.58,
+   "bytes": 25622,
+   "sha256": "4aa95b6865fd32d8fe6d8dedb3189989963e0cdcab1b022da26368dce1ad2c5d",
+   "integrated_lufs_dual_mono": -20.0,
+   "true_peak_dbfs": -3.4,
+   "target_lufs": -18.0,
+   "gain_db": 0.6,
+   "pre_level": {
+    "integrated_lufs": -20.5,
+    "true_peak_dbfs": -4.1
+   },
+   "source": {
+    "file": "suno-6d016aa8-82bf-402e-9b6f-b1fe37b715ba.wav",
+    "sha256": "a4d79bffa90e6fb376f04aafd6a3755af33eb32a507639a51e52dec3f253c2b9",
+    "parts": [
+     {
+      "start": 29.6,
+      "end": 30.18,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_sector_entered",
+   "variant": 2,
+   "file": "enemy_sector_entered_2.wav",
+   "phrase": null,
+   "motif": "Two dry clicks, short warning rise",
+   "duration_seconds": 0.370023,
+   "bytes": 16362,
+   "sha256": "e74cecc600426095ef5c9a14fee0ebf81bb167e8ba5973880a301977df1fd80c",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -6.7,
+   "target_lufs": -18.0,
+   "gain_db": -0.34,
+   "pre_level": {
+    "integrated_lufs": -17.66,
+    "true_peak_dbfs": -6.2
+   },
+   "source": {
+    "file": "suno-6d016aa8-82bf-402e-9b6f-b1fe37b715ba.wav",
+    "sha256": "a4d79bffa90e6fb376f04aafd6a3755af33eb32a507639a51e52dec3f253c2b9",
+    "parts": [
+     {
+      "start": 3.24,
+      "end": 3.61,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_recovered",
+   "variant": 1,
+   "file": "unit_recovered_1.wav",
+   "phrase": null,
+   "motif": "Smooth fall, brief pause, relieved rise",
+   "duration_seconds": 0.76,
+   "bytes": 33560,
+   "sha256": "606bc114b09682830c7c4a120dc46ae92fee4d657b17dd37fda54df9769c26bb",
+   "integrated_lufs_dual_mono": -18.8,
+   "true_peak_dbfs": -6.6,
+   "target_lufs": -18.0,
+   "gain_db": 2.9,
+   "pre_level": {
+    "integrated_lufs": -20.9,
+    "true_peak_dbfs": -9.0
+   },
+   "source": {
+    "file": "suno-066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae.wav",
+    "sha256": "29c777d4ddadca3da0dd15a61be706acc3506a79f4785b6bda3c6a6df7418973",
+    "parts": [
+     {
+      "start": 10.05,
+      "end": 10.81,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_recovered",
+   "variant": 2,
+   "file": "unit_recovered_2.wav",
+   "phrase": null,
+   "motif": "Smooth fall, brief pause, relieved rise",
+   "duration_seconds": 0.66,
+   "bytes": 29150,
+   "sha256": "eadb9e9c04e3d075c1008810160169280d402574b6f8bb49de63833b1c0e821c",
+   "integrated_lufs_dual_mono": -18.8,
+   "true_peak_dbfs": -3.6,
+   "target_lufs": -18.0,
+   "gain_db": 3.1,
+   "pre_level": {
+    "integrated_lufs": -21.5,
+    "true_peak_dbfs": -6.6
+   },
+   "source": {
+    "file": "suno-093e3295-f927-4c90-ba73-c1425f1f7ebf.wav",
+    "sha256": "c0f40fff4aa4c8685fd7dd9518b52eca2d5e2615c0fabfa1d15d194170017f46",
+    "parts": [
+     {
+      "start": 32.67,
+      "end": 33.33,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 1,
+   "file": "enemy_unit_spotted_1.wav",
+   "phrase": null,
+   "motif": "Three rapid warning pulses, ascending",
+   "duration_seconds": 0.570023,
+   "bytes": 25182,
+   "sha256": "e2ba1a358033b5694c5ec318b5aa9a4894beee9aa6cb24c799441afe5488ea7f",
+   "integrated_lufs_dual_mono": -28.1,
+   "true_peak_dbfs": -9.4,
+   "target_lufs": -18.0,
+   "gain_db": 12.0,
+   "pre_level": {
+    "integrated_lufs": -39.4,
+    "true_peak_dbfs": -21.2
+   },
+   "source": {
+    "file": "suno-554a8639-5962-4fd4-9165-4083dd228856.wav",
+    "sha256": "7427dad92654051d2c165f88290135727b35af74ab4bbb9221f7349fc63f185c",
+    "parts": [
+     {
+      "start": 31.63,
+      "end": 32.2,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 2,
+   "file": "enemy_unit_spotted_2.wav",
+   "phrase": null,
+   "motif": "Three rapid warning pulses, ascending",
+   "duration_seconds": 0.52,
+   "bytes": 22976,
+   "sha256": "4166993b9291cf09bd35fb05cb3ec95434750df36e10c3837839a5b93b66aff0",
+   "integrated_lufs_dual_mono": -19.0,
+   "true_peak_dbfs": -3.5,
+   "target_lufs": -18.0,
+   "gain_db": 1.2,
+   "pre_level": {
+    "integrated_lufs": -19.9,
+    "true_peak_dbfs": -4.7
+   },
+   "source": {
+    "file": "suno-f50c90d8-972c-4cdd-988b-ad866be3675b.wav",
+    "sha256": "364591f6f3711e868267ed109a0a63ca7e39aae1cb598ab27d89a7c737ff1eaf",
+    "parts": [
+     {
+      "start": 4.52,
+      "end": 5.04,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_host_found",
+   "variant": 1,
+   "file": "enemy_host_found_1.wav",
+   "phrase": null,
+   "motif": "Low warning body, long narrow high call",
+   "duration_seconds": 1.02,
+   "bytes": 45026,
+   "sha256": "6e1dcecdebc7bb8a52e5721cc03dec6d1acab76797833526c28d28136d05c3c7",
+   "integrated_lufs_dual_mono": -17.9,
+   "true_peak_dbfs": -5.8,
+   "target_lufs": -17.0,
+   "gain_db": 12.0,
+   "pre_level": {
+    "integrated_lufs": -29.8,
+    "true_peak_dbfs": -17.6
+   },
+   "source": {
+    "file": "suno-066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae.wav",
+    "sha256": "29c777d4ddadca3da0dd15a61be706acc3506a79f4785b6bda3c6a6df7418973",
+    "parts": [
+     {
+      "start": 25.68,
+      "end": 26.7,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_host_found",
+   "variant": 2,
+   "file": "enemy_host_found_2.wav",
+   "phrase": null,
+   "motif": "Low warning body, long narrow high call",
+   "duration_seconds": 0.98,
+   "bytes": 43262,
+   "sha256": "615e41b28d7267df261a6b87bad64dc364ffa3cf1d0316c275fe801dece90e6c",
+   "integrated_lufs_dual_mono": -21.2,
+   "true_peak_dbfs": -3.5,
+   "target_lufs": -17.0,
+   "gain_db": 0.6,
+   "pre_level": {
+    "integrated_lufs": -22.3,
+    "true_peak_dbfs": -4.1
+   },
+   "source": {
+    "file": "suno-093e3295-f927-4c90-ba73-c1425f1f7ebf.wav",
+    "sha256": "c0f40fff4aa4c8685fd7dd9518b52eca2d5e2615c0fabfa1d15d194170017f46",
+    "parts": [
+     {
+      "start": 8.54,
+      "end": 9.52,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "uncertain",
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "request_support",
+   "variant": 1,
+   "file": "request_support_1.wav",
+   "phrase": null,
+   "motif": "One low calling pulse, two shorter answers",
+   "duration_seconds": 1.330023,
+   "bytes": 58698,
+   "sha256": "92bf8227ce9f6f2beda87f841d71aabbdf7629ffe7f36778a6a55d07d8f0f0a5",
+   "integrated_lufs_dual_mono": -17.6,
+   "true_peak_dbfs": -5.8,
+   "target_lufs": -17.0,
+   "gain_db": 0.7,
+   "pre_level": {
+    "integrated_lufs": -17.7,
+    "true_peak_dbfs": -6.5
+   },
+   "source": {
+    "file": "suno-7bd701a4-394f-496e-987d-0618dfc243bd.wav",
+    "sha256": "d0b2bc1f7f9f417dd254e6394ce7f484204a24c6812b8293fb286997582035f0",
+    "parts": [
+     {
+      "start": 3.39,
+      "end": 4.72,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 7bd701a4-394f-496e-987d-0618dfc243bd"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "request_support",
+   "variant": 2,
+   "file": "request_support_2.wav",
+   "phrase": null,
+   "motif": "One low calling pulse, two shorter answers",
+   "duration_seconds": 1.06,
+   "bytes": 46790,
+   "sha256": "545e878d3a7db05bb4b6cbb94cf4ec5088b04144be3fe9672de9a016f5a82eef",
+   "integrated_lufs_dual_mono": -16.8,
+   "true_peak_dbfs": -5.3,
+   "target_lufs": -17.0,
+   "gain_db": 0.0,
+   "pre_level": {
+    "integrated_lufs": -17.0,
+    "true_peak_dbfs": -5.1
+   },
+   "source": {
+    "file": "suno-554a8639-5962-4fd4-9165-4083dd228856.wav",
+    "sha256": "7427dad92654051d2c165f88290135727b35af74ab4bbb9221f7349fc63f185c",
+    "parts": [
+     {
+      "start": 20.0,
+      "end": 21.06,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "uncertain",
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_retreating",
+   "variant": 1,
+   "file": "unit_retreating_1.wav",
+   "phrase": null,
+   "motif": "Two receding descending calls",
+   "duration_seconds": 0.72,
+   "bytes": 31796,
+   "sha256": "e6770f3c83c5a1617bbb90943729ad60d995daef15aff1b4595bada2bc0fbdaa",
+   "integrated_lufs_dual_mono": -21.6,
+   "true_peak_dbfs": -3.5,
+   "target_lufs": -18.0,
+   "gain_db": 2.3,
+   "pre_level": {
+    "integrated_lufs": -23.9,
+    "true_peak_dbfs": -5.8
+   },
+   "source": {
+    "file": "suno-093e3295-f927-4c90-ba73-c1425f1f7ebf.wav",
+    "sha256": "c0f40fff4aa4c8685fd7dd9518b52eca2d5e2615c0fabfa1d15d194170017f46",
+    "parts": [
+     {
+      "start": 17.5,
+      "end": 18.22,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_retreating",
+   "variant": 2,
+   "file": "unit_retreating_2.wav",
+   "phrase": null,
+   "motif": "Two receding descending calls",
+   "duration_seconds": 0.54,
+   "bytes": 23858,
+   "sha256": "01871a3e4310a2871ef2688b4d28b5de8785302fb23d54ff5dc8c201de8bec2f",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.9,
+   "target_lufs": -18.0,
+   "gain_db": 1.7,
+   "pre_level": {
+    "integrated_lufs": -19.7,
+    "true_peak_dbfs": -6.4
+   },
+   "source": {
+    "file": "suno-554a8639-5962-4fd4-9165-4083dd228856.wav",
+    "sha256": "7427dad92654051d2c165f88290135727b35af74ab4bbb9221f7349fc63f185c",
+    "parts": [
+     {
+      "start": 17.88,
+      "end": 18.42,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_lost",
+   "variant": 1,
+   "file": "unit_lost_1.wav",
+   "phrase": null,
+   "motif": "Hollow low exhalation with long falling decay",
+   "duration_seconds": 1.14,
+   "bytes": 50318,
+   "sha256": "1c5be730d939b33eed7d9d7aef6f529bcdd35a2f245d4f5e3e0272cf6a5c6747",
+   "integrated_lufs_dual_mono": -17.4,
+   "true_peak_dbfs": -6.6,
+   "target_lufs": -17.0,
+   "gain_db": -1.1,
+   "pre_level": {
+    "integrated_lufs": -15.9,
+    "true_peak_dbfs": -5.2
+   },
+   "source": {
+    "file": "suno-41d986c3-8f1a-439e-bef7-83bb777bdcf5.wav",
+    "sha256": "7caab97d39cd4f42b96fa205cb940a023d08819746fec5aa19e59cf7c121a954",
+    "parts": [
+     {
+      "start": 16.06,
+      "end": 17.2,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "unit_lost",
+   "variant": 2,
+   "file": "unit_lost_2.wav",
+   "phrase": null,
+   "motif": "Hollow low exhalation with long falling decay",
+   "duration_seconds": 0.970023,
+   "bytes": 42822,
+   "sha256": "6d3b8298f9e341737fa15eef5471912a8aaa2f9983e66a323d19f17e1d86265a",
+   "integrated_lufs_dual_mono": -17.2,
+   "true_peak_dbfs": -8.8,
+   "target_lufs": -17.0,
+   "gain_db": -5.4,
+   "pre_level": {
+    "integrated_lufs": -11.6,
+    "true_peak_dbfs": -3.2
+   },
+   "source": {
+    "file": "suno-f50c90d8-972c-4cdd-988b-ad866be3675b.wav",
+    "sha256": "364591f6f3711e868267ed109a0a63ca7e39aae1cb598ab27d89a7c737ff1eaf",
+    "parts": [
+     {
+      "start": 5.16,
+      "end": 6.13,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "uncertain",
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 1,
+   "file": "enemy_unit_engaged_1.wav",
+   "phrase": null,
+   "motif": "Four tight alternating combat pulses",
+   "duration_seconds": 0.6,
+   "bytes": 26504,
+   "sha256": "3aaa0c1f8e9254235b39dffa23b7a0aa794db245812913f9c0340907130ccef2",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -3.6,
+   "target_lufs": -18.0,
+   "gain_db": 1.0,
+   "pre_level": {
+    "integrated_lufs": -19.1,
+    "true_peak_dbfs": -4.5
+   },
+   "source": {
+    "file": "suno-6d016aa8-82bf-402e-9b6f-b1fe37b715ba.wav",
+    "sha256": "a4d79bffa90e6fb376f04aafd6a3755af33eb32a507639a51e52dec3f253c2b9",
+    "parts": [
+     {
+      "start": 28.5,
+      "end": 29.1,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 2,
+   "file": "enemy_unit_engaged_2.wav",
+   "phrase": null,
+   "motif": "Four tight alternating combat pulses",
+   "duration_seconds": 0.530023,
+   "bytes": 23418,
+   "sha256": "d81aedfc3bb62e43f15239cea1de469864ad7ff87d404e173177fb006824c037",
+   "integrated_lufs_dual_mono": -22.4,
+   "true_peak_dbfs": -4.6,
+   "target_lufs": -18.0,
+   "gain_db": 12.0,
+   "pre_level": {
+    "integrated_lufs": -34.4,
+    "true_peak_dbfs": -16.6
+   },
+   "source": {
+    "file": "suno-093e3295-f927-4c90-ba73-c1425f1f7ebf.wav",
+    "sha256": "c0f40fff4aa4c8685fd7dd9518b52eca2d5e2615c0fabfa1d15d194170017f46",
+    "parts": [
+     {
+      "start": 14.4,
+      "end": 14.93,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 1,
+   "file": "enemy_unit_destroyed_1.wav",
+   "phrase": null,
+   "motif": "One decisive pulse with falling tail",
+   "duration_seconds": 0.74,
+   "bytes": 32678,
+   "sha256": "cf0b70045d0bc751aa7c6153d373e2d0b0f3f2a7745b05aee0ed697a4befd5ee",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -5.3,
+   "target_lufs": -18.0,
+   "gain_db": -0.1,
+   "pre_level": {
+    "integrated_lufs": -17.9,
+    "true_peak_dbfs": -5.1
+   },
+   "source": {
+    "file": "suno-6d016aa8-82bf-402e-9b6f-b1fe37b715ba.wav",
+    "sha256": "a4d79bffa90e6fb376f04aafd6a3755af33eb32a507639a51e52dec3f253c2b9",
+    "parts": [
+     {
+      "start": 12.39,
+      "end": 13.13,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "weak",
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 2,
+   "file": "enemy_unit_destroyed_2.wav",
+   "phrase": null,
+   "motif": "One decisive pulse with falling tail",
+   "duration_seconds": 0.58,
+   "bytes": 25622,
+   "sha256": "e32efd92d5df0d6583d79d2ecf2f563ccc20d7dbeca398da4f71443778560452",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.9,
+   "target_lufs": -18.0,
+   "gain_db": -1.3,
+   "pre_level": {
+    "integrated_lufs": -16.7,
+    "true_peak_dbfs": -5.5
+   },
+   "source": {
+    "file": "suno-f50c90d8-972c-4cdd-988b-ad866be3675b.wav",
+    "sha256": "364591f6f3711e868267ed109a0a63ca7e39aae1cb598ab27d89a7c737ff1eaf",
+    "parts": [
+     {
+      "start": 9.14,
+      "end": 9.72,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "uncertain",
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 1,
+   "file": "enemy_host_destroyed_1.wav",
+   "phrase": null,
+   "motif": "Broad three-step resolving resonance",
+   "duration_seconds": 1.4,
+   "bytes": 61784,
+   "sha256": "03c6a06b430499621354664cd189465525f8c33483193b988381389884c7a02f",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -3.7,
+   "target_lufs": -17.0,
+   "gain_db": 3.9,
+   "pre_level": {
+    "integrated_lufs": -22.2,
+    "true_peak_dbfs": -7.4
+   },
+   "source": {
+    "file": "suno-6d016aa8-82bf-402e-9b6f-b1fe37b715ba.wav",
+    "sha256": "a4d79bffa90e6fb376f04aafd6a3755af33eb32a507639a51e52dec3f253c2b9",
+    "parts": [
+     {
+      "start": 10.23,
+      "end": 11.63,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "uncertain",
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 2,
+   "file": "enemy_host_destroyed_2.wav",
+   "phrase": null,
+   "motif": "Broad three-step resolving resonance",
+   "duration_seconds": 1.4,
+   "bytes": 61784,
+   "sha256": "0dc8a24ce66ca677645f985432b67d373b854f50968b60a7931d028cbba240fd",
+   "integrated_lufs_dual_mono": -17.1,
+   "true_peak_dbfs": -4.8,
+   "target_lufs": -17.0,
+   "gain_db": 0.0,
+   "pre_level": {
+    "integrated_lufs": -17.0,
+    "true_peak_dbfs": -4.7
+   },
+   "source": {
+    "file": "suno-41d986c3-8f1a-439e-bef7-83bb777bdcf5.wav",
+    "sha256": "7caab97d39cd4f42b96fa205cb940a023d08819746fec5aa19e59cf7c121a954",
+    "parts": [
+     {
+      "start": 32.75,
+      "end": 34.15,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "plausible",
+   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "powerstation_captured",
+   "variant": 1,
+   "file": "powerstation_captured_1.wav",
+   "phrase": null,
+   "motif": "One continuous low-to-bright rising bloom",
+   "duration_seconds": 1.250023,
+   "bytes": 55170,
+   "sha256": "d15b79391930fbaeece5428ec97aaf9493dcab5bf7376b3a460469bafdbaea8f",
+   "integrated_lufs_dual_mono": -17.1,
+   "true_peak_dbfs": -10.0,
+   "target_lufs": -17.0,
+   "gain_db": -4.4,
+   "pre_level": {
+    "integrated_lufs": -12.6,
+    "true_peak_dbfs": -5.6
+   },
+   "source": {
+    "file": "audio-reaper/Projects/Media/1c237902-4d7f-4066-8cd2-b59a693c0c7b_paid_wm.wav",
+    "sha256": "2ccb1601900b7a569ff5c6a68872a8af977fba76b3107e4d29a6c6a56eaeb44a",
+    "parts": [
+     {
+      "start": 9.8,
+      "end": 11.05,
+      "offset": 0.0
+     }
+    ]
+   },
+   "reviewer": "Coda (cut, v02) + Red (signal check, 2026-11-02; not heard)",
+   "confidence": "under_evaluation",
+   "origin": "Coda v02 salvage Sulgogar-04"
+  },
+  {
+   "faction": "sulgogars-mp",
+   "event": "powerstation_captured",
+   "variant": 2,
+   "file": "powerstation_captured_2.wav",
+   "phrase": null,
+   "motif": "One continuous low-to-bright rising bloom",
+   "duration_seconds": 1.170023,
+   "bytes": 51642,
+   "sha256": "0a90bce3165c721ce013e148ab5627eff2649a0b3a5b0dd190b44f592ad7b411",
+   "integrated_lufs_dual_mono": -17.0,
+   "true_peak_dbfs": -5.8,
+   "target_lufs": -17.0,
+   "gain_db": 6.0,
+   "pre_level": {
+    "integrated_lufs": -23.0,
+    "true_peak_dbfs": -11.6
+   },
+   "source": {
+    "file": "suno-066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae.wav",
+    "sha256": "29c777d4ddadca3da0dd15a61be706acc3506a79f4785b6bda3c6a6df7418973",
+    "parts": [
+     {
+      "start": 26.92,
+      "end": 28.09,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
+   "confidence": "uncertain",
+   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae"
+  }
+ ]
 }
