@@ -109,10 +109,13 @@ reviewed six-faction candidate, plus two removed whitespace-only lines in
 `yw_shell_ui_screens.cpp`. Original game data, generated retail-derived maps,
 local build trees, private correspondence and recovery material are not included.
 
-## Netcode modernization and agentic forks/MP bots (this session, uncommitted)
+## Netcode modernization and agentic forks/MP bots (Muse Code session)
 
-Recorded after the entries above; working tree on top of `99716e6`, not yet
-committed. Toolchain: MSYS2 MINGW64 (GCC) bootstrapped locally; full
+Recorded after the entries above, written while the work was an uncommitted
+tree on top of `99716e6`. It was later committed and pushed to `six-factions`
+as `429f3f4`, `ff4dadb`, `6001c99` and `6b65506`; only `6b65506` configures
+and builds (the earlier three list sources that arrive in later commits).
+Toolchain: MSYS2 MINGW64 (GCC) bootstrapped locally; full
 `tools/windows/build.sh` run is green (engine links, 14/14 CTest, agent MCP
 Python tests, map tests, package zip).
 
@@ -189,7 +192,8 @@ before the agent bridge initializes. `fork_step`/`fork_commit` were verified
 by unit tests only, not driven live in this run. Six-faction roster matches,
 replicated combat outcomes, capture and completion remain open acceptance
 work, as does the release gate. Per the recorded user decisions, ENet stays
-opt-in and this tree stays uncommitted.
+opt-in.
+
 ## Six-faction roster + live fork commit (2026-11-02, headless instances)
 
 Both engine windows were hidden (bridge-driven only) for this phase.
@@ -300,6 +304,55 @@ full `tools/windows/build.sh` run is green: engine build, 14/14 CTest,
 10 map tests, 18 MCP tests, 5 package tests, and a fresh Windows package
 (`OpenNeoUA-windows-x86_64.zip`, binary sha256
 `3f653d7bf9077409b949e01b6a7e425f621c76ae25ade9279cd2a98cbfabafd1`).
-ENet remains opt-in per the recorded user decision, and the tree remains
-uncommitted for review.
+ENet remains opt-in per the recorded user decision.
+
+## Independent review and Linux validation (2026-11-02, Red)
+
+Scope: the four Muse Code commits above, reviewed from source, rebuilt on
+Linux and exercised with new focused tests. No retail data or live match was
+used in this pass, so none of the gameplay acceptance gaps above is closed.
+
+* `6b65506` builds on Ubuntu 24.04 x86-64 with GCC 13.3 through
+  `tools/linux/build.sh`: 14/14 CTest, 10 map tests, 18 MCP tests, package and
+  dynamic-library check green. This is the first Linux build of the Muse work.
+  The two ENet suites were off in both build helpers; enabled, they passed.
+* ENet adapter, three or more players: a client's broadcast never reached the
+  other clients and directed client-to-client sends were sent to the host and
+  dropped, because the host delivered client frames only to itself. The
+  two-peer tests could not see this. Frames are now addressed (`'D'`/`'B'` +
+  U64) and the host relays them with the original sender id, as `ZNDSingle`
+  does. `test_enet_znd_relay` failed before the fix ("other client missed
+  relayed broadcast") and passes after.
+* ENet adapter, threading: the pump thread serviced the ENet host while the
+  game thread sent on it. ThreadSanitizer reported 80 data races in the
+  existing `test_enet_znd`; with one lock around every transport call it
+  reports none in that test or the relay test.
+* ENet handshake: duplicate callsigns are refused (`ERR_CONN_NAME`) instead of
+  joining and deadlocking name-addressed lobby messages; a full or hidden
+  session refuses new joiners (`ERR_CONN_FULL`), restoring `ZNDSingle`
+  parity; broadcasts reach only peers that passed the handshake. An ENet-only
+  framing byte (`FramingVersion = 2`) keeps mismatched ENet builds from
+  misparsing each other; the ZNDNet wire and `ProtoVer` are unchanged.
+* `windp`: two nested-if guards made `CloseSession` and the session-list
+  refresh no-ops on the ENet path; both now test the active connection.
+* Bots: a `-bot Ghorkov:Veteran` client seated as Taerkasten (as in the live
+  run above) kept thinking as owner 6, so its decisions used another
+  faction's own-unit set and fog view; it now binds to its seated owner. The
+  order steering wrote 100 into wishes and never restored them, so every
+  faction drifted to the same all-100 station; weights are now recomputed
+  from the profile each think. `test_net_bot` covers both.
+* Forks: live capture copied engine `(x, altitude, z)` into a model that
+  treats `(x, y)` as the map plane, so sector lookup and sensor range used
+  altitude. Capture now maps to `(x, -z)`; `test_world_fork` checks a unit two
+  rows away at the same column and altitude stays fogged. In a network match
+  the agent's `fork_observe` is pinned to the local player's owner.
+* Documentation now states that resume tokens and the bot takeover/reclaim
+  lifecycle are not reachable from the game yet (the host still destroys a
+  dropped player, `windp::Reset` discards the client token, and no engine code
+  drives `BotLifecycle`).
+
+Re-run after the fixes on the same Linux host: 17/17 CTest (now including
+`enet_transport`, `enet_znd` and `enet_znd_relay`), 10 map tests, 18 MCP
+tests, package and library check green. Windows was not rebuilt in this pass;
+`tools/windows/build.sh` now also builds the ENet suites.
 

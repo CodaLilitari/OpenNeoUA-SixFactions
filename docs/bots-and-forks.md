@@ -22,11 +22,17 @@ OpenNeoUA -bot 2:0
 The spec is `Faction:Difficulty`. Factions: `Resistance`, `Ghorkov`,
 `Mykonian`, `Taerkasten`, `BlackSect` (also `black-sect`), `Sulgogars`, or a
 numeric owner id (`1, 6, 3, 4, 5, 2`). Difficulties: `Cadet`/`0`,
-`Normal`/`1`, `Veteran`/`2`. Once the net game starts, the process drives its
-own station: the faction profile is applied through the normal robo wish
-setters (`setROBO_epConquer` and friends) and re-steered every reaction
-interval toward the order chosen by fork lookahead. Bots appear in the lobby
-as ordinary players (name them e.g. `BOT Ghorkov (Veteran)`).
+`Normal`/`1`, `Veteran`/`2`. The faction is still picked in the lobby like a
+human's; the requested faction is a preference. When the match starts the
+bot binds to the owner it was actually seated as (`BindSpecToOwner`) and logs
+a mismatch, so its profile, own-unit set and fog view always belong to its
+own station. Thinking as the requested owner would read another player's
+view, or none at all. The process then drives its station: every reaction
+interval the faction profile is re-applied through the normal robo wish
+setters (`setROBO_epConquer` and friends) and only the wish matching the
+fork-chosen order is lifted (`WeightsForOrder`), so the six personalities do
+not converge. Bots appear in the lobby as ordinary players (name them e.g.
+`BOT Ghorkov (Veteran)`); callsigns must be unique.
 
 Each faction plays differently (weights in `src/world/net_bot.h`):
 Resistance balanced; Ghorkov heavy conquest squads; Mykonian radar/recon and
@@ -36,19 +42,21 @@ no construction wishes. Difficulty only scales reaction time (1500/750/250
 ms), sensor range (1800/2000/2160), lookahead depth (0/1/2) and order noise —
 never information access.
 
-### Leave, takeover, reclaim
+### Leave, takeover, reclaim (designed, not yet wired)
+
+`BotLifecycle` in `net_bot.h` models these transitions and is unit-tested,
+but no engine code drives it yet. `BotRuntime::RequestLeave` exists without a
+caller, a dropped human is still destroyed by the host as before, and no
+standby-bot or rejoin path exists in the shell. The intended design:
 
 - Leave: `BotRuntime::RequestLeave` broadcasts `UAMSG_EXIT` (norm=1), the
   same quit path as a human; the departing player's units follow the normal
   `yw_cleanPlayer` fate.
-- Disconnect takeover: run a standby bot process with the same faction spec.
-  When the human drops, the bot adopts that owner slot
-  (`BotLifecycle::OnTakeoverOffer`), resyncs from the host snapshot
-  (REQUPDATE/UPDATE) and resumes play. The brain only accepts takeover for
-  its own configured owner.
+- Disconnect takeover: a standby bot with the same faction adopts that owner
+  slot (`BotLifecycle::OnTakeoverOffer`), resyncs from the host snapshot
+  (REQUPDATE/UPDATE) and resumes play.
 - Human reclaim: the human rejoins the same owner slot; the bot exits first
-  (`OnHumanReclaim` → EXIT) and the human resyncs before READY. A faction
-  that was not in the starting roster is never created mid-match.
+  (`OnHumanReclaim` → EXIT) and the human resyncs before READY.
 
 Bots may send rate-limited (≥20 s), faction-flavoured chat through
 `UAMSG_MESSAGE`. Lines are validated by `ValidBotChatLine`: at most 63 chars,
@@ -85,7 +93,12 @@ Semantics:
   authoritative world, so net CRC checks still guard divergence.
 - **Observe**: fog-filtered per owner — own units in full; enemy units only
   inside a visible sector or within sensor range of an own unit. Bots use
-  exactly this view, so a bot can never attack what it cannot see.
+  exactly this view, so a bot can never attack what it cannot see. Fork
+  states use the map plane: `x` east, `y` = engine `-z` (sector rows), `z` =
+  engine altitude (`EnginePositionToPlane`). Capturing raw engine axes would
+  test sensor range against altitude and leak units along a whole column.
+  In a network match the agent bridge always observes as the local player's
+  owner, whatever owner the request names.
 - **Limits**: fixed step (40 ms default), per-call tick budget, unit cap
   (1024, matching the net snapshot caps), snapshot byte ceiling, and a live
   fork budget (8 per registry; discarded forks free their slot).
@@ -93,6 +106,10 @@ Semantics:
 Engine bridge: `ForkBridge::CaptureWorldState` / `ValidateActions`
 (`src/game/yw_fork.cpp`) translate the live `NC_STACK_ypaworld` (sectors via
 `Sectors()`, unit hierarchy via `_unitsList`/`_kidList`) into fork state.
+`Fork::Step` is an abstract planning model (move, attack, create, build on
+sector energy), not the engine's physics or combat; forks rank options, they
+do not predict the live simulation. Discarded agent forks are retained in
+memory until the process exits (the registry frees the slot, not the state).
 Bot lookahead (`NetBot::Decide`) forks that state, steps candidates, and at
 Veteran depth also steps an assumed enemy reply before picking an order.
 
