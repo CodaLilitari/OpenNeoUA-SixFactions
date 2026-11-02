@@ -85,6 +85,20 @@ bool IsVariantFilename(const std::string &filename, const std::string &stem)
     return positive;
 }
 
+const char *FactionPackRoot(int owner)
+{
+    // Retail gave every faction the same vehicle-class voices. Resistance (1)
+    // and Mykonians (3) keep them; these four factions have their own packs.
+    switch (owner)
+    {
+    case 2: return "sounds/speech/voicepacks/sulgogars-mp";
+    case 4: return "sounds/speech/voicepacks/taerkasten-mp";
+    case 5: return "sounds/speech/voicepacks/black-sect-mp";
+    case 6: return "sounds/speech/voicepacks/ghorkov-mp";
+    default: return "";
+    }
+}
+
 std::vector<std::string> UnitEventPaths(const std::string &authoredRoot, size_t event,
                                       int owner, bool multiplayer)
 {
@@ -93,9 +107,7 @@ std::vector<std::string> UnitEventPaths(const std::string &authoredRoot, size_t 
     if (!authored.empty()) paths.push_back(authored);
     if (multiplayer)
     {
-        const char *root = owner == 5 ? "sounds/speech/voicepacks/black-sect-mp" :
-                           owner == 2 ? "sounds/speech/voicepacks/sulgogars-mp" : "";
-        const std::string faction = PackEventPath(root, event);
+        const std::string faction = PackEventPath(FactionPackRoot(owner), event);
         if (!faction.empty() && faction != authored) paths.push_back(faction);
     }
     return paths;

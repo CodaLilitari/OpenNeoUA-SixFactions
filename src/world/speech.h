@@ -21,6 +21,9 @@ int EventIndexFromMsgID(int message);
 int EventIndexFromKey(const std::string &key);
 const char *EventKey(size_t index);
 std::string PackEventPath(const std::string &root, size_t event);
+// Multiplayer default pack root for a faction owner, or "" when the faction
+// keeps the original vehicle-class voices (Resistance 1, Mykonians 3).
+const char *FactionPackRoot(int owner);
 // Explicit prototype packs take precedence over the new multiplayer defaults.
 // Owner IDs are faction IDs, not lobby slot indices.
 std::vector<std::string> UnitEventPaths(const std::string &authoredRoot, size_t event,
