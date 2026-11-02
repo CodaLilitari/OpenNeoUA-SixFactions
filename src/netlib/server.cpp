@@ -1,5 +1,6 @@
 #include "zndNet.h"
 #include "errcode.h"
+#include "world/net_protocol.h"
 
 namespace ZNDNet
 {
@@ -89,7 +90,7 @@ void ZNDServer::ProcessSystemPkt(Pkt* pkt)
             uint8_t namestrSz = rd.readU8();
 
             if (namestrSz == 0 || servstrSz == 0 ||
-               ((size_t)namestrSz + (size_t)servstrSz + 2) != rd.size() ||
+               (((size_t)namestrSz + (size_t)servstrSz + 2) != rd.size() && ((size_t)namestrSz + (size_t)servstrSz + 4) != rd.size() && ((size_t)namestrSz + (size_t)servstrSz + 20) != rd.size()) ||
                     servstrSz != servString.size())
             {
                 return;
@@ -103,6 +104,15 @@ void ZNDServer::ProcessSystemPkt(Pkt* pkt)
 
             std::string nm;
             rd.readStr(nm,  namestrSz);
+
+            unsigned char verBytes[2];
+            verBytes[0] = rd.readU8();
+            verBytes[1] = rd.readU8();
+            if (!World::NetProtocol::ProtoCompatible(World::NetProtocol::DecodeProtoVer(verBytes)))
+            {
+                SrvSendConnErr(pkt->addr, ERR_CONN_VERSION);
+                return;
+            }
 
             CorrectName(nm);
 

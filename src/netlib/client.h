@@ -67,6 +67,7 @@ protected:
     bool        cLeader;
     std::string cJoinedSessionName;
     uint64_t    cTimeOut;
+    unsigned char cResumeToken[16];
 
     SessionInfoVect cSessions;
     uint64_t        cSessionsReqTimeNext;

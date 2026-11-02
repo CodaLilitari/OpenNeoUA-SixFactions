@@ -31,6 +31,7 @@
 //#define ZNDNET_TUNE_SEND_MAXDATA 131070
 
 #include "errcode.h"
+#include "ratelimit.h"
 #include "types.h"
 #include "tick.h"
 #include "events.h"
@@ -180,6 +181,7 @@ protected:
 
 
     uint64_t GenerateID();
+    void GenerateResumeToken(NetUser *usr);
     void CorrectName(std::string &_name);
     SendingData *MkSendingData(NetUser *usr, RefData *data, uint8_t flags, uint32_t chnl = 0);
 
@@ -199,6 +201,7 @@ protected:
     // In Raw packets
     SDL_Thread   *recvThread;
 
+    std::unordered_map<uint64_t, TokenBucket> rateBuckets;
     InRawList   recvPktList;
     SDL_mutex  *recvPktListMutex;
     ////
@@ -222,6 +225,7 @@ protected:
     PartedList  pendingPkt;
 
     Tick64       ttime;
+    uint64_t     resumeCounter;
 
 
 

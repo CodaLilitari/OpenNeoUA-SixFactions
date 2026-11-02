@@ -7,6 +7,7 @@
 #include "platform/network.h"
 #include "gui/lstvw.h"
 #include "netlib/zndNet.h"
+#include "netlib/enet_znd.h"
 
 
 struct ProviderStruct
@@ -235,6 +236,7 @@ public:
     ZNDNet::ZNDClient *zcli;
     ZNDNet::ZNDSingle *zhost;
     ZNDNet::ZNDNet    *zcon;
+    ZNDNet::ZNDEnet   *zenet = nullptr; // ENet cutover (OPENNEOUA_TRANSPORT=enet)
     bool _hasLobby;
     uint64_t    _myID;
     std::string _myName;

@@ -75,6 +75,8 @@ set(SOURCES
     netlib/single.cpp
     netlib/single_threads.cpp
     netlib/zndNet.cpp
+    netlib/enet_transport.cpp
+    netlib/enet_znd.cpp
     nucleus/nucleas.cpp
     nucleus/obj3d.cpp
     nucleus/particle.cpp
@@ -165,6 +167,8 @@ set(SOURCES
     game/yw_ui_voice.cpp
     game/yw_ui_windows.cpp
     game/yw_net.cpp
+    game/yw_fork.cpp
+    game/yw_bot.cpp
     game/yw_save.cpp
     game/ypabact.cpp
     game/ypabact_ai.cpp
@@ -203,6 +207,26 @@ set(SOURCES
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 add_subdirectory(third_party/bullet)
+
+# Vendored ENet 1.3.18 (design Phase 1 transport); see third_party/enet/VENDORED.md.
+set(ENET_SOURCES
+    third_party/enet/callbacks.c
+    third_party/enet/compress.c
+    third_party/enet/host.c
+    third_party/enet/list.c
+    third_party/enet/packet.c
+    third_party/enet/peer.c
+    third_party/enet/protocol.c)
+if(WIN32)
+    list(APPEND ENET_SOURCES third_party/enet/win32.c)
+else()
+    list(APPEND ENET_SOURCES third_party/enet/unix.c)
+endif()
+add_library(enet STATIC ${ENET_SOURCES})
+target_include_directories(enet PUBLIC third_party/enet/include)
+if(WIN32)
+    target_link_libraries(enet PUBLIC ws2_32 winmm)
+endif()
 
 pkg_search_module(SDL2 REQUIRED sdl2)
 link_directories(${SDL2_LIBRARY_DIRS})
@@ -274,6 +298,7 @@ target_link_libraries(
     PkgConfig::FFMPEG
     Threads::Threads
     OpenNeoUACollision
+    enet
 )
 
 set_source_files_properties(agent/bridge.cpp PROPERTIES COMPILE_DEFINITIONS

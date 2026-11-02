@@ -470,6 +470,7 @@ std::string Text::OpenUA(uint32_t id)
         case OUA_ABOUT_BUILD: fallback = "Build"; break;
         case OUA_ABOUT_CREDITS: fallback = "Original credits"; break;
         case OUA_ABOUT_THANKS: fallback = "Special thanks"; break;
+        case OUA_NET_SAVE_DISABLED: fallback = "Save and load are disabled in a network game."; break;
         case OUA_INTERFACE_RESOLUTION: fallback = "Interface Resolution"; break;
         case OUA_INTERFACE_RESOLUTION_TOOLTIP: fallback = "Select the interface resolution. Fullscreen output uses the desktop display mode."; break;
         case OUA_DB_USED_BY: fallback = "Used by"; break;

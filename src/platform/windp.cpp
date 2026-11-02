@@ -7,6 +7,7 @@
 #include <string.h>
 #include "common/includes.h"
 #include "system/inpt.h"
+#include <cstdlib>
 #include "platform/windp.h"
 #include "gui/button.h"
 #include "game/yw_net.h"
@@ -103,12 +104,26 @@ size_t NC_STACK_windp::SetMode(bool hosting)
     if (hosting)
     {
         connType = 1;
+        const char *transportEnv = std::getenv("OPENNEOUA_TRANSPORT");
+        if (transportEnv && std::string(transportEnv) == "enet")
+        {
+            zenet = new ZNDNet::ZNDEnet(World::NetProtocol::ServiceId);
+            zcon = zenet;
+            return 1;
+        }
         zhost = new ZNDNet::ZNDSingle(World::NetProtocol::ServiceId);
         zcon = zhost;
     }
     else
     {
         connType = 2;
+        const char *transportEnv = std::getenv("OPENNEOUA_TRANSPORT");
+        if (transportEnv && std::string(transportEnv) == "enet")
+        {
+            zenet = new ZNDNet::ZNDEnet(World::NetProtocol::ServiceId);
+            zcon = zenet;
+            return 1;
+        }
         zcli = new ZNDNet::ZNDClient(World::NetProtocol::ServiceId);
         zcon = zcli;
     }
@@ -139,7 +154,7 @@ bool NC_STACK_windp::Connect(const std::string &connString)
     if ( SDLNet_ResolveHost(&server, connString.c_str(), 61234) != 0)
         return false;
 
-    zcli->Start(_myName, server);
+    if (zenet) zenet->Start(_myName, server); else zcli->Start(_myName, server);
 
     uint32_t deadTime = SDL_GetTicks() + CONF_CONN_WAIT;
     bool waitConn = true;
@@ -150,11 +165,11 @@ bool NC_STACK_windp::Connect(const std::string &connString)
 
         if (SDL_GetTicks() > deadTime)
         {
-            zcli->Stop();
+            if (zenet) zenet->Stop(); else zcli->Stop();
             return false;
         }
 
-        for(ZNDNet::Event *evt = zcli->Events_PopSystem(); evt != nullptr; evt = zcli->Events_PopSystem())
+        for(ZNDNet::Event *evt = zcon->Events_PopSystem(); evt != nullptr; evt = zcon->Events_PopSystem())
         {
             switch( evt->type )
             {
@@ -182,7 +197,7 @@ bool NC_STACK_windp::Connect(const std::string &connString)
                 case ZNDNet::EVENT_DISCONNECT:
                 case ZNDNet::EVENT_CONNERR:
                     {
-                        zcli->Stop();
+                        if (zenet) zenet->Stop(); else zcli->Stop();
                         return false;
                     }
                     break;
@@ -205,6 +220,7 @@ bool NC_STACK_windp::IsConnected()
     if (connType != 2)
         return false;
 
+    if (zenet) return zenet->GetStatus() == ZNDNet::NetUser::STATUS_CONNECTED;
     return zcli->GetStatus() == ZNDNet::NetUser::STATUS_CONNECTED;
 }
 
@@ -230,8 +246,8 @@ bool NC_STACK_windp::Host(const std::string &gameName, int playerNum)
     if (connType != 1)
         return false;
 
-    zhost->Start(_myName, 61234, gameName, playerNum);
-    _myID = zhost->GetMyID();
+    if (zenet) zenet->Start(_myName, 61234, gameName, playerNum); else zhost->Start(_myName, 61234, gameName, playerNum);
+    _myID = zcon->GetMyID();
 
     ReloadUsersList();
     return true;
@@ -281,7 +297,7 @@ size_t NC_STACK_windp::CloseSession(IDVPair *stak)
     if (connType == 1)
     {
         if (zhost)
-            zhost->CloseSession(0);
+            if (zenet) zenet->CloseSession(0); else zhost->CloseSession(0);
     }
     
     return 0;
@@ -448,7 +464,7 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
         case ZNDNet::EVENT_SESSION_LIST:
         {
             if (zcli)
-                zcli->GetSessions(_rawSessions);
+                if (zenet) zenet->GetSessions(_rawSessions); else if (zcli) zcli->GetSessions(_rawSessions);
         }
         break;
 
@@ -541,7 +557,15 @@ size_t NC_STACK_windp::LockSession(int *arg)
 
 size_t NC_STACK_windp::Reset(IDVPair *stak)
 {
-    if (zcli)
+    if (zenet)
+    {
+        if (connType == 2) zenet->SendDisconnect();
+        else zenet->CloseSession(0);
+        zenet->Stop();
+        delete zenet;
+        zenet = nullptr;
+    }
+    else if (zcli)
     {
         zcli->SendDisconnect();
         zcli->Stop();
@@ -635,10 +659,10 @@ void NC_STACK_windp::UpdateOwnPlayerIndex()
 
 void NC_STACK_windp::ReloadSessionsList()
 {
-    if (connType > 0 && zcli && SDL_GetTicks() > _nextSessionsGet)
+    if (connType > 0 && (zcli || zenet) && SDL_GetTicks() > _nextSessionsGet)
     {
         _nextSessionsGet = SDL_GetTicks() + CONF_SESS_GET_TIME;
-        zcli->GetSessions(_rawSessions);
+        if (zenet) zenet->GetSessions(_rawSessions); else zcli->GetSessions(_rawSessions);
     }
 }
 

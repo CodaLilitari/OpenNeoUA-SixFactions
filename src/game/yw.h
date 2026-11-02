@@ -38,6 +38,7 @@
 #include "world/tools.h"
 #include "world/parsers.h"
 #include "world/saveparsers.h"
+#include "world/net_tick.h"
 #include "world/nparticle.h"
 #include "world/grounddecal_smoke.h"
 #include "world/grounddecal_profile.h"
@@ -3554,7 +3555,7 @@ public:
     uint32_t _netUpdateTimeStamp = 0;
     bool _isNetGame = false;
     bool _isNetGameStarted = false;
-    int32_t _netFlushTimer = 0;
+    World::Net::NetTick _netTick;
 
     bool _netInfoOverkill = false;
 

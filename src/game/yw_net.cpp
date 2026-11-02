@@ -2590,7 +2590,15 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         impls.force = impMsg->dir_len;
         impls.mass = impMsg->mass;
 
-        for( NC_STACK_ypabact* &curUnit : secInfo.pcell->unitsList )
+        const int impulseCellRadius = impMsg->p[1];
+        for ( int dy = -impulseCellRadius; dy <= impulseCellRadius; dy++ )
+        for ( int dx = -impulseCellRadius; dx <= impulseCellRadius; dx++ )
+        {
+            const Common::Point impulseCellId = secInfo.CellId + Common::Point(dx, dy);
+            if ( !yw->IsSector(impulseCellId) )
+                continue;
+            cellArea &impulseCell = yw->SectorAt(impulseCellId);
+            for( NC_STACK_ypabact* &curUnit : impulseCell.unitsList )
         {
             if (curUnit->_bact_type != BACT_TYPES_MISSLE &&
                     curUnit->_bact_type != BACT_TYPES_ROBO &&
@@ -2601,6 +2609,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
                     curUnit->_owner == yw->_userRobo->_owner &&
                     !(impMsg->p[0] && curUnit->CanReceiveConfiguredPush()))
                 curUnit->ApplyImpulse(&impls);
+            }
         }
     }
     break;

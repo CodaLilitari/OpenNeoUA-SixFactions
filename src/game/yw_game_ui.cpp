@@ -1411,11 +1411,31 @@ void NC_STACK_ypaworld::ypaworld_func64__sub7__sub6(TInputState *inpt)
                 break;
 
             case 9:
-                _levelInfo.State = TLevelInfo::STATE_SAVE;
+                if ( !_isNetGame )
+                    _levelInfo.State = TLevelInfo::STATE_SAVE;
+                else
+                {
+                    yw_arg159 v18;
+                    v18.unit = 0;
+                    v18.Priority = 10;
+                    v18.txt = Locale::Text::OpenUA(Locale::OUA_NET_SAVE_DISABLED);
+                    v18.MsgID = 0;
+                    ypaworld_func159(&v18);
+                }
                 break;
 
             case 10:
-                _levelInfo.State = TLevelInfo::STATE_LOAD;
+                if ( !_isNetGame )
+                    _levelInfo.State = TLevelInfo::STATE_LOAD;
+                else
+                {
+                    yw_arg159 v18;
+                    v18.unit = 0;
+                    v18.Priority = 10;
+                    v18.txt = Locale::Text::OpenUA(Locale::OUA_NET_SAVE_DISABLED);
+                    v18.MsgID = 0;
+                    ypaworld_func159(&v18);
+                }
                 break;
 
             case 11:

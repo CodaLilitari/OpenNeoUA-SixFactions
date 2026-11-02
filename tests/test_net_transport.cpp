@@ -135,6 +135,25 @@ static void Run()
         return true;
     }, 10000), "replacement sixth endpoint did not join");
     std::cout << "Protocol isolation, capacity limit, disconnect, and sixth-slot reuse passed\n";
+
+    // Resume: silently drop one client (Stop sends no DISCONNECT) so the host
+    // orphans it after TIMEOUT_USER, then reconnect the same client object.
+    // The resume token from CONNECTED must restore the original identity.
+    {
+        auto *returning = clients.front().get();
+        const uint64_t originalId = returning->GetMyID();
+        Check(originalId != 0, "resume candidate has no identity");
+        returning->Stop();
+        Check(Until([&] { return Count(host) == count - 1; }, 25000),
+              "silent drop did not vacate the session slot");
+        returning->Start("player-2", address);
+        Check(Until([&] { return returning->GetStatus() == NetUser::STATUS_CONNECTED
+                              && returning->GetMyID() == originalId; }, 15000),
+              "resume did not restore the original identity");
+        Check(Until([&] { return Count(host) == count; }, 10000),
+              "resumed endpoint did not rejoin the roster");
+        std::cout << "Resume after silent drop restored the original identity\n";
+    }
     for (auto &client : clients) client->Stop();
     host.Stop();
 }

@@ -1163,12 +1163,10 @@ void NC_STACK_ypaworld::ProcessGameShell()
 
     if ( _isNetGame )
     {
-        _netFlushTimer -= _GameShell->DTime;
-        if ( _netFlushTimer <= 0 )
+        _netTick.SetTickMs(100);
+        if ( _netTick.Advance(_GameShell->DTime) > 0 )
         {
             _netDriver->FlushBroadcastBuffer();
-
-            _netFlushTimer = 100;
         }
     }
 

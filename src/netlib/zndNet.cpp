@@ -1,5 +1,6 @@
 #include "zndNet.h"
 #include <regex>
+#include "world/net_protocol.h"
 
 
 namespace ZNDNet
@@ -30,6 +31,7 @@ ZNDNet::ZNDNet(const std::string &servstring)
     eEventWaitLock = 0;
 
     sendModifyMutex = SDL_CreateMutex();
+    resumeCounter = 0;
 }
 
 ZNDNet::~ZNDNet()
@@ -54,6 +56,33 @@ uint64_t ZNDNet::GenerateID()
 }
 
 
+
+void ZNDNet::GenerateResumeToken(NetUser *usr)
+{
+    if (!usr)
+        return;
+
+    // splitmix64 over clock, identity, address and a per-instance counter.
+    // The token is the resume identity; GenerateID stays display-only.
+    uint64_t z = SDL_GetPerformanceCounter()
+               ^ (usr->ID * 0x9E3779B97F4A7C15ULL)
+               ^ ((uint64_t)usr->addr.host << 32)
+               ^ (uint64_t)usr->addr.port
+               ^ (++resumeCounter * 0xD1B54A32D192ED03ULL);
+    for (int i = 0; i < 2; i++)
+    {
+        z += 0x9E3779B97F4A7C15ULL;
+        uint64_t x = z;
+        x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
+        x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
+        x = x ^ (x >> 31);
+        memcpy(&usr->resumeToken[i * 8], &x, 8);
+    }
+    bool any = false;
+    for (int i = 0; i < 16; i++) if (usr->resumeToken[i]) any = true;
+    if (!any)
+        usr->resumeToken[0] = 1;
+}
 
 void ZNDNet::CorrectName(std::string &name)
 {
@@ -456,8 +485,15 @@ void ZNDNet::SrvSendConnected(NetUser *usr, bool multisession)
 
     strm->writeU8(SYS_MSG_CONNECTED);
     strm->writeU8( multisession ? 1 : 0 ); //has lobby
+    {
+        World::NetProtocol::ResumeToken cur;
+        memcpy(cur.b, usr->resumeToken, 16);
+        if (!World::NetProtocol::TokenValid(cur))
+            GenerateResumeToken(usr);
+    }
     strm->writeU64(usr->ID);
     strm->writeSzStr(usr->name);
+    strm->write(usr->resumeToken, 16);
 
     Send_PushData( new SendingData(usr->addr, 0, strm, PKT_FLAG_SYSTEM) );
 }
@@ -603,6 +639,24 @@ bool ZNDNet::SessionCheckPswd(const std::string &pswd)
 
 void ZNDNet::Recv_PushInRaw(InRawPkt *inpkt)
 {
+    // Inbound flood guard (recv thread only): system packets are exempt;
+    // data packets are token-bucket limited per source address.
+    if (inpkt && inpkt->data && inpkt->len > 0 && !(inpkt->data[0] & PKT_FLAG_SYSTEM))
+    {
+        const uint64_t key = ((uint64_t)inpkt->addr.host << 16) ^ (uint64_t)inpkt->addr.port;
+        auto it = rateBuckets.find(key);
+        if (it == rateBuckets.end())
+        {
+            if (rateBuckets.size() >= 4096)
+                rateBuckets.clear();
+            it = rateBuckets.emplace(key, TokenBucket()).first;
+        }
+        if (!it->second.Allow(ttime.GetTicks()))
+        {
+            delete inpkt;
+            return;
+        }
+    }
     if (SDL_LockMutex(recvPktListMutex) == 0)
     {
         recvPktList.push_back(inpkt);

@@ -1509,12 +1509,18 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
 
             if ( _isNetGame && !gameplayFrozen )
             {
-                if ( arg->DTime == 1 )
-                    _netFlushTimer -= 20;
+                const int32_t frameMs = (arg->DTime == 1) ? 20 : arg->DTime;
+                const int32_t periodMs = SPEED_DOWN_NET ? 1500 : _GameShell->flush_time_norm;
+                bool flushDue;
+                if ( periodMs <= 0 )
+                    flushDue = true;
                 else
-                    _netFlushTimer -= arg->DTime;
+                {
+                    _netTick.SetTickMs(periodMs);
+                    flushDue = _netTick.Advance(frameMs) > 0;
+                }
 
-                if ( _netFlushTimer <= 0 )
+                if ( flushDue )
                 {
 
                     uint32_t v44 = _netDriver->FlushBroadcastBuffer();
@@ -1530,10 +1536,6 @@ size_t NC_STACK_ypaworld::Process(base_64arg *arg)
                     if ( v44 )
                         _GameShell->net_packet_cnt++;
 
-                    if ( SPEED_DOWN_NET )
-                        _netFlushTimer = 1500;
-                    else
-                        _netFlushTimer = _GameShell->flush_time_norm;
                 }
             }
             _profileVals[PFID_NETTIME] += profiler_end(v41);

@@ -48,6 +48,40 @@ must use the same fork identity. The `-six-factions-mp1` build label is informat
 not the compatibility check. This separates incompatible protocols; it does not
 authenticate players or change the inherited peer-trust design.
 
+The handshake also carries a little-endian U16 wire protocol version
+(`World::NetProtocol::ProtoVer`, currently 1) after the player name. Hosts
+(`ZNDSingle`/`ZNDServer`) hard-reject missing or incompatible versions with
+`ERR_CONN_VERSION`, so every peer must run a build with the same protocol
+version; bump `ProtoVer` on any incompatible wire change.
+
+Reconnect: `CONNECTED` carries a 128-bit resume token. A client that drops
+without sending `DISCONNECT` is orphaned by the host for 60 seconds; reconnecting
+with the token in the handshake restores the original transport identity and
+session slot. Explicit leave/kick frees the slot immediately. Game-state resync
+after rejoin uses the existing `REQUPDATE` snapshot flow. Inbound data packets
+are token-bucket limited per source address (400 burst, 200/s sustained);
+system packets are exempt.
+
+Modernization status: protocol versioning, resume tokens, and rate limiting
+above are on the wire today. The Phase 2 wire envelope (`src/game/yw_wire.h`)
+and the Phase 3 fixed tick (`src/world/net_tick.h`, 20 Hz) and delta codec
+(`src/world/delta_wire.h`, ForkDiff wire format) are implemented and
+unit-tested but not yet cut over. The fixed tick is wired: world and shell
+net flushes run through `NetTick` at the configured flush period. The
+transport still runs ZNDNet struct
+packets until the ENet swap (Phase 1) is built and accepted on a toolchain
+machine. Phase 1 transport now exists beside it: vendored ENet 1.3.18
+(`src/third_party/enet`) behind `INetTransport`/`EnetTransport`
+(`src/netlib/transport.h`, `enet_transport.h`) with the same handshake,
+resume-token, and two-channel contract, loopback-verified by
+`test_enet_transport` (`OPENNEOUA_ENET_TEST=ON`, no SDL needed). The `windp`
+provider still drives ZNDNet by default; set `OPENNEOUA_TRANSPORT=enet` to
+run the engine on ENet through the `ZNDEnet` adapter (single-session direct
+play, roster-synced user list). The adapter is loopback-verified
+(`OPENNEOUA_ENET_ZND_TEST=ON`) and the engine builds and passes its full test
+gate with it compiled in. Flipping the default awaits a live multiplayer
+acceptance match on retail data.
+
 Existing maps retain their original number of playable starts. Six-player maps
 require six distinct stations, suitable starting territory, owner-specific build
 permissions, and consistent technology rewards. Merely selecting Black Sect in

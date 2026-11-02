@@ -1,4 +1,5 @@
 #include "zndNet.h"
+#include "world/net_protocol.h"
 
 namespace ZNDNet
 {
@@ -8,6 +9,7 @@ ZNDClient::ZNDClient(const std::string &servstring)
 {
     cSessionsReqTimeNext = 0;
     cME.status = NetUser::STATUS_DISCONNECTED;
+    for (int i = 0; i < 16; i++) cResumeToken[i] = 0;
     eStatus = 0;
 }
 
@@ -89,6 +91,8 @@ void ZNDClient::ProcessSystemPkt(Pkt* pkt)
                     std::string nm;
                     rd.readSzStr(nm);
                     cME.name = nm;
+                    if (rd.size() - rd.tell() >= 16)
+                        rd.read(cResumeToken, 16);
                     cME.ID = ID;
                     cME.status = NetUser::STATUS_CONNECTED;
 
@@ -183,7 +187,7 @@ void ZNDClient::ProcessSystemPkt(Pkt* pkt)
             if (cME.status == NetUser::STATUS_CONNECTING && rd.size() == 1)
             {
                 uint8_t type = rd.readU8();
-                if (type == ERR_CONN_FULL || type == ERR_CONN_NAME)
+                if (type == ERR_CONN_FULL || type == ERR_CONN_NAME || type == ERR_CONN_VERSION)
                 {
                     threadsEnd = true; //Go to
                     Events_Push( new Event(EVENT_CONNERR, type) );
@@ -321,10 +325,11 @@ void ZNDClient::ProcessRegularPkt(Pkt* pkt)
 
 void ZNDClient::Start(const std::string &name, const IPaddress &addr)
 {
-    if (cME.status != NetUser::STATUS_DISCONNECTED)
+    if (cME.status != NetUser::STATUS_DISCONNECTED && !threadsEnd)
         return;
 
     mode = MODE_CLIENT;
+    // (restart after Stop without DISCONNECT presents the resume token)
     sock = SDLNet_UDP_Open(0);
 
     cServAddress = addr;
@@ -356,6 +361,15 @@ void ZNDClient::SendConnect()
     rfdata->writeU8(cME.name.size());
     rfdata->writeStr(servString);
     rfdata->writeStr(cME.name);
+    unsigned char verBytes[2];
+    World::NetProtocol::EncodeProtoVer(World::NetProtocol::ProtoVer, verBytes);
+    rfdata->write(verBytes, 2);
+    {
+        bool hasToken = false;
+        for (int i = 0; i < 16; i++) if (cResumeToken[i]) hasToken = true;
+        if (hasToken)
+            rfdata->write(cResumeToken, 16);
+    }
 
     Send_PushData( new SendingData(cServAddress, 0, rfdata, PKT_FLAG_SYSTEM));
 }

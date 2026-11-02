@@ -37,6 +37,8 @@ struct NetUser
     int32_t __idx;
 
     bool net;
+    unsigned char resumeToken[16];
+    uint64_t resumeExpiry;
     void *__master;
 
     NetUser()
@@ -60,6 +62,8 @@ struct NetUser
         __master = nullptr;
 
         net = false;
+        for (int i = 0; i < 16; i++) resumeToken[i] = 0;
+        resumeExpiry = 0;
     };
 
     inline bool IsOnline()
@@ -114,6 +118,8 @@ public:
         freeUsers.push_back(usr);
 
         usr->status = NetUser::STATUS_DISCONNECTED;
+        for (int i = 0; i < 16; i++) usr->resumeToken[i] = 0;
+        usr->resumeExpiry = 0;
     }
 
     NetUser *FindByIP(const IPaddress &addr)

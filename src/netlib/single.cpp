@@ -1,4 +1,5 @@
 #include "zndNet.h"
+#include "world/net_protocol.h"
 
 namespace ZNDNet
 {
@@ -109,7 +110,7 @@ void ZNDSingle::ProcessSystemPkt(Pkt* pkt)
 
     MemReader rd(pkt->data + 1, pkt->datasz - 1);
 
-    if (pkt->user == nullptr)
+    if (pkt->user == nullptr || (pkt->data[0] == SYS_MSG_HANDSHAKE && pkt->user && !pkt->user->IsOnline()))
     {
         if (pkt->data[0] == SYS_MSG_HANDSHAKE && rd.size() >= 4 &&
             session.open && session.HasSlot())
@@ -118,7 +119,7 @@ void ZNDSingle::ProcessSystemPkt(Pkt* pkt)
             uint8_t namestrSz = rd.readU8();
 
             if (namestrSz == 0 || servstrSz == 0 ||
-               ((size_t)namestrSz + (size_t)servstrSz + 2) != rd.size() ||
+               (((size_t)namestrSz + (size_t)servstrSz + 2) != rd.size() && ((size_t)namestrSz + (size_t)servstrSz + 4) != rd.size() && ((size_t)namestrSz + (size_t)servstrSz + 20) != rd.size()) ||
                     servstrSz != servString.size())
             {
                 return;
@@ -132,6 +133,50 @@ void ZNDSingle::ProcessSystemPkt(Pkt* pkt)
 
             std::string nm;
             rd.readStr(nm,  namestrSz);
+
+            unsigned char verBytes[2];
+            verBytes[0] = rd.readU8();
+            verBytes[1] = rd.readU8();
+            if (!World::NetProtocol::ProtoCompatible(World::NetProtocol::DecodeProtoVer(verBytes)))
+            {
+                SrvSendConnErr(pkt->addr, ERR_CONN_VERSION);
+                return;
+            }
+
+            if (rd.size() - rd.tell() >= 16)
+            {
+                unsigned char tokBytes[16];
+                rd.read(tokBytes, 16);
+                World::NetProtocol::ResumeToken want;
+                memcpy(want.b, tokBytes, 16);
+                if (World::NetProtocol::TokenValid(want))
+                {
+                    const uint64_t now = ttime.GetTicks();
+                    for (NetUserList::iterator uit = users.begin(); uit != users.end(); ++uit)
+                    {
+                        NetUser *old = *uit;
+                        if (!old || old->IsOnline() || !old->resumeExpiry || old->resumeExpiry <= now)
+                            continue;
+                        World::NetProtocol::ResumeToken have;
+                        memcpy(have.b, old->resumeToken, 16);
+                        if (!World::NetProtocol::TokenEqual(want, have))
+                            continue;
+                        old->addr = pkt->addr;
+                        old->pingTime = now;
+                        old->pingSeq = 0;
+                        old->pongTime = now;
+                        old->pongSeq = 0;
+                        old->status = NetUser::STATUS_CONNECTED;
+                        old->latence = 0;
+                        old->resumeExpiry = 0;
+                        SrvSendConnected(old, false);
+                        UserToSession(old, &session);
+                        eStatus |= FLAGS_USERS_LIST_UPD;
+                        Events_Push( new EventNameID(EVENT_USER_ADD, 0, old->name, old->ID) );
+                        return;
+                    }
+                }
+            }
 
             CorrectName(nm);
 
@@ -178,6 +223,7 @@ void ZNDSingle::ProcessSystemPkt(Pkt* pkt)
             usr->name = nm;
             usr->latence = 0;
             usr->sesID = 0;
+            usr->resumeExpiry = 0;
             usr->net = true;
 
             SrvSendConnected(usr, false);
@@ -251,7 +297,7 @@ void ZNDSingle::ProcessSystemPkt(Pkt* pkt)
 
 void ZNDSingle::ProcessRegularPkt(Pkt* pkt)
 {
-    if (!pkt || !pkt->user)
+    if (!pkt || !pkt->user || !pkt->user->IsOnline())
         return;
 
     if (pkt->datasz < 1 )
@@ -330,10 +376,10 @@ void ZNDSingle::InterprocessUpdate()
                 {
                     DisconnectUser(usr, 1);
 
-                    it = users.erase(it);
+                    usr->resumeExpiry = curTime + 60000;
 
                     //Disconnect player
-                    continue; //skip it++
+                    // orphan kept in users for resume until the expiry sweep
                 }
                 else
                 {
@@ -348,6 +394,19 @@ void ZNDSingle::InterprocessUpdate()
             }
         } // if (usr)
 
+        it++;
+    }
+
+    for(NetUserList::iterator it = users.begin() ; it != users.end();)
+    {
+        NetUser *usr = *it;
+        if (usr && usr->net && !usr->IsOnline() && usr->resumeExpiry && curTime > usr->resumeExpiry)
+        {
+            for (int i = 0; i < 16; i++) usr->resumeToken[i] = 0;
+            usr->resumeExpiry = 0;
+            it = users.erase(it);
+            continue;
+        }
         it++;
     }
 

@@ -1671,8 +1671,16 @@ void NC_STACK_ypamissile::Impact()
         arg83.mass *= v7;
     }
 
-    /* FIXME:
-       Needs to check all near sectors too if effective radius affect it*/
+    /* Legacy impulse: scan every sector the blast radius reaches, not only
+       the impact sector (mirrors the ApplyBlastToUnits neighbourhood scan). */
+
+    const Common::Point impactCell = World::PositionToSectorID(_position);
+    int cellRadius = 0;
+    if (isfinite(_mislBlastRadius) && _mislBlastRadius > 0.0f && _world->IsSector(impactCell))
+    {
+        cellRadius = (int)ceil(_mislBlastRadius / World::CVSectorLength) + 1;
+        if (cellRadius > 64) cellRadius = 64;
+    }
 
     const bool validDirectPush = isfinite(_mislDirectPush) && _mislDirectPush > 0;
     const bool validBlastPush = isfinite(_mislBlastPush) && _mislBlastPush > 0 &&
@@ -1681,7 +1689,9 @@ void NC_STACK_ypamissile::Impact()
     bool modernPushWeapon = validDirectPush || validBlastPush;
     bool hasLegacyImpulseTarget = false;
 
-    for( NC_STACK_ypabact* &bct : _pSector->unitsList )
+    auto applyImpulseToCell = [&](cellArea &cell)
+    {
+    for( NC_STACK_ypabact* &bct : cell.unitsList )
     {
         if ( _mislEmitter && _mislEmitter->IsMountedFamilyWith(bct) )
             continue;
@@ -1715,11 +1725,29 @@ void NC_STACK_ypamissile::Impact()
         }
     }
 
+    };
+
+    if ( cellRadius > 0 )
+    {
+        for ( int dy = -cellRadius; dy <= cellRadius; dy++ )
+            for ( int dx = -cellRadius; dx <= cellRadius; dx++ )
+            {
+                const Common::Point cellId = impactCell + Common::Point(dx, dy);
+                if ( _world->IsSector(cellId) )
+                    applyImpulseToCell(_world->SectorAt(cellId));
+            }
+    }
+    else if ( _pSector )
+    {
+        applyImpulseToCell(*_pSector);
+    }
+
     if ( _world->_isNetGame && hasLegacyImpulseTarget )
     {
         uamessage_impulse impMsg;
         impMsg.msgID = UAMSG_IMPULSE;
         impMsg.p[0] = modernPushWeapon ? 1 : 0;
+        impMsg.p[1] = (uint8_t)cellRadius;
         impMsg.owner = _owner;
         impMsg.id = _gid;
         impMsg.pos = _position;
