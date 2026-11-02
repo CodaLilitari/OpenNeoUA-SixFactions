@@ -47,6 +47,8 @@
 #include "world/energyfx.h"
 #include "common/crashdiag.h"
 #include "agent/bridge.h"
+#include "game/yw_bot.h"
+#include "game/yw_fork.h"
 
 namespace
 {
@@ -787,7 +789,9 @@ int main(int argc, char *argv[])
     ypaworld->LoadGuiFonts();
     ypaworld->CreateNewGuiElements();
 
+    ForkBridge::RegisterAgentHandler(ypaworld);
     Agent::Init();
+    BotRuntime::InitFromCmdLine();
     System::EventsAddHandler(Agent::EventFilter, true);
     while ( ProcessNextFrame() )
     {
@@ -819,10 +823,12 @@ int main(int argc, char *argv[])
             }
         }
         Agent::AfterFrame(snapshot);
+        BotRuntime::Tick(ypaworld);
         Agent::BeforeEvents();
         if (System::ProcessEvents()) break;
         System::Frames.EndFrame();
     }
+    BotRuntime::Shutdown();
     Agent::Shutdown();
     System::ProcessEvents(); // Dispatch automatic releases before input is destroyed.
     System::EventsDeleteHandler(Agent::EventFilter);

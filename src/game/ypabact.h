@@ -531,6 +531,7 @@ public:
     virtual void Update(update_msg *arg);
     virtual void Render(baseRender_msg *arg);
     virtual void SetTarget(setTarget_msg *arg);
+    virtual bool UsesAIControl() const { return !getBACT_inputting(); }
     virtual void AI_layer1(update_msg *arg);
     virtual void AI_layer2(update_msg *arg);
     virtual void AI_layer3(update_msg *arg);

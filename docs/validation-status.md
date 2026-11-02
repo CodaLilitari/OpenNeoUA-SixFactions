@@ -108,3 +108,198 @@ The committed engine adds the verified startup config-path repair to the
 reviewed six-faction candidate, plus two removed whitespace-only lines in
 `yw_shell_ui_screens.cpp`. Original game data, generated retail-derived maps,
 local build trees, private correspondence and recovery material are not included.
+
+## Netcode modernization and agentic forks/MP bots (this session, uncommitted)
+
+Recorded after the entries above; working tree on top of `99716e6`, not yet
+committed. Toolchain: MSYS2 MINGW64 (GCC) bootstrapped locally; full
+`tools/windows/build.sh` run is green (engine links, 14/14 CTest, agent MCP
+Python tests, map tests, package zip).
+
+* Handshake now carries a little-endian U16 wire protocol version; hosts
+  hard-reject missing/incompatible versions with `ERR_CONN_VERSION`. The
+  six-endpoint production transport test passes with the trailer, including
+  silent-drop resume: a 128-bit token issued at `CONNECTED` restores the
+  original identity after the 15 s host timeout plus 60 s orphan grace
+  (observed: "Resume after silent drop restored the original identity").
+* Inbound data packets are token-bucket limited per source (400 burst,
+  200/s); unit-tested (burst/refill/cap/backwards clock).
+* Blast-radius FIXME closed: legacy impulse scans the blast neighbourhood on
+  sender and receiver (radius in spare `p[1]`; old senders stay home-only).
+* Agentic forks: deterministic fork/step/observe/diff/commit-by-replay with
+  fog-filtered observation, dispatched through the agent bridge and MCP
+  `game_fork_*` tools (MCP suite 17/17). MP bots: six distinct faction
+  profiles, three difficulties, join/leave/takeover lifecycle, `-bot
+  Faction:Difficulty`. Fork/bot logic is covered by standalone tests; no
+  live bot match has been run.
+* Fixed 20 Hz tick (`NetTick`) now drives world and shell net flushes at
+  the configured period. `yw_wire` envelope and `delta_wire` ForkDiff
+  codecs are unit-tested but not yet cut over.
+* ENet 1.3.18 is vendored behind `INetTransport`/`EnetTransport` with the
+  same handshake/resume/two-channel contract (loopback-verified without
+  SDL), plus a `ZNDEnet` adapter preserving the windp session model
+  (loopback-verified with SDL). `OPENNEOUA_TRANSPORT=enet` selects it;
+  ZNDNet remains the default until a live acceptance match justifies the
+  flip. The Windows engine binary starts and stays up with and without the
+  opt-in (10-12 s smoke, no retail data in the working directory).
+
+Still open (unchanged in kind from above): replicated combat, capture and
+completion in real game clients, a live human+bot match and
+disconnect-takeover drill, and the release gate. These need retail game
+data and real client processes, not more transport work.
+Data staging update: the user's `OpenUA Standalone Package.zip` (retail UA +
+Metropolis Dawn, OpenUA build 2025-03-09) was extracted in scratch space and
+caught up to OpenNeoUA: current `OpenNeoUA.exe` + runtime DLLs in the root,
+OpenNeoUA `Data` overlay merged over the retail `DATA` (overlay wins),
+retail root `LEVELS`/`ENV`/`LOCALE` copied into `DATA` (259 level
+files incl. `MULTI`). The merged install starts and runs (20 s smoke,
+config written). Originals (zip and Downloads) untouched. Live multiplayer
+acceptance via the agent bridge is the remaining step.
+## Live multiplayer acceptance (2026-11-02, two real engine processes)
+
+Two engine instances were run from the staging copies and driven through the
+real menus with the agent bridge/MCP on loopback (host UDP 61234):
+
+* ZNDNet (default transport): HOST1 hosted retail level UNDER; CLIENT1
+  joined, readied, and both entered the match (`screen=game`, level 132,
+  owners 1 and 4). Netlogs show mutual READY TO PLAY; both stayed in sync
+  for minutes with no snapshot errors. Fork create/observe/discard was
+  exercised live against the running match: fog-filtered state showed both
+  own units and foreign-owned sectors. Disconnect drill: the client process
+  was killed mid-match; the host logged "Waiting for player CLIENT1", then
+  "Received a destroy player for CLIENT1", and kept playing.
+* MP bot: a third instance started with `-bot Ghorkov:Veteran` was driven
+  into the same lobby (roster HOST1 + BOT1), readied, and entered the match.
+  Its fork-observed world state minutes later showed the native station AI
+  expanding under the bot profile (own sectors energized across the map).
+* ENet opt-in (`OPENNEOUA_TRANSPORT=enet`): with distinct callsigns, the
+  client joined the host lobby over the `ZNDEnet` adapter, readied, and both
+  instances entered the same match with mutual READY TO PLAY. With
+  *identical* default callsigns ("Unnamed" on both sides) the lobby deadlocked
+  instead: name-targeted WELCOME delivery resolves the first matching name,
+  which is the host itself when names collide. Unique callsigns are required;
+  this matches the legacy name-addressed design and also affects readability
+  of the roster (both players display as "Unnamed").
+
+Driving notes: bridge clicks must target the legacy widgets' own 640x480
+hit rects (use widget geometry, not the rendered background art, which is
+offset); retail profiles also need `gfx.movie_player = no` in
+`NUCLEUS.INI` for unattended launches, or startup blocks in the intro movie
+before the agent bridge initializes. `fork_step`/`fork_commit` were verified
+by unit tests only, not driven live in this run. Six-faction roster matches,
+replicated combat outcomes, capture and completion remain open acceptance
+work, as does the release gate. Per the recorded user decisions, ENet stays
+opt-in and this tree stays uncommitted.
+## Six-faction roster + live fork commit (2026-11-02, headless instances)
+
+Both engine windows were hidden (bridge-driven only) for this phase.
+
+* Generated a six-station variant of retail `THE_ARTIFICIAL` (level id 200,
+  `THE_ARTIFICIAL_Six_Factions`) with `tools/make_six_faction_map.py` and
+  staged it into the instance data. The multiplayer level list shows it
+  alongside the retail entry; the lobby offers all six factions (Resistance,
+  Ghorkov, Mykonians, Taerkasten text/icon buttons plus Black Sect and
+  Sulgogars). A match on it ran with host owner 1 and a bot owner 6
+  (`screen=game`, `level_id` 200, six-station starts, 320000 station energy).
+* Live fork drive: `fork_create` + the new `game_fork_clone` produced two
+  forks with identical base hash; a Move step on the source advanced its
+  hash; `fork_commit` then succeeded and the clone's fog-filtered state
+  showed the replayed move (robo displaced toward the step target).
+  `fork_clone FORK OWNER` was added to the agent protocol, engine dispatch,
+  bridge capability list and MCP tools for this: two independent live
+  captures can never share a base hash (the state hash covers timestamps
+  and energies), so commit-by-replay needs a same-base destination. MCP
+  tests now 18/18. Committing between two unrelated live captures still
+  fails loudly (`fork_commit_failed`), as designed.
+* The bot's station maneuvers toward the host under its conquer wishes
+  (observed closing ~500 map units per 8 minutes on the 54x32 map); sector
+  ownership and unit counts were stable while out of contact. Replicated
+  weapon combat, sector capture and match completion are being observed
+  over a longer bot-driven run; results appended when contact occurs.
+## Live replicated bot combat (2026-11-02)
+
+### Bot station dispatch defects found and fixed
+
+Two dispatch defects prevented multiplayer bot stations from using the native
+station AI. This made fork-driven orders ineffective because those orders only
+steer the station wish weights.
+
+1. `NC_STACK_yparobo::AI_layer3` skipped `AI_checkWorld` and `AI_doWish`
+   for the local human station. A bot station is marked as the player robo,
+   so its production and strategic wishes never executed.
+2. `NC_STACK_yparobo::AI_layer1` dispatched directly to `User_layer`
+   whenever the local station had the inputting flag. This prevented the bot
+   station from reaching `AI_layer3` at all.
+
+The fix is narrowly scoped to bot processes:
+
+- `World::NetBot::StationUsesNativeAI(isPlayerRobo, botControlled)` in
+  `src/world/net_bot.h` centralizes the gate.
+- `NC_STACK_yparobo` now has `_botControlled` plus `SetBotControlled()`
+  and `IsBotControlled()` in `src/game/yparobo.h`.
+- `BotRuntime::Tick` in `src/game/yw_bot.cpp` marks the local robo as
+  bot-controlled when a valid `-bot` spec is active.
+- `AI_layer3` computes `nativeAI` from `StationUsesNativeAI` and uses it
+  for movement, world checks, wish execution, service, attacker-slot cleanup,
+  and danger handling in `src/game/yparobo_ai.cpp`.
+- `NC_STACK_ypabact::UsesAIControl()` was added in `src/game/ypabact.h`;
+  its default preserves human behavior. `NC_STACK_yparobo` overrides it to
+  return true for bot-controlled stations.
+- The generic dispatch in `src/game/ypabact_ai.cpp` and robo dispatch in
+  `src/game/yparobo_ai.cpp` now use `UsesAIControl()` instead of checking
+  the raw inputting flag. Human-controlled stations retain the original
+  `User_layer` path.
+
+`tests/test_net_bot.cpp` now covers all four `StationUsesNativeAI`
+combinations. The test failed before the helper existed and passes after the
+fix.
+
+### Headless live match
+
+Two hidden engine processes were launched from the updated staging instances:
+
+- Host: `OpenNeoUA -bot Resistance:Veteran` (callsign BHOST, owner 1).
+- Client: `OpenNeoUA -bot Ghorkov:Veteran` (callsign BCLIENT). On UNDER,
+  the client was assigned owner 4 / Taerkasten (station prototype 60).
+
+The client connected to 127.0.0.1, both players appeared in the lobby, the
+client readied, and the host started level 132. Both observations reported
+`screen=game`, `level_id=132`, and mutual READY TO PLAY appeared in the
+network logs.
+
+Within about 100 seconds of simulated time the armies expanded from the
+initial 2 units per side to host 8 and client 5; about 100 seconds later the
+host had 28 units and the client 12. Production spent station energy (host
+station 200000 -> 159754 during the buildup). Units dispersed across the map
+and the client station advanced toward the host (x about 9985 -> 9498).
+
+Combat was then observed from fork snapshots on both processes:
+
+- At t about 317 s, the closest opposing units were 745-747 map units apart
+  on both observations, with damaged units already present on both sides.
+- At t about 457 s, the closest opposing units were 7-8 map units apart.
+  Multiple units had non-prototype (damaged) energies and several wreck /
+  recently-killed entries had negative energies on both clients.
+- Host owned-unit count collapsed 34 -> 15 -> 1. By t about 631 s the host
+  station (gid 16842752) was at energy -17800 on the host observation and
+  the identical -17800 value was observed as a foreign unit on the client,
+  proving the destruction replicated.
+- Sector control collapsed with the army: host-visible owner-1 sectors went
+  28 -> 19 -> none visible, while the client observed 64 owner-4 sectors
+  and still held 13 units. This is replicated sector capture / map control
+  following the battle.
+
+`OH NO! The DEATH CACHE BUG is back!` lines in the client log are a legacy
+engine diagnostic printed during the death cascade; no crash occurred and
+both processes remained responsive to bridge observations afterwards.
+
+### Final verification
+
+After the dispatch fix, the focused `test_net_bot` binary passes, and the
+full `tools/windows/build.sh` run is green: engine build, 14/14 CTest,
+10 map tests, 18 MCP tests, 5 package tests, and a fresh Windows package
+(`OpenNeoUA-windows-x86_64.zip`, binary sha256
+`3f653d7bf9077409b949e01b6a7e425f621c76ae25ade9279cd2a98cbfabafd1`).
+ENet remains opt-in per the recorded user decision, and the tree remains
+uncommitted for review.
+

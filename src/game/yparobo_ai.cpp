@@ -7,6 +7,7 @@
 #include "game/yw.h"
 #include "game/yparobo.h"
 #include "game/yw_net.h"
+#include "world/net_bot.h" // World::NetBot::StationUsesNativeAI (bot station gate)
 #include "fmtlib/printf.h"
 #include "system/inivals.h"
 #include "common/crashdiag.h"
@@ -49,12 +50,10 @@ void NC_STACK_yparobo::AI_layer1(update_msg *arg)
     else if ( _primTtype != BACT_TGT_TYPE_UNIT )
         _target_vec = vec3d(0.0, 0.0, 0.0);
 
-    int v9 = getBACT_inputting();
-
-    if ( v9 )
-        User_layer(arg);
-    else
+    if ( UsesAIControl() )
         AI_layer3(arg);
+    else
+        User_layer(arg);
 }
 
 void NC_STACK_yparobo::AI_doMove(update_msg *arg)
@@ -3214,7 +3213,12 @@ void NC_STACK_yparobo::AI_layer3(update_msg *arg)
         {
             checkCollisions(arg->frameTime * 0.001);
 
-            if ( IsPlayerRobo() )
+            // A bot-driven station (BotRuntime) is marked PLAYERROBO as the
+            // local station but has no human driver: World::NetBot::
+            // StationUsesNativeAI routes it to the native AI below.
+            const bool nativeAI = World::NetBot::StationUsesNativeAI(IsPlayerRobo(), IsBotControlled());
+
+            if ( !nativeAI )
             {
                 if ( !UpdatePlayerMobileMove(arg) && !UpdatePlayerRoboIdleMotion(arg) )
                     wallow(arg);
@@ -3224,13 +3228,13 @@ void NC_STACK_yparobo::AI_layer3(update_msg *arg)
                 AI_doMove(arg);
             }
 
-            if ( IsPlayerRobo() )
+            if ( !nativeAI )
             {
                 searchEnemyRobo();
                 usersRoboEnergyCheck();
             }
 
-            if ( !IsPlayerRobo() )
+            if ( nativeAI )
             {
                 AI_checkWorld(arg);
                 AI_doWish(arg);
@@ -3242,7 +3246,7 @@ void NC_STACK_yparobo::AI_layer3(update_msg *arg)
 
             checkDanger();
 
-            if ( _roboState & ROBOSTATE_DANGER && !IsPlayerRobo() )
+            if ( _roboState & ROBOSTATE_DANGER && nativeAI )
                 AI_solveTrouble(arg);
         }
     }

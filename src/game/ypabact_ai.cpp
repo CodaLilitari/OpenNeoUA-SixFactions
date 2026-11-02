@@ -136,7 +136,7 @@ void NC_STACK_ypabact::AI_layer1(update_msg *arg)
     // Keep the common timing/stuck bookkeeping above, but do not let the
     // directly controlled unit execute AI target propagation or order recovery.
     // AI_layer2 routes it straight to the class-specific User_layer.
-    if ( _oflags & BACT_OFLAG_USERINPT )
+    if ( !UsesAIControl() )
     {
         AI_layer2(arg);
         return;
@@ -235,7 +235,7 @@ void NC_STACK_ypabact::AI_layer2(update_msg *arg)
     // Bypass opportunistic enemy scans, AI speech/engagement messages and AI
     // secondary-target assignment; only the active single-player stun
     // movement controller below temporarily replaces direct driving.
-    if ( _oflags & BACT_OFLAG_USERINPT )
+    if ( !UsesAIControl() )
     {
         // OpenNeoUA debuff stun: while movement stunation is active, the
         // directly controlled unit temporarily runs the same erratic movement

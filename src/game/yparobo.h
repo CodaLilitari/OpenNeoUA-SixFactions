@@ -226,6 +226,9 @@ public:
     void ypabact_func65__sub0();
 
     bool IsPlayerRobo() const;
+    void SetBotControlled(bool bot) { _botControlled = bot; }
+    bool IsBotControlled() const { return _botControlled; }
+    bool UsesAIControl() const override { return IsBotControlled() || !getBACT_inputting(); }
     bool IsPlayerRoboAIBehavior() const;
     bool IsPlayerRoboAIBehaviorMoveActive() const;
     bool GetPlayerRoboAIBehaviorMoveTarget(vec3d *target) const;
@@ -471,6 +474,7 @@ public:
     vec3d _roboBeamPos;
     int _roboBeamFXTime;
 
+    bool _botControlled = false;
     bool _playerRoboAIBehavior;
     bool _playerRoboAIBehaviorMoveActive;
     int _playerRoboAIBehaviorTargetCellID;
