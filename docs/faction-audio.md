@@ -75,8 +75,8 @@ or −17 LUFS for Sulgogar events whose duration target starts at 0.8 s. Measure
 the final files as dual mono, Black lines read −18.9 to −18.0 LUFS. Of the 32
 Sulgogar files, 23 are within 1 dB of target. Seven are 1.4 to 5.8 dB under,
 either because the peak ceiling limits gain on sharp attacks or because energy
-above 11 kHz is lost at 22050 Hz. Two hit the +12 dB cap and stay at −22.4 and
-−28.1 LUFS. True peak is at most −3.4 dBFS. None of these numbers show yet how
+above 11 kHz is lost at 22050 Hz. The last two stay at −22.4 and −28.1 LUFS even
+at the +12 dB gain cap. True peak is at most −3.4 dBFS. None of these numbers show yet how
 the cues hold up in combat or against the stock speech bus.
 
 The 64 cues were placed by `cue_workflow.prepare` into one REAPER project, saved
