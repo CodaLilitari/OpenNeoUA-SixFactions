@@ -176,6 +176,57 @@ int main()
     assert(TauntDue(1000, 21000));
     assert(TauntDue(-1, 0));
 
+    // Seating: the lobby decides the faction; the brain follows the seat.
+    {
+        BotSpec requested = ParseBotSpec("Ghorkov:Veteran");
+        bool mismatch = false;
+        BotSpec seated = BindSpecToOwner(requested, 4, mismatch);
+        Require(mismatch && seated.owner == 4 && seated.valid &&
+                seated.difficulty == Difficulty::Veteran, "bot follows its seated owner");
+        seated = BindSpecToOwner(requested, 6, mismatch);
+        Require(!mismatch && seated.owner == 6, "matching seat reports no mismatch");
+        seated = BindSpecToOwner(BotSpec(), 4, mismatch);
+        Require(!mismatch && !seated.valid, "invalid request stays invalid");
+    }
+
+    // Steering is stateless: any order sequence leaves every wish at its
+    // profile value except the one lifted for the current order, so the six
+    // personalities never converge on an all-100 station.
+    {
+        std::size_t count = 0;
+        const BotProfile *all = AllProfiles(count);
+        const OrderKind sequence[] = {OrderKind::Attack, OrderKind::Build, OrderKind::Move,
+                                      OrderKind::Attack, OrderKind::None};
+        std::set<std::vector<int>> distinct;
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            const BotProfile &p = all[i];
+            WishWeights w;
+            for (OrderKind k : sequence)
+                w = WeightsForOrder(p, k);
+            const WishWeights base = BaseWeights(p);
+            Require(w.conquer == base.conquer && w.power == base.power &&
+                    w.roboAttack == base.roboAttack && w.radar == base.radar,
+                    "a no-order think restores the profile weights");
+            const WishWeights attack = WeightsForOrder(p, OrderKind::Attack);
+            Require(attack.roboAttack == std::min(100, base.roboAttack + 30) &&
+                    attack.conquer == base.conquer && attack.power == base.power,
+                    "attack lifts only the robo-attack wish");
+            const WishWeights build = WeightsForOrder(p, OrderKind::Build);
+            Require(build.power == std::min(100, base.power + 30) &&
+                    build.roboAttack == base.roboAttack, "build lifts power/radar only");
+            for (OrderKind k : {OrderKind::Attack, OrderKind::Build, OrderKind::Move})
+            {
+                const WishWeights x = WeightsForOrder(p, k);
+                for (int v : {x.conquer, x.defense, x.radar, x.power, x.safety, x.recon, x.roboAttack})
+                    Require(v >= 0 && v <= 100, "wish weight stays within 0..100");
+            }
+            distinct.insert({attack.conquer, attack.defense, attack.radar, attack.power,
+                             attack.safety, attack.recon, attack.roboAttack});
+        }
+        Require(distinct.size() == count, "faction personalities stay distinct under orders");
+    }
+
     std::cout << "net bot profiles, roster, observation, lifecycle and chat tests passed\n";
     return 0;
 }

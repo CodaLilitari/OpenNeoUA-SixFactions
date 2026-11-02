@@ -8,16 +8,18 @@
 #include "game/yparobo.h"
 #include "game/yw_fork.h"
 #include "system/system.h"
+#include "common/log.h"
 
 namespace BotRuntime {
 namespace {
 
-World::NetBot::BotSpec g_spec;
+World::NetBot::BotSpec g_spec;        // as requested on the command line
+World::NetBot::BotSpec g_active;      // bound to the seat of the current match
+bool g_matchBound = false;
 World::NetBot::BotLifecycle g_lifecycle;
 World::Fork::ForkRng g_rng(0xB07B07ull);
 std::int32_t g_lastThinkMs = -1;
 std::int32_t g_lastTauntMs = -1;
-bool g_profileApplied = false;
 std::uint64_t g_forkSeq = 1;
 
 NC_STACK_yparobo *LocalRobo(NC_STACK_ypaworld *world)
@@ -27,17 +29,23 @@ NC_STACK_yparobo *LocalRobo(NC_STACK_ypaworld *world)
     return dynamic_cast<NC_STACK_yparobo *>(world->_userRobo);
 }
 
-void ApplyProfile(NC_STACK_yparobo *robo)
+void ApplyWeights(NC_STACK_yparobo *robo, const World::NetBot::WishWeights &w)
 {
-    const World::NetBot::BotProfile &p = World::NetBot::ProfileForOwner(g_spec.owner);
-    robo->setROBO_epConquer(p.wConquer);
-    robo->setROBO_epDefense(p.wDefense);
-    robo->setROBO_epRadar(p.wRadar);
-    robo->setROBO_epPower(p.wPower);
-    robo->setROBO_epSafety(p.wSafety);
-    robo->setROBO_epReconnoitre(p.wRecon);
-    robo->setROBO_epRobo(p.wRoboAttack);
-    g_profileApplied = true;
+    robo->setROBO_epConquer(w.conquer);
+    robo->setROBO_epDefense(w.defense);
+    robo->setROBO_epRadar(w.radar);
+    robo->setROBO_epPower(w.power);
+    robo->setROBO_epSafety(w.safety);
+    robo->setROBO_epReconnoitre(w.recon);
+    robo->setROBO_epRobo(w.roboAttack);
+}
+
+void ResetMatch()
+{
+    g_matchBound = false;
+    g_active = World::NetBot::BotSpec();
+    g_lastThinkMs = -1;
+    g_lastTauntMs = -1;
 }
 
 void SendChat(NC_STACK_ypaworld *world, const char *line)
@@ -76,8 +84,15 @@ World::NetBot::BotPhase Phase() { return g_lifecycle.phase; }
 
 void Tick(NC_STACK_ypaworld *world)
 {
-    if (!Enabled() || !world || !world->_isNetGame || !world->_isNetGameStarted)
+    if (!Enabled() || !world)
         return;
+    if (!world->_isNetGame || !world->_isNetGameStarted)
+    {
+        // Back in the shell: the next match may seat this bot elsewhere.
+        if (g_matchBound)
+            ResetMatch();
+        return;
+    }
     if (g_lifecycle.phase == World::NetBot::BotPhase::Lobby)
         g_lifecycle.phase = World::NetBot::BotPhase::InGame;
     NC_STACK_yparobo *robo = LocalRobo(world);
@@ -86,10 +101,22 @@ void Tick(NC_STACK_ypaworld *world)
     // No human drives this station: route it to the native station AI
     // (AI_checkWorld/AI_doWish) instead of the player path.
     robo->SetBotControlled(true);
-    if (!g_profileApplied)
-        ApplyProfile(robo);
+    if (!g_matchBound)
+    {
+        bool mismatch = false;
+        g_active = World::NetBot::BindSpecToOwner(
+            g_spec, static_cast<std::uint8_t>(robo->_owner), mismatch);
+        if (mismatch)
+            log_netlog("bot: requested %s, seated as owner %d; playing the seated faction\n",
+                       World::NetBot::ProfileForOwner(g_spec.owner).factionName,
+                       static_cast<int>(robo->_owner));
+        g_lifecycle.spec = g_active;
+        ApplyWeights(robo, World::NetBot::BaseWeights(
+            World::NetBot::ProfileForOwner(g_active.owner)));
+        g_matchBound = true;
+    }
 
-    const World::NetBot::DifficultyParams dp = World::NetBot::ParamsFor(g_spec.difficulty);
+    const World::NetBot::DifficultyParams dp = World::NetBot::ParamsFor(g_active.difficulty);
     if (g_lastThinkMs >= 0 && world->_timeStamp - g_lastThinkMs < dp.reactionMs)
         return;
     g_lastThinkMs = world->_timeStamp;
@@ -98,33 +125,18 @@ void Tick(NC_STACK_ypaworld *world)
     if (!ForkBridge::CaptureWorldState(world, state))
         return;
     const World::NetBot::BotOrder order =
-        World::NetBot::Decide(state, g_spec, g_rng, World::Fork::ForkId{g_forkSeq++});
+        World::NetBot::Decide(state, g_active, g_rng, World::Fork::ForkId{g_forkSeq++});
     // Steer the native station AI (AI_layer3 wishes) toward the fork-chosen
     // order. Direct state writes are never used; the robo setters are the
-    // same wish interface the shell uses for a human station.
-    const World::NetBot::BotProfile &p = World::NetBot::ProfileForOwner(g_spec.owner);
-    switch (order.kind)
-    {
-    case World::NetBot::OrderKind::Attack:
-        robo->setROBO_epRobo(100);
-        robo->setROBO_epConquer(p.wConquer);
-        break;
-    case World::NetBot::OrderKind::Build:
-        robo->setROBO_epPower(100);
-        robo->setROBO_epRadar(p.wRadar);
-        break;
-    case World::NetBot::OrderKind::Move:
-        robo->setROBO_epConquer(100);
-        robo->setROBO_epRobo(p.wRoboAttack);
-        break;
-    default:
-        break;
-    }
+    // same wish interface the shell uses for a human station. Weights are
+    // recomputed from the faction profile every think, so they never ratchet.
+    ApplyWeights(robo, World::NetBot::WeightsForOrder(
+        World::NetBot::ProfileForOwner(g_active.owner), order.kind));
 
     if (World::NetBot::TauntDue(g_lastTauntMs, world->_timeStamp))
     {
         g_lastTauntMs = world->_timeStamp;
-        SendChat(world, World::NetBot::TauntFor(g_spec.owner,
+        SendChat(world, World::NetBot::TauntFor(g_active.owner,
                                                 static_cast<std::uint32_t>(g_forkSeq)));
     }
 }
@@ -147,9 +159,7 @@ bool RequestLeave(NC_STACK_ypaworld *world)
 void Shutdown()
 {
     g_spec = World::NetBot::BotSpec();
-    g_profileApplied = false;
-    g_lastThinkMs = -1;
-    g_lastTauntMs = -1;
+    ResetMatch();
 }
 
 } // namespace BotRuntime

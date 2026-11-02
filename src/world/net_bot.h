@@ -150,6 +150,22 @@ inline BotSpec ParseBotSpec(const std::string &text)
     return spec;
 }
 
+// The lobby, not the command line, decides which faction a bot plays: a
+// "-bot Ghorkov:Veteran" client can be seated as Taerkasten. The brain must
+// then think as the faction it actually owns, both for its own-unit set and
+// for the fog view; thinking as the requested owner would read another
+// player's view (or none). Returns the spec bound to the seated owner and
+// reports whether it differed from the request.
+inline BotSpec BindSpecToOwner(const BotSpec &requested, std::uint8_t seatedOwner,
+                               bool &mismatch)
+{
+    BotSpec bound = requested;
+    mismatch = requested.valid && seatedOwner != requested.owner;
+    if (requested.valid && seatedOwner)
+        bound.owner = seatedOwner;
+    return bound;
+}
+
 inline std::string BotDisplayName(const BotSpec &spec)
 {
     const char *lvl = spec.difficulty == Difficulty::Cadet ? "Cadet" :
@@ -169,6 +185,39 @@ struct BotOrder
     std::int32_t cost = 0;
     double score = 0.0;
 };
+
+// Station wish weights (NC_STACK_yparobo ROBO_ATT_EP_* setters).
+struct WishWeights
+{
+    int conquer = 50, defense = 50, radar = 50, power = 50;
+    int safety = 50, recon = 50, roboAttack = 50;
+};
+
+inline WishWeights BaseWeights(const BotProfile &p)
+{
+    WishWeights w;
+    w.conquer = p.wConquer; w.defense = p.wDefense; w.radar = p.wRadar;
+    w.power = p.wPower; w.safety = p.wSafety; w.recon = p.wRecon;
+    w.roboAttack = p.wRoboAttack;
+    return w;
+}
+
+// Stateless steering: every think starts from the faction profile and lifts
+// only the wish matching the chosen order. Writing 100 into a wish and never
+// restoring it would ratchet every faction toward the same all-100 station.
+inline WishWeights WeightsForOrder(const BotProfile &p, OrderKind kind, int boost = 30)
+{
+    WishWeights w = BaseWeights(p);
+    const auto lift = [boost](int base) { return std::min(100, base + boost); };
+    switch (kind)
+    {
+    case OrderKind::Attack: w.roboAttack = lift(w.roboAttack); break;
+    case OrderKind::Build:  w.power = lift(w.power); w.radar = lift(w.radar); break;
+    case OrderKind::Move:   w.conquer = lift(w.conquer); break;
+    default: break;
+    }
+    return w;
+}
 
 inline float SectorCenterX(const Fork::WorldState &s, std::int32_t sectorId)
 {
