@@ -132,3 +132,5 @@ __pycache__/
 # Original developed multiplayer faction cues.
 !/Sounds/Speech/Voicepacks/black-sect-mp/
 !/Sounds/Speech/Voicepacks/sulgogars-mp/
+!/Sounds/Speech/Voicepacks/ghorkov-mp/
+!/Sounds/Speech/Voicepacks/taerkasten-mp/

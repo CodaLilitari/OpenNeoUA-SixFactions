@@ -1,18 +1,53 @@
 {
- "version": 4,
- "pack": "Suno + REAPER candidate pack (REAPER lab run v03-full-candidate-2026-11-02)",
- "collaboration": "Coda built the REAPER lab, the v02 cuts, the production plan and the reviewed cue contract; Red generated the remaining Suno takes, selected and verified cuts, rendered natively in REAPER and integrated.",
- "listening_status": "Nobody has heard these files. Black lines are ASR-verified (base.en, small.en, medium.en on the final files); Sulgogar calls are signal- and spectrogram-selected with a per-slot confidence. Auditory and in-game acceptance remain with Andrei.",
+ "version": 5,
+ "pack": "Suno + REAPER candidate packs for four factions: Black Sect, Sulgogars, Ghorkov and Taerkasten",
+ "collaboration": "Coda built the REAPER lab, the v02 cuts, the Black Sect and Sulgogar production plan and the reviewed cue contract. Red generated the remaining Black Sect and Sulgogar takes, wrote, generated and selected the Ghorkov and Taerkasten packs and the Black Sect message-19 lines, verified the cuts, rendered them natively in REAPER and integrated them.",
+ "listening_status": "Andrei listened to the version 4 Black Sect and Sulgogar reels on 2026-11-02 and called them good. He asked for the message-19 fix that this version makes. Nobody has heard the Ghorkov and Taerkasten files or the two new Black Sect lines yet. They are ASR-verified, and their accent is checked by a language-ID cue. Auditory, accent and in-game acceptance remain with Andrei.",
  "format": "PCM16 mono 22050 Hz",
- "level_policy": "-18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target).",
- "black_voice": "Suno v6 (Songs Advanced, spoken word, male) takes separated with Demucs htdemucs vocal stems; four lines are Coda v02 cuts of her own Suno vocal estimates.",
+ "level_policy": "-18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target). Ghorkov and Taerkasten use the -18 LUFS target.",
+ "black_voice": "Suno v6 (Songs Advanced, spoken word, male) takes separated with Demucs htdemucs vocal stems; four lines are Coda v02 cuts of her own Suno vocal estimates. Message 19 lines: Black Sect Production 08 (Suno v6, Coda's Production 01 prompt), htdemucs vocal stem.",
  "sulg_provenance": "Suno v6 creature-call takes used unseparated; three Coda v02 salvage fragments kept.",
+ "ghorkov_voice": "Suno Speech (beta), male, background music off, variety off. Each script puts a short Russian radio phrase and an ellipsis paragraph before every English line; the Russian phrases are cut away and never ship. Some takes carried a low drone bed despite music off; their htdemucs vocal stems are used.",
+ "taerkasten_voice": "Suno Speech (beta), male, background music off, variety off, with a short German phrase before every English line (cut away). The last batch used a plain dry-recording tone that leaves no drone bed.",
+ "accent_method": "Suno ignores accent wording in the tone, so the L1 priming phrase carries the accent. The check is Whisper small language ID. Calibrated on the GMU Speech Accent Archive (2 s chunks, per-speaker medians): native English speakers P(ru) 0.0001-0.0008, Russian second-language speakers P(ru) 0.004-0.21, German second-language speakers P(de) 0.0012-0.011. It is a cue, not a measurement of how strong the accent sounds.",
+ "selection": "Whisper word alignment locates each line; the cut sits at the silence around its vocal island. An edge audit transcribes and language-identifies every island in the cut and trims away priming phrases, breaths and clicks. A residue check rejects cuts with sound outside the line's words. A cut is eligible only if base.en, small.en and medium.en, transcribing it in isolation, hear exactly the planned line in at least two of three cases.",
  "render": {
-  "project_sha256": "9e684755e4bbb6bb6d4596b998ecc0729e0b1306bc95e9e9e1176abf0d4d6a32",
-  "master_sha256": "1e461dcb407ee1ef52da9793d02503a4c0074388b3c57dfd6a8bf06801e47e64",
-  "method": "Native REAPER 7.79 render through the TwelveTake bridge; per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz."
+  "v03": {
+   "run": "v03-full-candidate-2026-11-02",
+   "project_sha256": "9e684755e4bbb6bb6d4596b998ecc0729e0b1306bc95e9e9e1176abf0d4d6a32",
+   "master_sha256": "1e461dcb407ee1ef52da9793d02503a4c0074388b3c57dfd6a8bf06801e47e64",
+   "method": "Native REAPER 7.79 render through the TwelveTake bridge; per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz."
+  },
+  "v04": {
+   "run": "v04-faction-voices-2026-11-02",
+   "project_sha256": "64373b0bde923a307f17f9cf953a1eda801b854ddeb14a67564706bc43f8d31a",
+   "master_sha256": "115eb704271303432afc434dbab2f2af7851383087dbc29ffb03812adce4b9d2",
+   "method": "Native REAPER 7.79 render through the TwelveTake bridge; the bridge mailbox was driven by file transfer because the device shell was unavailable. Per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz. The 30 unchanged Black Sect cues re-rendered byte-identical to v03."
+  }
  },
- "previous": "Version 3 (Microsoft David SAPI Black Sect, procedural Sulgogars) remains on red/review-fixes and in history.",
+ "previous": "Version 4 (Black Sect and Sulgogars only) is in this branch history up to 09f42e7; version 3 remains on red/review-fixes.",
+ "pending": [
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_idle",
+   "variant": 1,
+   "file": "unit_idle_1.wav",
+   "phrase": "We await orders.",
+   "status": "no file: the engine falls back to the original vanilla voice for this event",
+   "reason": "No cut was heard exactly by at least two of three ASR models. In the downloaded takes the accented 'await' was heard as 'invite' or 'have eight'.",
+   "redo": "Suno batch taerkasten_r2 (takes 3f2bd9d9, 03b0e645) holds both lines but could not be downloaded: the account was out of downloads until 2026-11-30."
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_idle",
+   "variant": 2,
+   "file": "unit_idle_2.wav",
+   "phrase": "We wait, still as stone.",
+   "status": "no file: the engine falls back to the original vanilla voice for this event",
+   "reason": "No cut was heard exactly by at least two of three ASR models. In the downloaded takes the accented 'still as stone' was heard as 'still a storm'; the line was reordered.",
+   "redo": "Suno batch taerkasten_r2 (takes 3f2bd9d9, 03b0e645) holds both lines but could not be downloaded: the account was out of downloads until 2026-11-30."
+  }
+ ],
  "cues": [
   {
    "faction": "black-sect-mp",
@@ -53,7 +88,8 @@
     }
    },
    "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
-   "music_under_voice_db": -3.5
+   "music_under_voice_db": -3.5,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -93,7 +129,8 @@
      "medium.en": "Asset online."
     }
    },
-   "origin": "Coda v02 cut Black-B-01"
+   "origin": "Coda v02 cut Black-B-01",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -134,7 +171,8 @@
     }
    },
    "origin": "Suno take dd2c97e0-4df3-473f-acf6-767eb97d3b19",
-   "music_under_voice_db": -44.1
+   "music_under_voice_db": -44.1,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -175,7 +213,8 @@
     }
    },
    "origin": "Suno take 5177937c-f35e-4113-b6d4-6822507b9d4b",
-   "music_under_voice_db": 0.5
+   "music_under_voice_db": 0.5,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -215,7 +254,8 @@
      "medium.en": "Route confirmed."
     }
    },
-   "origin": "Coda v02 cut Black-A-02"
+   "origin": "Coda v02 cut Black-A-02",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -256,7 +296,8 @@
     }
    },
    "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
-   "music_under_voice_db": 1.9
+   "music_under_voice_db": 1.9,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -297,7 +338,8 @@
     }
    },
    "origin": "Suno take 5177937c-f35e-4113-b6d4-6822507b9d4b",
-   "music_under_voice_db": -0.7
+   "music_under_voice_db": -0.7,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -338,7 +380,8 @@
     }
    },
    "origin": "Suno take dd2c97e0-4df3-473f-acf6-767eb97d3b19",
-   "music_under_voice_db": -16.8
+   "music_under_voice_db": -16.8,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -379,7 +422,8 @@
     }
    },
    "origin": "Suno take 5ee4c7a0-37d4-4614-90f9-f88311388ece",
-   "music_under_voice_db": -8.5
+   "music_under_voice_db": -8.5,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -420,7 +464,8 @@
     }
    },
    "origin": "Suno take 91868280-52e5-4d51-bf8f-6beba0cd808e",
-   "music_under_voice_db": 3.5
+   "music_under_voice_db": 3.5,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -461,7 +506,8 @@
     }
    },
    "origin": "Suno take 91868280-52e5-4d51-bf8f-6beba0cd808e",
-   "music_under_voice_db": -14.4
+   "music_under_voice_db": -14.4,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -502,7 +548,8 @@
     }
    },
    "origin": "Suno take 91868280-52e5-4d51-bf8f-6beba0cd808e",
-   "music_under_voice_db": -3.2
+   "music_under_voice_db": -3.2,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -543,7 +590,8 @@
     }
    },
    "origin": "Suno take e64f4ee5-6660-4759-8cae-57af978d11d3",
-   "music_under_voice_db": -1.0
+   "music_under_voice_db": -1.0,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -584,7 +632,8 @@
     }
    },
    "origin": "Suno take e64f4ee5-6660-4759-8cae-57af978d11d3",
-   "music_under_voice_db": 4.8
+   "music_under_voice_db": 4.8,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -625,7 +674,8 @@
     }
    },
    "origin": "Suno take e64f4ee5-6660-4759-8cae-57af978d11d3",
-   "music_under_voice_db": 4.5
+   "music_under_voice_db": 4.5,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -666,7 +716,8 @@
     }
    },
    "origin": "Suno take 5ba883c8-fe4b-4afc-88d0-96ce256e7c17",
-   "music_under_voice_db": -13.3
+   "music_under_voice_db": -13.3,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -707,7 +758,8 @@
     }
    },
    "origin": "Suno take ba08296a-e32c-4f64-ae11-7051025dbb41",
-   "music_under_voice_db": -19.0
+   "music_under_voice_db": -19.0,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -748,7 +800,8 @@
     }
    },
    "origin": "Suno take ad21193e-7864-4fc2-9085-7ec949292993",
-   "music_under_voice_db": 1.9
+   "music_under_voice_db": 1.9,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -789,7 +842,8 @@
     }
    },
    "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
-   "music_under_voice_db": 2.7
+   "music_under_voice_db": 2.7,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -829,7 +883,8 @@
      "medium.en": "Reinforcements requested"
     }
    },
-   "origin": "Coda v02 cut Black-A-03"
+   "origin": "Coda v02 cut Black-A-03",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -870,7 +925,8 @@
     }
    },
    "origin": "Suno take ad21193e-7864-4fc2-9085-7ec949292993",
-   "music_under_voice_db": -16.7
+   "music_under_voice_db": -16.7,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -911,7 +967,8 @@
     }
    },
    "origin": "Suno take ad21193e-7864-4fc2-9085-7ec949292993",
-   "music_under_voice_db": 0.5
+   "music_under_voice_db": 0.5,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -952,7 +1009,8 @@
     }
    },
    "origin": "Suno take 6b6f7c68-dbbf-423c-9bba-9e289981561d",
-   "music_under_voice_db": 2.8
+   "music_under_voice_db": 2.8,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -993,33 +1051,34 @@
     }
    },
    "origin": "Suno take 6b6f7c68-dbbf-423c-9bba-9e289981561d",
-   "music_under_voice_db": -1.0
+   "music_under_voice_db": -1.0,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
    "event": "enemy_unit_engaged",
    "variant": 1,
    "file": "enemy_unit_engaged_1.wav",
-   "phrase": "Engaging target.",
+   "phrase": "Hostile unit fleeing.",
    "motif": null,
-   "duration_seconds": 1.590023,
-   "bytes": 70164,
-   "sha256": "3ce0ee2dafaca8af649a3468879ac17757f8dd437e430fe820b881ea595b5a5b",
-   "integrated_lufs_dual_mono": -18.0,
-   "true_peak_dbfs": -4.2,
+   "duration_seconds": 1.84,
+   "bytes": 81188,
+   "sha256": "84fd832a60c7bc8033eccddf41fbd515294d20b48729fad04883e29014af8813",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -6.8,
    "target_lufs": -18.0,
-   "gain_db": 4.4,
+   "gain_db": -1.7,
    "pre_level": {
-    "integrated_lufs": -22.4,
-    "true_peak_dbfs": -8.5
+    "integrated_lufs": -16.3,
+    "true_peak_dbfs": -5.2
    },
    "source": {
-    "file": "htdemucs vocal stem of suno-6b6f7c68-dbbf-423c-9bba-9e289981561d.wav",
-    "sha256": "a1abd8aaf30b669deb624a69b4dd1838646b7616545fbfd4e97c827628ba8248",
+    "file": "htdemucs vocal stem of suno-449ecba9-5e8c-4434-836b-025f22b519e6.wav",
+    "sha256": "4a08d59127ce200094d3e705bb80c59c77873689a4866f15132d5de37ae7e2c9",
     "parts": [
      {
-      "start": 9.75,
-      "end": 11.34,
+      "start": 6.18,
+      "end": 8.02,
       "offset": 0
      }
     ]
@@ -1028,39 +1087,41 @@
    "asr_final_file": {
     "votes": 3,
     "heard": {
-     "base.en": "Engaging target.",
-     "small.en": "Engaging target.",
-     "medium.en": "Engaging target."
+     "base.en": "Hostile unit fleeing.",
+     "small.en": "Hostile unit fleeing.",
+     "medium.en": "Hostile unit fleeing."
     }
    },
-   "origin": "Suno take 6b6f7c68-dbbf-423c-9bba-9e289981561d",
-   "music_under_voice_db": 1.3
+   "origin": "Suno take 449ecba9-5e8c-4434-836b-025f22b519e6 (Black Sect Production 08)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "replaced": "Engaging target.",
+   "music_under_voice_db": -4.0
   },
   {
    "faction": "black-sect-mp",
    "event": "enemy_unit_engaged",
    "variant": 2,
    "file": "enemy_unit_engaged_2.wav",
-   "phrase": "Weapons on target.",
+   "phrase": "Target retreating.",
    "motif": null,
-   "duration_seconds": 1.530023,
-   "bytes": 67518,
-   "sha256": "054bd395b85273cf77ae5f2ed2a6267d8a779cdbef8eebfb2ccbec57f5ace7f5",
-   "integrated_lufs_dual_mono": -18.9,
-   "true_peak_dbfs": -3.5,
+   "duration_seconds": 1.170023,
+   "bytes": 51642,
+   "sha256": "e3f55ce9fe161950f554478c42d7a208d7c9cbdd0b42a191673c08b51f4d2544",
+   "integrated_lufs_dual_mono": -18.5,
+   "true_peak_dbfs": -6.0,
    "target_lufs": -18.0,
-   "gain_db": 2.7,
+   "gain_db": 1.0,
    "pre_level": {
-    "integrated_lufs": -21.5,
-    "true_peak_dbfs": -6.2
+    "integrated_lufs": -19.0,
+    "true_peak_dbfs": -6.9
    },
    "source": {
-    "file": "htdemucs vocal stem of suno-6e666826-064d-4ca4-8380-efa51951a998.wav",
-    "sha256": "626fe6ff33303a11ef7cc0322e417800682564542050f1a7b65e54fd1bccf95e",
+    "file": "htdemucs vocal stem of suno-449ecba9-5e8c-4434-836b-025f22b519e6.wav",
+    "sha256": "4a08d59127ce200094d3e705bb80c59c77873689a4866f15132d5de37ae7e2c9",
     "parts": [
      {
-      "start": 13.61,
-      "end": 15.14,
+      "start": 2.19,
+      "end": 3.36,
       "offset": 0
      }
     ]
@@ -1069,13 +1130,15 @@
    "asr_final_file": {
     "votes": 3,
     "heard": {
-     "base.en": "Weapons on target.",
-     "small.en": "Weapons on target.",
-     "medium.en": "Weapons on target."
+     "base.en": "Target retreating.",
+     "small.en": "Target retreating.",
+     "medium.en": "Target retreating."
     }
    },
-   "origin": "Suno take 6e666826-064d-4ca4-8380-efa51951a998",
-   "music_under_voice_db": -1.4
+   "origin": "Suno take 449ecba9-5e8c-4434-836b-025f22b519e6 (Black Sect Production 08)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "replaced": "Weapons on target.",
+   "music_under_voice_db": 4.3
   },
   {
    "faction": "black-sect-mp",
@@ -1116,7 +1179,8 @@
     }
    },
    "origin": "Suno take 290933c5-1b87-4aea-8cda-981c52152215",
-   "music_under_voice_db": 2.8
+   "music_under_voice_db": 2.8,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -1157,7 +1221,8 @@
     }
    },
    "origin": "Suno take 290933c5-1b87-4aea-8cda-981c52152215",
-   "music_under_voice_db": 3.8
+   "music_under_voice_db": 3.8,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -1198,7 +1263,8 @@
     }
    },
    "origin": "Suno take d67a3992-e79c-4fb1-855a-d7460bba987a",
-   "music_under_voice_db": 2.2
+   "music_under_voice_db": 2.2,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -1238,7 +1304,8 @@
      "medium.en": "Host station neutralized."
     }
    },
-   "origin": "Coda v02 cut Black-B-04"
+   "origin": "Coda v02 cut Black-B-04",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -1279,7 +1346,8 @@
     }
    },
    "origin": "Suno take 423d6e42-5419-4bef-98cf-ac1549799dda",
-   "music_under_voice_db": -2.9
+   "music_under_voice_db": -2.9,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "black-sect-mp",
@@ -1320,7 +1388,8 @@
     }
    },
    "origin": "Suno take 423d6e42-5419-4bef-98cf-ac1549799dda",
-   "music_under_voice_db": 3.0
+   "music_under_voice_db": 3.0,
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1353,7 +1422,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1386,7 +1456,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5"
+   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1419,7 +1490,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1452,7 +1524,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1490,7 +1563,8 @@
    },
    "reviewer": "Coda (cut, v02) + Red (signal check, 2026-11-02; not heard)",
    "confidence": "under_evaluation",
-   "origin": "Coda v02 salvage Sulgogar-01"
+   "origin": "Coda v02 salvage Sulgogar-01",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1523,7 +1597,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1556,7 +1631,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1589,7 +1665,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1622,7 +1699,8 @@
    },
    "reviewer": "Coda (cut, v02) + Red (signal check, 2026-11-02; not heard)",
    "confidence": "under_evaluation",
-   "origin": "Coda v02 salvage Sulgogar-02"
+   "origin": "Coda v02 salvage Sulgogar-02",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1655,7 +1733,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "uncertain",
-   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1688,7 +1767,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1721,7 +1801,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1754,7 +1835,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae"
+   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1787,7 +1869,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1820,7 +1903,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1853,7 +1937,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1886,7 +1971,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae"
+   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1919,7 +2005,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "uncertain",
-   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1952,7 +2039,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 7bd701a4-394f-496e-987d-0618dfc243bd"
+   "origin": "Suno take 7bd701a4-394f-496e-987d-0618dfc243bd",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -1985,7 +2073,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "uncertain",
-   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2018,7 +2107,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2051,7 +2141,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856"
+   "origin": "Suno take 554a8639-5962-4fd4-9165-4083dd228856",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2084,7 +2175,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5"
+   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2117,7 +2209,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "uncertain",
-   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2150,7 +2243,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2183,7 +2277,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf"
+   "origin": "Suno take 093e3295-f927-4c90-ba73-c1425f1f7ebf",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2216,7 +2311,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "weak",
-   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2249,7 +2345,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "uncertain",
-   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b"
+   "origin": "Suno take f50c90d8-972c-4cdd-988b-ad866be3675b",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2282,7 +2379,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "uncertain",
-   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba"
+   "origin": "Suno take 6d016aa8-82bf-402e-9b6f-b1fe37b715ba",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2315,7 +2413,8 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "plausible",
-   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5"
+   "origin": "Suno take 41d986c3-8f1a-439e-bef7-83bb777bdcf5",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2348,7 +2447,8 @@
    },
    "reviewer": "Coda (cut, v02) + Red (signal check, 2026-11-02; not heard)",
    "confidence": "under_evaluation",
-   "origin": "Coda v02 salvage Sulgogar-04"
+   "origin": "Coda v02 salvage Sulgogar-04",
+   "render_run": "v03-full-candidate-2026-11-02"
   },
   {
    "faction": "sulgogars-mp",
@@ -2381,7 +2481,3046 @@
    },
    "reviewer": "Red (signal mining + spectrogram check, 2026-11-02; not heard)",
    "confidence": "uncertain",
-   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae"
+   "origin": "Suno take 066ecd48-d1d1-45dd-ae0b-b826c1e2c6ae",
+   "render_run": "v03-full-candidate-2026-11-02"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_ready",
+   "variant": 1,
+   "file": "unit_ready_1.wav",
+   "phrase": "Reporting for duty.",
+   "motif": null,
+   "duration_seconds": 1.630023,
+   "bytes": 71928,
+   "sha256": "cfbcf298bbeb7aefe94c79ffe9c34708ea7c3e35a9ec0888b68c6a12479b6254",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.7,
+   "target_lufs": -18.0,
+   "gain_db": -2.5,
+   "pre_level": {
+    "integrated_lufs": -15.5,
+    "true_peak_dbfs": -4.2
+   },
+   "source": {
+    "file": "suno-12c59ec1-e0a8-451f-a24e-89eca327aa8f.wav",
+    "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
+    "parts": [
+     {
+      "start": 2.57,
+      "end": 4.2,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Reporting for duty.",
+     "small.en": "Reporting for duty.",
+     "medium.en": "Reporting for duty."
+    }
+   },
+   "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.5548,
+    "top": "ru",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.6 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_ready",
+   "variant": 2,
+   "file": "unit_ready_2.wav",
+   "phrase": "Liberation Forces reporting.",
+   "motif": null,
+   "duration_seconds": 2.230023,
+   "bytes": 98388,
+   "sha256": "260550c1c8fd083d437962bec0966f3a5db8f302391751f9f1bdfdf06627e2bd",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.6,
+   "target_lufs": -18.0,
+   "gain_db": 0.1,
+   "pre_level": {
+    "integrated_lufs": -18.1,
+    "true_peak_dbfs": -4.7
+   },
+   "source": {
+    "file": "suno-aa73f942-eb08-408b-b00e-3057dbaf8a81.wav",
+    "sha256": "0947d393770ee0316829e78cd114d42a0a87c0135eb7fc63401004ff75200693",
+    "parts": [
+     {
+      "start": 2.6,
+      "end": 4.83,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "Liberation Force is reporting.",
+     "small.en": "Liberation Forces reporting.",
+     "medium.en": "Liberation Forces reporting."
+    }
+   },
+   "origin": "Suno take aa73f942-eb08-408b-b00e-3057dbaf8a81 (batch ghorkov_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.4749,
+    "top": "ru",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–1.9 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_idle",
+   "variant": 1,
+   "file": "unit_idle_1.wav",
+   "phrase": "Awaiting orders.",
+   "motif": null,
+   "duration_seconds": 1.4,
+   "bytes": 61784,
+   "sha256": "3183a1360329fed43e86b4589c2597399ae15c9fd227acf0bfebbaf28e527399",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.0,
+   "target_lufs": -18.0,
+   "gain_db": 0.0,
+   "pre_level": {
+    "integrated_lufs": -18.0,
+    "true_peak_dbfs": -5.7
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5d34d328-7d82-48c2-adeb-bcd00b7c84a8.wav",
+    "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
+    "parts": [
+     {
+      "start": 12.44,
+      "end": 13.84,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "awaiting orders",
+     "small.en": "awaiting orders.",
+     "medium.en": "Awaiting Orders"
+    }
+   },
+   "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0006,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "0.9–1.3 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_idle",
+   "variant": 2,
+   "file": "unit_idle_2.wav",
+   "phrase": "Orders, Commander?",
+   "motif": null,
+   "duration_seconds": 2.16,
+   "bytes": 95300,
+   "sha256": "5564402886558ad5bdaf653698579842368955f5832da58f1132092b4feb8514",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -4.9,
+   "target_lufs": -18.0,
+   "gain_db": -0.3,
+   "pre_level": {
+    "integrated_lufs": -17.7,
+    "true_peak_dbfs": -4.2
+   },
+   "source": {
+    "file": "suno-84d5377b-15cc-4cef-a17c-cd8a2fa8ab57.wav",
+    "sha256": "0d0b0c974b9ef3470db6d1fe4b9333ac98338c04402860eef632ad8721c6d952",
+    "parts": [
+     {
+      "start": 2.46,
+      "end": 4.62,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Orders, Commander.",
+     "small.en": "Orders, Commander.",
+     "medium.en": "Orders, Commander"
+    }
+   },
+   "origin": "Suno take 84d5377b-15cc-4cef-a17c-cd8a2fa8ab57 (batch ghorkov_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0516,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.0–1.4 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "order_ack_friendly",
+   "variant": 1,
+   "file": "order_ack_friendly_1.wav",
+   "phrase": "Moving out, Commander.",
+   "motif": null,
+   "duration_seconds": 2.230023,
+   "bytes": 98388,
+   "sha256": "37ea257425471bb05750522852fc944c96a6f875d6f75cd9c03171a9c366e533",
+   "integrated_lufs_dual_mono": -20.9,
+   "true_peak_dbfs": -4.1,
+   "target_lufs": -18.0,
+   "gain_db": 3.8,
+   "pre_level": {
+    "integrated_lufs": -24.5,
+    "true_peak_dbfs": -7.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5d34d328-7d82-48c2-adeb-bcd00b7c84a8.wav",
+    "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
+    "parts": [
+     {
+      "start": 2.82,
+      "end": 5.05,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Moving out, Commander.",
+     "small.en": "Moving out, Commander.",
+     "medium.en": "Moving out, Commander."
+    }
+   },
+   "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0058,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.1–1.5 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "order_ack_friendly",
+   "variant": 2,
+   "file": "order_ack_friendly_2.wav",
+   "phrase": "Moving as one.",
+   "motif": null,
+   "duration_seconds": 1.370023,
+   "bytes": 60462,
+   "sha256": "42a6ab650ad3f02d13fc54bd92544f8847f6c153f367af7c638048a75df7e564",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -9.2,
+   "target_lufs": -18.0,
+   "gain_db": -4.2,
+   "pre_level": {
+    "integrated_lufs": -13.8,
+    "true_peak_dbfs": -4.7
+   },
+   "source": {
+    "file": "suno-12c59ec1-e0a8-451f-a24e-89eca327aa8f.wav",
+    "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
+    "parts": [
+     {
+      "start": 11.59,
+      "end": 12.96,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "moving as one",
+     "small.en": "Moving as one.",
+     "medium.en": "Moving as one."
+    }
+   },
+   "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0004,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "0.9–1.2 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "order_ack_enemy",
+   "variant": 1,
+   "file": "order_ack_enemy_1.wav",
+   "phrase": "Commencing attack.",
+   "motif": null,
+   "duration_seconds": 1.4,
+   "bytes": 61784,
+   "sha256": "479c95d0e7bd71e3e5b1f3a7db42b8ab7c5f8a14e3f629a2ce8fe85e25b2b1f2",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.6,
+   "target_lufs": -18.0,
+   "gain_db": -3.5,
+   "pre_level": {
+    "integrated_lufs": -14.5,
+    "true_peak_dbfs": -3.1
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44.wav",
+    "sha256": "101c6fe6fc974e0d885ae42f8f9611996e5a8cf5fe3c81efd36d0adbdb0014b0",
+    "parts": [
+     {
+      "start": 2.98,
+      "end": 4.38,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Commencing attack.",
+     "small.en": "Commencing attack.",
+     "medium.en": "Commencing attack."
+    }
+   },
+   "origin": "Suno take 00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44 (batch ghorkov_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0044,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.0–1.4 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "order_ack_enemy",
+   "variant": 2,
+   "file": "order_ack_enemy_2.wav",
+   "phrase": "Attacking the misguided.",
+   "motif": null,
+   "duration_seconds": 1.76,
+   "bytes": 77660,
+   "sha256": "96f3b72e66da7c68700ac9bb7a601e58fad6f376c2c0cd28a0ef7577d974000c",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -4.5,
+   "target_lufs": -18.0,
+   "gain_db": -1.0,
+   "pre_level": {
+    "integrated_lufs": -17.0,
+    "true_peak_dbfs": -3.5
+   },
+   "source": {
+    "file": "suno-4afcfc96-1f21-4e29-991e-a58f8d9c63aa.wav",
+    "sha256": "d75423a703ddb903049753ff6dbb9d3d30ac14e04c667775efe39b0ff257fb0c",
+    "parts": [
+     {
+      "start": 27.98,
+      "end": 29.74,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Attacking the misguided.",
+     "small.en": "attacking the misguided.",
+     "medium.en": "Attacking the misguided."
+    }
+   },
+   "origin": "Suno take 4afcfc96-1f21-4e29-991e-a58f8d9c63aa (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0539,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.6 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_control_entered",
+   "variant": 1,
+   "file": "unit_control_entered_1.wav",
+   "phrase": "Control is yours, Commander.",
+   "motif": null,
+   "duration_seconds": 1.930023,
+   "bytes": 85158,
+   "sha256": "3e9dcce54985f612b5e3aeae04ad9870d16d3dd57afecb2e81131c98776e4aa8",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.8,
+   "target_lufs": -18.0,
+   "gain_db": -4.2,
+   "pre_level": {
+    "integrated_lufs": -13.8,
+    "true_peak_dbfs": -2.6
+   },
+   "source": {
+    "file": "suno-12c59ec1-e0a8-451f-a24e-89eca327aa8f.wav",
+    "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
+    "parts": [
+     {
+      "start": 19.79,
+      "end": 21.72,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Control is yours, Commander",
+     "small.en": "Control is yours, Commander.",
+     "medium.en": "Control is yours, Commander."
+    }
+   },
+   "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0106,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.3–1.8 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_control_entered",
+   "variant": 2,
+   "file": "unit_control_entered_2.wav",
+   "phrase": "Handing over control.",
+   "motif": null,
+   "duration_seconds": 1.650023,
+   "bytes": 72810,
+   "sha256": "710f1bd3a8f7a71cc41d707e18fd2c39fa1264ac02fbeb626e739d3f07a9e184",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -1.3,
+   "pre_level": {
+    "integrated_lufs": -16.7,
+    "true_peak_dbfs": -5.2
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-f1009096-2051-4501-93eb-79a373ce9df0.wav",
+    "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
+    "parts": [
+     {
+      "start": 27.24,
+      "end": 28.89,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Handing over control.",
+     "small.en": "Handing over control",
+     "medium.en": "Handing over control."
+    }
+   },
+   "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0007,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.1–1.5 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_sector_entered",
+   "variant": 1,
+   "file": "enemy_sector_entered_1.wav",
+   "phrase": "Entering enemy ground.",
+   "motif": null,
+   "duration_seconds": 1.630023,
+   "bytes": 71928,
+   "sha256": "ee1efff29a4353b78ab63d512a74fefecaec582a49461c7b0a070f70de33c4ef",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -7.5,
+   "target_lufs": -18.0,
+   "gain_db": -1.3,
+   "pre_level": {
+    "integrated_lufs": -16.7,
+    "true_peak_dbfs": -6.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5d34d328-7d82-48c2-adeb-bcd00b7c84a8.wav",
+    "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
+    "parts": [
+     {
+      "start": 27.9,
+      "end": 29.53,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Entering enemy ground.",
+     "small.en": "Entering enemy ground.",
+     "medium.en": "Entering enemy ground."
+    }
+   },
+   "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.006,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.3–1.7 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_sector_entered",
+   "variant": 2,
+   "file": "enemy_sector_entered_2.wav",
+   "phrase": "Reactionary sector entered.",
+   "motif": null,
+   "duration_seconds": 2.0,
+   "bytes": 88244,
+   "sha256": "49c15a8754d91768a9f0a36113ae54a65b85334c0454a2a8defbe8129abea6dc",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.3,
+   "target_lufs": -18.0,
+   "gain_db": -2.6,
+   "pre_level": {
+    "integrated_lufs": -15.4,
+    "true_peak_dbfs": -3.7
+   },
+   "source": {
+    "file": "suno-84d5377b-15cc-4cef-a17c-cd8a2fa8ab57.wav",
+    "sha256": "0d0b0c974b9ef3470db6d1fe4b9333ac98338c04402860eef632ad8721c6d952",
+    "parts": [
+     {
+      "start": 11.26,
+      "end": 13.26,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "A reactionary sector entered.",
+     "small.en": "Reactionary sector entered.",
+     "medium.en": "Reactionary sector entered."
+    }
+   },
+   "origin": "Suno take 84d5377b-15cc-4cef-a17c-cd8a2fa8ab57 (batch ghorkov_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0081,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.6–2.0 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_recovered",
+   "variant": 1,
+   "file": "unit_recovered_1.wav",
+   "phrase": "Recharged and ready.",
+   "motif": null,
+   "duration_seconds": 2.710023,
+   "bytes": 119556,
+   "sha256": "3aff3a2f1e6f59572307d7f5dc9b39799035fc1473b3bb7895589c1a29852acd",
+   "integrated_lufs_dual_mono": -18.5,
+   "true_peak_dbfs": -3.7,
+   "target_lufs": -18.0,
+   "gain_db": 0.2,
+   "pre_level": {
+    "integrated_lufs": -18.5,
+    "true_peak_dbfs": -3.7
+   },
+   "source": {
+    "file": "suno-4afcfc96-1f21-4e29-991e-a58f8d9c63aa.wav",
+    "sha256": "d75423a703ddb903049753ff6dbb9d3d30ac14e04c667775efe39b0ff257fb0c",
+    "parts": [
+     {
+      "start": 39.37,
+      "end": 42.08,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "recharged and ready.",
+     "small.en": "Recharged and ready.",
+     "medium.en": "recharged and ready."
+    }
+   },
+   "origin": "Suno take 4afcfc96-1f21-4e29-991e-a58f8d9c63aa (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0003,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "valley",
+   "duration_target": "1.0–1.4 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_recovered",
+   "variant": 2,
+   "file": "unit_recovered_2.wav",
+   "phrase": "We fight again.",
+   "motif": null,
+   "duration_seconds": 1.050023,
+   "bytes": 46350,
+   "sha256": "f6ce7b0d551fcd5720c9504c09c326c632834ecca26c583de6e486f30955f6af",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -5.2,
+   "target_lufs": -18.0,
+   "gain_db": -1.3,
+   "pre_level": {
+    "integrated_lufs": -16.7,
+    "true_peak_dbfs": -3.9
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18.wav",
+    "sha256": "67dc38378b03616a62bbdf68fb20ffb784090dfcb40c534ac8b6bc07a3ad2590",
+    "parts": [
+     {
+      "start": 23.97,
+      "end": 25.02,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "We fight again.",
+     "small.en": "We fight again.",
+     "medium.en": "We fight again."
+    }
+   },
+   "origin": "Suno take 2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18 (batch ghorkov_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0095,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "0.9–1.2 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 1,
+   "file": "enemy_unit_spotted_1.wav",
+   "phrase": "Enemy ahead.",
+   "motif": null,
+   "duration_seconds": 1.050023,
+   "bytes": 46350,
+   "sha256": "7380b2fe2a1b1c99349a0b2dd6bbb538572726cacaca1476b09766cf04350458",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.6,
+   "target_lufs": -18.0,
+   "gain_db": -1.8,
+   "pre_level": {
+    "integrated_lufs": -16.2,
+    "true_peak_dbfs": -4.8
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18.wav",
+    "sha256": "67dc38378b03616a62bbdf68fb20ffb784090dfcb40c534ac8b6bc07a3ad2590",
+    "parts": [
+     {
+      "start": 6.83,
+      "end": 7.88,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy ahead.",
+     "small.en": "enemy ahead.",
+     "medium.en": "enemy ahead"
+    }
+   },
+   "origin": "Suno take 2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18 (batch ghorkov_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0079,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "0.9–1.3 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 2,
+   "file": "enemy_unit_spotted_2.wav",
+   "phrase": "Misguided force in view.",
+   "motif": null,
+   "duration_seconds": 1.58,
+   "bytes": 69722,
+   "sha256": "75a9037c23c9e6c6a9e2a4415c118333a580523ae61fd6916822aefa1f9a7635",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.9,
+   "target_lufs": -18.0,
+   "gain_db": -2.2,
+   "pre_level": {
+    "integrated_lufs": -15.8,
+    "true_peak_dbfs": -2.7
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-f1009096-2051-4501-93eb-79a373ce9df0.wav",
+    "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
+    "parts": [
+     {
+      "start": 18.0,
+      "end": 19.58,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "Misguided force in view.",
+     "small.en": "Misguided forcing view.",
+     "medium.en": "Misguided force in view."
+    }
+   },
+   "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0096,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.6 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_host_found",
+   "variant": 1,
+   "file": "enemy_host_found_1.wav",
+   "phrase": "Enemy command station located.",
+   "motif": null,
+   "duration_seconds": 2.010023,
+   "bytes": 88686,
+   "sha256": "d3729161311ca01589c751887767f25a989e98f9874b46bc8bcf4b133f658235",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -3.3,
+   "pre_level": {
+    "integrated_lufs": -14.7,
+    "true_peak_dbfs": -3.1
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18.wav",
+    "sha256": "67dc38378b03616a62bbdf68fb20ffb784090dfcb40c534ac8b6bc07a3ad2590",
+    "parts": [
+     {
+      "start": 19.22,
+      "end": 21.23,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy command station located.",
+     "small.en": "Enemy command station located.",
+     "medium.en": "Enemy command station located."
+    }
+   },
+   "origin": "Suno take 2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18 (batch ghorkov_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0021,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.7–2.2 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_host_found",
+   "variant": 2,
+   "file": "enemy_host_found_2.wav",
+   "phrase": "Reactionary stronghold found.",
+   "motif": null,
+   "duration_seconds": 2.7,
+   "bytes": 119114,
+   "sha256": "2faf3fb1e9bbe7d042bbdc705855948936fdacb81233ae41047fb5665518ce52",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -7.1,
+   "target_lufs": -18.0,
+   "gain_db": -3.2,
+   "pre_level": {
+    "integrated_lufs": -14.8,
+    "true_peak_dbfs": -3.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5d34d328-7d82-48c2-adeb-bcd00b7c84a8.wav",
+    "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
+    "parts": [
+     {
+      "start": 15.63,
+      "end": 18.33,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "Reaction is strong, hold found",
+     "small.en": "Reactionary Stronghold found.",
+     "medium.en": "Reactionary stronghold found."
+    }
+   },
+   "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0343,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.0 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "request_support",
+   "variant": 1,
+   "file": "request_support_1.wav",
+   "phrase": "Under fire, requesting support.",
+   "motif": null,
+   "duration_seconds": 2.010023,
+   "bytes": 88686,
+   "sha256": "be4c1673ca09bc0da8bc30839e8ac451ff2605c0c24db8a45ee9658232c37789",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -4.3,
+   "target_lufs": -18.0,
+   "gain_db": -0.2,
+   "pre_level": {
+    "integrated_lufs": -17.8,
+    "true_peak_dbfs": -4.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-f1009096-2051-4501-93eb-79a373ce9df0.wav",
+    "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
+    "parts": [
+     {
+      "start": 22.85,
+      "end": 24.86,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 2,
+    "heard": {
+     "base.en": "and the fire requesting support.",
+     "small.en": "under fire requesting support.",
+     "medium.en": "Under fire requesting support."
+    }
+   },
+   "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0034,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.6–2.1 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "request_support",
+   "variant": 2,
+   "file": "request_support_2.wav",
+   "phrase": "We need support, Commander.",
+   "motif": null,
+   "duration_seconds": 1.490023,
+   "bytes": 65754,
+   "sha256": "0aaca22811c39ec9f5194f94516b5108ed729a9d6e7fec394d94a98adcc3b58d",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -7.4,
+   "target_lufs": -18.0,
+   "gain_db": -3.8,
+   "pre_level": {
+    "integrated_lufs": -14.2,
+    "true_peak_dbfs": -3.5
+   },
+   "source": {
+    "file": "suno-12c59ec1-e0a8-451f-a24e-89eca327aa8f.wav",
+    "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
+    "parts": [
+     {
+      "start": 30.81,
+      "end": 32.3,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "We need support commander.",
+     "small.en": "We need support commander.",
+     "medium.en": "We need support commander."
+    }
+   },
+   "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.2605,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.4–1.8 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_retreating",
+   "variant": 1,
+   "file": "unit_retreating_1.wav",
+   "phrase": "Returning to recharge.",
+   "motif": null,
+   "duration_seconds": 1.890023,
+   "bytes": 83394,
+   "sha256": "6c51bbb361724a29d0f398fd0d85c0d436780753a5eba3dcf98095151ae17e0f",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.3,
+   "target_lufs": -18.0,
+   "gain_db": -3.1,
+   "pre_level": {
+    "integrated_lufs": -14.9,
+    "true_peak_dbfs": -3.5
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44.wav",
+    "sha256": "101c6fe6fc974e0d885ae42f8f9611996e5a8cf5fe3c81efd36d0adbdb0014b0",
+    "parts": [
+     {
+      "start": 15.21,
+      "end": 17.1,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Returning to recharge.",
+     "small.en": "Returning to recharge.",
+     "medium.en": "Returning to recharge."
+    }
+   },
+   "origin": "Suno take 00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44 (batch ghorkov_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0004,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.6 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_retreating",
+   "variant": 2,
+   "file": "unit_retreating_2.wav",
+   "phrase": "Energy low, pulling back.",
+   "motif": null,
+   "duration_seconds": 2.04,
+   "bytes": 90008,
+   "sha256": "f7f332ea890841c2bbaf8658096d6913f3b2a331a90043d6849fbc5e2ba268dc",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -4.2,
+   "target_lufs": -18.0,
+   "gain_db": -0.9,
+   "pre_level": {
+    "integrated_lufs": -17.1,
+    "true_peak_dbfs": -3.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-f1009096-2051-4501-93eb-79a373ce9df0.wav",
+    "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
+    "parts": [
+     {
+      "start": 8.11,
+      "end": 10.15,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Energy low, pulling back.",
+     "small.en": "Energy low, pulling back.",
+     "medium.en": "Energy Low. Pulling Back."
+    }
+   },
+   "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0015,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.4–1.9 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_lost",
+   "variant": 1,
+   "file": "unit_lost_1.wav",
+   "phrase": "All systems failing.",
+   "motif": null,
+   "duration_seconds": 1.58,
+   "bytes": 69722,
+   "sha256": "eeae3f6a435a3c41c441b0bdf341bb96202908407c7a590f90ddb3b3fd4f6e73",
+   "integrated_lufs_dual_mono": -18.7,
+   "true_peak_dbfs": -6.9,
+   "target_lufs": -18.0,
+   "gain_db": -3.9,
+   "pre_level": {
+    "integrated_lufs": -14.1,
+    "true_peak_dbfs": -3.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-01049ca1-6a3d-4872-91b6-444c82153600.wav",
+    "sha256": "def6cff574fd445b15c53f3597bf58089bc6d7a9f87caae92ae0fb78151f7c8d",
+    "parts": [
+     {
+      "start": 15.98,
+      "end": 17.56,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "All systems failing.",
+     "small.en": "All systems failing.",
+     "medium.en": "All systems failing."
+    }
+   },
+   "origin": "Suno take 01049ca1-6a3d-4872-91b6-444c82153600 (batch ghorkov_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0006,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.0–1.4 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "unit_lost",
+   "variant": 2,
+   "file": "unit_lost_2.wav",
+   "phrase": "Our people will endure.",
+   "motif": null,
+   "duration_seconds": 2.010023,
+   "bytes": 88686,
+   "sha256": "c25c186a746231209037b54866ce78d71bee979609e70d2d1274327de848946b",
+   "integrated_lufs_dual_mono": -19.8,
+   "true_peak_dbfs": -3.9,
+   "target_lufs": -18.0,
+   "gain_db": 1.4,
+   "pre_level": {
+    "integrated_lufs": -21.1,
+    "true_peak_dbfs": -4.9
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-f1009096-2051-4501-93eb-79a373ce9df0.wav",
+    "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
+    "parts": [
+     {
+      "start": 31.43,
+      "end": 33.44,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Our people will endure.",
+     "small.en": "Our people will endure.",
+     "medium.en": "Our people will endure."
+    }
+   },
+   "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0009,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.7 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 1,
+   "file": "enemy_unit_engaged_1.wav",
+   "phrase": "Enemy in retreat.",
+   "motif": null,
+   "duration_seconds": 1.270023,
+   "bytes": 56052,
+   "sha256": "12d40cae8ca17486b8dc9a9d755996440ed784467882ad34dab8404934e322ca",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -9.1,
+   "target_lufs": -18.0,
+   "gain_db": -5.6,
+   "pre_level": {
+    "integrated_lufs": -12.4,
+    "true_peak_dbfs": -3.2
+   },
+   "source": {
+    "file": "suno-961bde08-2130-43f9-bf96-97b96de70456.wav",
+    "sha256": "917887c0d74017f22c0d86b892918264058ed82e471eda9ba97947a2f7c26b58",
+    "parts": [
+     {
+      "start": 24.39,
+      "end": 25.66,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy in retreat.",
+     "small.en": "Enemy in retreat.",
+     "medium.en": "enemy in retreat"
+    }
+   },
+   "origin": "Suno take 961bde08-2130-43f9-bf96-97b96de70456 (batch pilot_primed)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0095,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.0–1.4 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 2,
+   "file": "enemy_unit_engaged_2.wav",
+   "phrase": "The enemy runs from us.",
+   "motif": null,
+   "duration_seconds": 1.7,
+   "bytes": 75014,
+   "sha256": "8ffda3ce2f1bc71871b9e2ef31589ed8ee9ac90b2fdfabeb858e57ad595c6dfa",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -5.6,
+   "target_lufs": -18.0,
+   "gain_db": 1.5,
+   "pre_level": {
+    "integrated_lufs": -19.5,
+    "true_peak_dbfs": -6.8
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-f1009096-2051-4501-93eb-79a373ce9df0.wav",
+    "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
+    "parts": [
+     {
+      "start": 37.19,
+      "end": 38.89,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "The enemy runs from us.",
+     "small.en": "The enemy runs from us.",
+     "medium.en": "The enemy runs from us."
+    }
+   },
+   "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0011,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.6 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 1,
+   "file": "enemy_unit_destroyed_1.wav",
+   "phrase": "Enemy down!",
+   "motif": null,
+   "duration_seconds": 1.08,
+   "bytes": 47672,
+   "sha256": "e477bf8043938570e5405b0b8ecf62b586a40431583046ba55010636067b7881",
+   "integrated_lufs_dual_mono": -18.7,
+   "true_peak_dbfs": -4.8,
+   "target_lufs": -18.0,
+   "gain_db": 3.3,
+   "pre_level": {
+    "integrated_lufs": -21.3,
+    "true_peak_dbfs": -8.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5d34d328-7d82-48c2-adeb-bcd00b7c84a8.wav",
+    "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
+    "parts": [
+     {
+      "start": 8.34,
+      "end": 9.42,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy down.",
+     "small.en": "Enemy down.",
+     "medium.en": "Enemy down."
+    }
+   },
+   "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0237,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "0.9–1.2 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 2,
+   "file": "enemy_unit_destroyed_2.wav",
+   "phrase": "Enemy force destroyed!",
+   "motif": null,
+   "duration_seconds": 1.790023,
+   "bytes": 78984,
+   "sha256": "b3ad4bf2b4799f890558fe0e543a97efe432fb3a183714df50eb83545dab93c6",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -6.6,
+   "target_lufs": -18.0,
+   "gain_db": -3.7,
+   "pre_level": {
+    "integrated_lufs": -14.3,
+    "true_peak_dbfs": -2.8
+   },
+   "source": {
+    "file": "suno-12c59ec1-e0a8-451f-a24e-89eca327aa8f.wav",
+    "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
+    "parts": [
+     {
+      "start": 7.19,
+      "end": 8.98,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy force destroyed.",
+     "small.en": "enemy force destroyed",
+     "medium.en": "Enemy force destroyed."
+    }
+   },
+   "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0191,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.7 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 1,
+   "file": "enemy_host_destroyed_1.wav",
+   "phrase": "Enemy command station destroyed!",
+   "motif": null,
+   "duration_seconds": 1.9,
+   "bytes": 83834,
+   "sha256": "66e03bbe1576dbe251fd88ae51d70a3b45f735fc67fcaef449e7144d345a5589",
+   "integrated_lufs_dual_mono": -18.0,
+   "true_peak_dbfs": -6.8,
+   "target_lufs": -18.0,
+   "gain_db": -4.1,
+   "pre_level": {
+    "integrated_lufs": -13.9,
+    "true_peak_dbfs": -2.7
+   },
+   "source": {
+    "file": "suno-12c59ec1-e0a8-451f-a24e-89eca327aa8f.wav",
+    "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
+    "parts": [
+     {
+      "start": 24.39,
+      "end": 26.29,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy Command Station destroyed.",
+     "small.en": "Enemy command station destroyed.",
+     "medium.en": "Enemy command station destroyed."
+    }
+   },
+   "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.006,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.8–2.2 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 2,
+   "file": "enemy_host_destroyed_2.wav",
+   "phrase": "Stronghold destroyed, Commander!",
+   "motif": null,
+   "duration_seconds": 2.670023,
+   "bytes": 117792,
+   "sha256": "3213ef4ecfd698e7d3474b186082ffd3b4fd3c95a02cdcfda5e159bf3ef8baea",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -2.4,
+   "pre_level": {
+    "integrated_lufs": -15.6,
+    "true_peak_dbfs": -4.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-c748073b-51bc-495f-b7ee-bf72da0a7a07.wav",
+    "sha256": "2360c8047d7888f6cbcc684cdb5fca2e98698e9ff8eacf1f9789126e227a5d53",
+    "parts": [
+     {
+      "start": 19.83,
+      "end": 22.5,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Stronghold destroyed commander.",
+     "small.en": "Stronghold destroyed commander.",
+     "medium.en": "Stronghold destroyed, Commander."
+    }
+   },
+   "origin": "Suno take c748073b-51bc-495f-b7ee-bf72da0a7a07 (batch ghorkov_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.3297,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.0 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "powerstation_captured",
+   "variant": 1,
+   "file": "powerstation_captured_1.wav",
+   "phrase": "Power station taken!",
+   "motif": null,
+   "duration_seconds": 1.630023,
+   "bytes": 71928,
+   "sha256": "cec4c8cfff512f8618896b16f13bede69434335b3fc2dbd58c1d47b9641c16bd",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -3.2,
+   "pre_level": {
+    "integrated_lufs": -14.8,
+    "true_peak_dbfs": -3.2
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44.wav",
+    "sha256": "101c6fe6fc974e0d885ae42f8f9611996e5a8cf5fe3c81efd36d0adbdb0014b0",
+    "parts": [
+     {
+      "start": 10.81,
+      "end": 12.44,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Power station taken.",
+     "small.en": "Power station taken.",
+     "medium.en": "Power station taken."
+    }
+   },
+   "origin": "Suno take 00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44 (batch ghorkov_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0005,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.6 s"
+  },
+  {
+   "faction": "ghorkov-mp",
+   "event": "powerstation_captured",
+   "variant": 2,
+   "file": "powerstation_captured_2.wav",
+   "phrase": "Energy for our people!",
+   "motif": null,
+   "duration_seconds": 1.54,
+   "bytes": 67958,
+   "sha256": "8b16bfb6394395ea70b5dc99cff6b00af41c8e7341333a13c81ba87b50e051a2",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -7.4,
+   "target_lufs": -18.0,
+   "gain_db": -1.3,
+   "pre_level": {
+    "integrated_lufs": -16.7,
+    "true_peak_dbfs": -6.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-5d34d328-7d82-48c2-adeb-bcd00b7c84a8.wav",
+    "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
+    "parts": [
+     {
+      "start": 20.26,
+      "end": 21.8,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Energy for our people.",
+     "small.en": "Energy for our people.",
+     "medium.en": "Energy for our people."
+    }
+   },
+   "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "ru",
+    "p": 0.0011,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.4–1.8 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_ready",
+   "variant": 1,
+   "file": "unit_ready_1.wav",
+   "phrase": "We stand ready.",
+   "motif": null,
+   "duration_seconds": 1.5,
+   "bytes": 66194,
+   "sha256": "17930343c141cd817e1f31ccae14d01b83cedb01b0ea8e99433d240fe99ec371",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.8,
+   "target_lufs": -18.0,
+   "gain_db": -1.4,
+   "pre_level": {
+    "integrated_lufs": -16.6,
+    "true_peak_dbfs": -5.2
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-865789a6-03b3-4556-a6ef-27b3664f2033.wav",
+    "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
+    "parts": [
+     {
+      "start": 4.03,
+      "end": 5.53,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "We stand ready.",
+     "small.en": "We stand ready.",
+     "medium.en": "We stand ready."
+    }
+   },
+   "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0012,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.7 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_ready",
+   "variant": 2,
+   "file": "unit_ready_2.wav",
+   "phrase": "New brothers for the Order.",
+   "motif": null,
+   "duration_seconds": 1.86,
+   "bytes": 82070,
+   "sha256": "6e1c773260056e3ad6506c319f286165c35396825150b23499d808992320ee41",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -7.1,
+   "target_lufs": -18.0,
+   "gain_db": -2.1,
+   "pre_level": {
+    "integrated_lufs": -15.9,
+    "true_peak_dbfs": -4.9
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-c10443d0-b676-4914-977c-ea603735012c.wav",
+    "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
+    "parts": [
+     {
+      "start": 33.3,
+      "end": 35.16,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "New Brothers for the Order.",
+     "small.en": "New Brothers for the Order.",
+     "medium.en": "New brothers for the Order."
+    }
+   },
+   "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0012,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.8–2.4 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "order_ack_friendly",
+   "variant": 1,
+   "file": "order_ack_friendly_1.wav",
+   "phrase": "Moving as ordered.",
+   "motif": null,
+   "duration_seconds": 2.56,
+   "bytes": 112940,
+   "sha256": "cdda0a8d941afb215ef1844e84267e6662ae00213eee4db43a8e2d56071c4d01",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -5.0,
+   "target_lufs": -18.0,
+   "gain_db": -0.5,
+   "pre_level": {
+    "integrated_lufs": -17.5,
+    "true_peak_dbfs": -4.4
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb.wav",
+    "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
+    "parts": [
+     {
+      "start": 3.29,
+      "end": 5.85,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "moving as ordered",
+     "small.en": "Moving as ordered.",
+     "medium.en": "Moving as ordered."
+    }
+   },
+   "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0254,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.3–1.8 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "order_ack_friendly",
+   "variant": 2,
+   "file": "order_ack_friendly_2.wav",
+   "phrase": "Brothers, we set out.",
+   "motif": null,
+   "duration_seconds": 1.8,
+   "bytes": 79424,
+   "sha256": "dd3fd23da76fbbd77c323ca111aeb433ef653eda3c759492a9b372c11270c89e",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -7.5,
+   "target_lufs": -18.0,
+   "gain_db": -3.9,
+   "pre_level": {
+    "integrated_lufs": -14.1,
+    "true_peak_dbfs": -3.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-38650425-37fb-4e8f-8329-1d8fb1609cdb.wav",
+    "sha256": "ca785d70595258eb3346b865c2b2deb778cf14b4f2eb8baed1e5f67e4cd930ea",
+    "parts": [
+     {
+      "start": 37.47,
+      "end": 39.27,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Brothers we set out.",
+     "small.en": "Brothers we set out.",
+     "medium.en": "Brothers we set out."
+    }
+   },
+   "origin": "Suno take 38650425-37fb-4e8f-8329-1d8fb1609cdb (batch taerkasten_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0012,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.1 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "order_ack_enemy",
+   "variant": 1,
+   "file": "order_ack_enemy_1.wav",
+   "phrase": "Into battle.",
+   "motif": null,
+   "duration_seconds": 1.44,
+   "bytes": 63548,
+   "sha256": "fb27d6bcbdc6fe5fd1cc1bbf9a44021b3481ea75afd2f56d5f652a57bfe11799",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.3,
+   "target_lufs": -18.0,
+   "gain_db": 0.6,
+   "pre_level": {
+    "integrated_lufs": -18.6,
+    "true_peak_dbfs": -4.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-c10443d0-b676-4914-977c-ea603735012c.wav",
+    "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
+    "parts": [
+     {
+      "start": 27.83,
+      "end": 29.27,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "into battle.",
+     "small.en": "into battle.",
+     "medium.en": "into battle."
+    }
+   },
+   "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0236,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.1–1.5 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "order_ack_enemy",
+   "variant": 2,
+   "file": "order_ack_enemy_2.wav",
+   "phrase": "We strike for the Order.",
+   "motif": null,
+   "duration_seconds": 2.18,
+   "bytes": 96182,
+   "sha256": "9faf41e044230d5a3a7900b72cc79ad84e079e9f91b4defccb19733fb6355be5",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -5.6,
+   "target_lufs": -18.0,
+   "gain_db": -3.2,
+   "pre_level": {
+    "integrated_lufs": -14.8,
+    "true_peak_dbfs": -2.7
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb.wav",
+    "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
+    "parts": [
+     {
+      "start": 32.13,
+      "end": 34.31,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "We strike for the order.",
+     "small.en": "We strike for the order.",
+     "medium.en": "We strike for the order."
+    }
+   },
+   "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0019,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.6–2.1 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_control_entered",
+   "variant": 1,
+   "file": "unit_control_entered_1.wav",
+   "phrase": "Control passes to you.",
+   "motif": null,
+   "duration_seconds": 1.84,
+   "bytes": 81188,
+   "sha256": "bfccf06563688de86f6f955e5d6f0480c57bf4d2434086371e06b68f6ed0145a",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -2.0,
+   "pre_level": {
+    "integrated_lufs": -16.0,
+    "true_peak_dbfs": -4.4
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-1f931593-39cd-47e9-ba5e-c5f6d7976b67.wav",
+    "sha256": "9b9b93a0c1bdcd641dd1a7a4b18c093464ac4bdea7f038f381961a3679d425ff",
+    "parts": [
+     {
+      "start": 23.64,
+      "end": 25.48,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Control passes to you.",
+     "small.en": "Control passes to you.",
+     "medium.en": "Control passes to you."
+    }
+   },
+   "origin": "Suno take 1f931593-39cd-47e9-ba5e-c5f6d7976b67 (batch taerkasten_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0026,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.0 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_control_entered",
+   "variant": 2,
+   "file": "unit_control_entered_2.wav",
+   "phrase": "Welcome among us.",
+   "motif": null,
+   "duration_seconds": 3.310023,
+   "bytes": 146016,
+   "sha256": "92add5d816f50cec9ecfe1ea3b3ce1f8d1c79f2c9e3ca0e55be797088e90e5dd",
+   "integrated_lufs_dual_mono": -18.9,
+   "true_peak_dbfs": -3.6,
+   "target_lufs": -18.0,
+   "gain_db": 0.1,
+   "pre_level": {
+    "integrated_lufs": -19.1,
+    "true_peak_dbfs": -3.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-c10443d0-b676-4914-977c-ea603735012c.wav",
+    "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
+    "parts": [
+     {
+      "start": 47.26,
+      "end": 50.57,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Welcome among us.",
+     "small.en": "Welcome Among Us.",
+     "medium.en": "Welcome among us."
+    }
+   },
+   "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0019,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.3–1.8 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_sector_entered",
+   "variant": 1,
+   "file": "enemy_sector_entered_1.wav",
+   "phrase": "Now on enemy ground.",
+   "motif": null,
+   "duration_seconds": 1.750023,
+   "bytes": 77220,
+   "sha256": "cec5f0d1d73759fd1b9ef17366852d81b815ee3390f80de9be3ab5cf86ab3e59",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.6,
+   "target_lufs": -18.0,
+   "gain_db": -1.8,
+   "pre_level": {
+    "integrated_lufs": -16.2,
+    "true_peak_dbfs": -4.5
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-865789a6-03b3-4556-a6ef-27b3664f2033.wav",
+    "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
+    "parts": [
+     {
+      "start": 28.82,
+      "end": 30.57,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Now on enemy ground.",
+     "small.en": "Now on enemy ground.",
+     "medium.en": "Now on enemy ground."
+    }
+   },
+   "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0087,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.6–2.1 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_sector_entered",
+   "variant": 2,
+   "file": "enemy_sector_entered_2.wav",
+   "phrase": "Brothers, they hold this ground.",
+   "motif": null,
+   "duration_seconds": 4.010023,
+   "bytes": 176886,
+   "sha256": "fc28e02732e8ebeec06792cf56c93ed25e4fb93d74c2d3aaa899b436bfc8e09c",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.7,
+   "target_lufs": -18.0,
+   "gain_db": -4.0,
+   "pre_level": {
+    "integrated_lufs": -14.0,
+    "true_peak_dbfs": -2.7
+   },
+   "source": {
+    "file": "suno-ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d.wav",
+    "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
+    "parts": [
+     {
+      "start": 26.63,
+      "end": 30.64,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Brothers, they hold this ground.",
+     "small.en": "Brothers, they hold this ground.",
+     "medium.en": "Brothers, they hold this ground."
+    }
+   },
+   "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0011,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.8–2.4 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_recovered",
+   "variant": 1,
+   "file": "unit_recovered_1.wav",
+   "phrase": "Ready once more.",
+   "motif": null,
+   "duration_seconds": 1.650023,
+   "bytes": 72810,
+   "sha256": "60e4cced28ab9394a98a6c6f6b8263c2f1e11ad78cfb01266a746e1f1641e303",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -2.5,
+   "pre_level": {
+    "integrated_lufs": -15.5,
+    "true_peak_dbfs": -4.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-38650425-37fb-4e8f-8329-1d8fb1609cdb.wav",
+    "sha256": "ca785d70595258eb3346b865c2b2deb778cf14b4f2eb8baed1e5f67e4cd930ea",
+    "parts": [
+     {
+      "start": 3.29,
+      "end": 4.94,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Ready once more.",
+     "small.en": "Ready once more.",
+     "medium.en": "Ready once more."
+    }
+   },
+   "origin": "Suno take 38650425-37fb-4e8f-8329-1d8fb1609cdb (batch taerkasten_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0025,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.7 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_recovered",
+   "variant": 2,
+   "file": "unit_recovered_2.wav",
+   "phrase": "Restored by the stone.",
+   "motif": null,
+   "duration_seconds": 2.38,
+   "bytes": 105002,
+   "sha256": "a450d74a60639a03fd0f301bda3d5089e581b9c7ac0d7eb7722637dbcdbfe031",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.5,
+   "target_lufs": -18.0,
+   "gain_db": -3.7,
+   "pre_level": {
+    "integrated_lufs": -14.3,
+    "true_peak_dbfs": -2.8
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-c10443d0-b676-4914-977c-ea603735012c.wav",
+    "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
+    "parts": [
+     {
+      "start": 21.62,
+      "end": 24.0,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "restored by the stone",
+     "small.en": "restored by the stone.",
+     "medium.en": "restored by the stone."
+    }
+   },
+   "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.002,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.4–1.9 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 1,
+   "file": "enemy_unit_spotted_1.wav",
+   "phrase": "Enemy before us.",
+   "motif": null,
+   "duration_seconds": 1.890023,
+   "bytes": 83394,
+   "sha256": "f6c38c193d430914e2e3c9410f7d78b77f1a61038ec6dc54dccb2dde981c2746",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -5.6,
+   "target_lufs": -18.0,
+   "gain_db": -2.0,
+   "pre_level": {
+    "integrated_lufs": -16.0,
+    "true_peak_dbfs": -3.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb.wav",
+    "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
+    "parts": [
+     {
+      "start": 24.62,
+      "end": 26.51,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy before us.",
+     "small.en": "Enemy before us.",
+     "medium.en": "enemy before us."
+    }
+   },
+   "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0008,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.0 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_unit_spotted",
+   "variant": 2,
+   "file": "enemy_unit_spotted_2.wav",
+   "phrase": "The godless approach.",
+   "motif": null,
+   "duration_seconds": 1.850023,
+   "bytes": 81630,
+   "sha256": "03dd0d4200f6d1c3722cc81c7dbc465d9bdb56b4e61badb189f2fcab00fe9307",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -6.8,
+   "target_lufs": -18.0,
+   "gain_db": -3.5,
+   "pre_level": {
+    "integrated_lufs": -14.5,
+    "true_peak_dbfs": -3.2
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-865789a6-03b3-4556-a6ef-27b3664f2033.wav",
+    "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
+    "parts": [
+     {
+      "start": 22.54,
+      "end": 24.39,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "The godless approach.",
+     "small.en": "The Godless Approach",
+     "medium.en": "The godless approach."
+    }
+   },
+   "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0006,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.4–1.9 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_host_found",
+   "variant": 1,
+   "file": "enemy_host_found_1.wav",
+   "phrase": "Enemy station found.",
+   "motif": null,
+   "duration_seconds": 1.98,
+   "bytes": 87362,
+   "sha256": "85d4070c245fbeeb9ec643551d479756f37189f1bb8f7e3d1f96abec3fefda15",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -8.9,
+   "target_lufs": -18.0,
+   "gain_db": -4.5,
+   "pre_level": {
+    "integrated_lufs": -13.5,
+    "true_peak_dbfs": -4.4
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-8a9ff52b-42aa-4647-bc85-52e206702286.wav",
+    "sha256": "6489c5410975bbfb3dca2086152793b9da4ac9b52c9ff8302b19518b60f45313",
+    "parts": [
+     {
+      "start": 16.68,
+      "end": 18.66,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy station found.",
+     "small.en": "Enemy Station Found",
+     "medium.en": "Enemy station found."
+    }
+   },
+   "origin": "Suno take 8a9ff52b-42aa-4647-bc85-52e206702286 (batch taerkasten_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0029,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.6–2.1 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_host_found",
+   "variant": 2,
+   "file": "enemy_host_found_2.wav",
+   "phrase": "There stands the enemy fortress.",
+   "motif": null,
+   "duration_seconds": 2.88,
+   "bytes": 127052,
+   "sha256": "67b8dbd4a89354a4aacafccdcd67a7e7d35a349acc0e14f1def09db869465b46",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -8.4,
+   "target_lufs": -18.0,
+   "gain_db": -5.7,
+   "pre_level": {
+    "integrated_lufs": -12.3,
+    "true_peak_dbfs": -2.7
+   },
+   "source": {
+    "file": "suno-ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d.wav",
+    "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
+    "parts": [
+     {
+      "start": 33.9,
+      "end": 36.78,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "There stands the enemy fortress.",
+     "small.en": "There stands the enemy fortress.",
+     "medium.en": "There stands the enemy fortress."
+    }
+   },
+   "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0025,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "2.0–2.6 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "request_support",
+   "variant": 1,
+   "file": "request_support_1.wav",
+   "phrase": "We need support.",
+   "motif": null,
+   "duration_seconds": 1.3,
+   "bytes": 57374,
+   "sha256": "5d1b84bea241663e1e29bee88a7f3585f409216b99c25f846802005c33316e26",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -6.0,
+   "target_lufs": -18.0,
+   "gain_db": -2.4,
+   "pre_level": {
+    "integrated_lufs": -15.6,
+    "true_peak_dbfs": -3.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-1f931593-39cd-47e9-ba5e-c5f6d7976b67.wav",
+    "sha256": "9b9b93a0c1bdcd641dd1a7a4b18c093464ac4bdea7f038f381961a3679d425ff",
+    "parts": [
+     {
+      "start": 42.9,
+      "end": 44.2,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "We need support.",
+     "small.en": "We need support.",
+     "medium.en": "We need support."
+    }
+   },
+   "origin": "Suno take 1f931593-39cd-47e9-ba5e-c5f6d7976b67 (batch taerkasten_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0041,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.7 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "request_support",
+   "variant": 2,
+   "file": "request_support_2.wav",
+   "phrase": "Brothers, stand with us.",
+   "motif": null,
+   "duration_seconds": 3.18,
+   "bytes": 140282,
+   "sha256": "64e4d5f05acd7eb4bea21773a700a8bba9210474e61e268b17f9228ba5292dd6",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -3.8,
+   "target_lufs": -18.0,
+   "gain_db": -0.7,
+   "pre_level": {
+    "integrated_lufs": -17.3,
+    "true_peak_dbfs": -3.4
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-865789a6-03b3-4556-a6ef-27b3664f2033.wav",
+    "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
+    "parts": [
+     {
+      "start": 47.77,
+      "end": 50.95,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Brothers, stand with us.",
+     "small.en": "Brothers, stand with us.",
+     "medium.en": "Brothers, stand with us."
+    }
+   },
+   "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0004,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.1 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_retreating",
+   "variant": 1,
+   "file": "unit_retreating_1.wav",
+   "phrase": "We withdraw.",
+   "motif": null,
+   "duration_seconds": 1.150023,
+   "bytes": 50760,
+   "sha256": "ac1319ca5075fe354ec96c11219cca290e2b4b3ff4e8a9ec154a81531e5f4396",
+   "integrated_lufs_dual_mono": -18.5,
+   "true_peak_dbfs": -5.7,
+   "target_lufs": -18.0,
+   "gain_db": -1.2,
+   "pre_level": {
+    "integrated_lufs": -16.8,
+    "true_peak_dbfs": -4.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb.wav",
+    "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
+    "parts": [
+     {
+      "start": 38.17,
+      "end": 39.32,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "We withdraw.",
+     "small.en": "We withdraw.",
+     "medium.en": "We withdraw."
+    }
+   },
+   "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0013,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.1–1.5 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_retreating",
+   "variant": 2,
+   "file": "unit_retreating_2.wav",
+   "phrase": "Back to the Fortress.",
+   "motif": null,
+   "duration_seconds": 2.12,
+   "bytes": 93536,
+   "sha256": "ed10e595a5b62aceb494110b053ed02847205aceafb6ca430973ceb107543ffe",
+   "integrated_lufs_dual_mono": -18.4,
+   "true_peak_dbfs": -5.8,
+   "target_lufs": -18.0,
+   "gain_db": -2.2,
+   "pre_level": {
+    "integrated_lufs": -15.8,
+    "true_peak_dbfs": -3.5
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-865789a6-03b3-4556-a6ef-27b3664f2033.wav",
+    "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
+    "parts": [
+     {
+      "start": 40.99,
+      "end": 43.11,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Back to the fortress.",
+     "small.en": "Back to the fortress.",
+     "medium.en": "Back to the fortress."
+    }
+   },
+   "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0016,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.4–1.9 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_lost",
+   "variant": 1,
+   "file": "unit_lost_1.wav",
+   "phrase": "Farewell, Commander.",
+   "motif": null,
+   "duration_seconds": 1.770023,
+   "bytes": 78102,
+   "sha256": "50a6cf0e424e6b185cd1733f5c0ce7cbc50d8522e8e6c062f85b190de73343e1",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -5.9,
+   "target_lufs": -18.0,
+   "gain_db": -1.6,
+   "pre_level": {
+    "integrated_lufs": -16.4,
+    "true_peak_dbfs": -4.2
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-1e6394ba-d608-499c-8e9a-68a9f5b5c0d9.wav",
+    "sha256": "9e7fbd4489b922f16b19adb73161aa9ccbd66cdc1b2fe029e079e23550283b82",
+    "parts": [
+     {
+      "start": 16.46,
+      "end": 18.23,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Farewell Commander.",
+     "small.en": "Farewell, Commander",
+     "medium.en": "Farewell commander."
+    }
+   },
+   "origin": "Suno take 1e6394ba-d608-499c-8e9a-68a9f5b5c0d9 (batch taerkasten_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0052,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.0 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_lost",
+   "variant": 2,
+   "file": "unit_lost_2.wav",
+   "phrase": "The earth receives us.",
+   "motif": null,
+   "duration_seconds": 1.86,
+   "bytes": 82070,
+   "sha256": "6aa3d8ed9732fd34a8033ac65e903f20c81bb531cc2dcf9d2c0559d4b59dbbbe",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -7.1,
+   "target_lufs": -18.0,
+   "gain_db": -3.7,
+   "pre_level": {
+    "integrated_lufs": -14.3,
+    "true_peak_dbfs": -3.6
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-c4ab6651-d6ec-493d-bddb-a6666496f706.wav",
+    "sha256": "7bea156a13540cc28e9b240d04bcac07acdb37a484864ba31a2696961f05d53f",
+    "parts": [
+     {
+      "start": 16.1,
+      "end": 17.96,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "The Earth receives us.",
+     "small.en": "The Earth receives us.",
+     "medium.en": "The Earth receives us."
+    }
+   },
+   "origin": "Suno take c4ab6651-d6ec-493d-bddb-a6666496f706 (batch taerkasten_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0012,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.5–2.0 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 1,
+   "file": "enemy_unit_engaged_1.wav",
+   "phrase": "Enemy fleeing.",
+   "motif": null,
+   "duration_seconds": 1.28,
+   "bytes": 56492,
+   "sha256": "77dde813951f0cf745cd51e4028d0be1aad9709006ef09377caa380805f143ec",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -7.5,
+   "target_lufs": -18.0,
+   "gain_db": -4.0,
+   "pre_level": {
+    "integrated_lufs": -14.0,
+    "true_peak_dbfs": -3.5
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-c10443d0-b676-4914-977c-ea603735012c.wav",
+    "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
+    "parts": [
+     {
+      "start": 40.09,
+      "end": 41.37,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy fleeing.",
+     "small.en": "Enemy fleeing.",
+     "medium.en": "Enemy fleeing."
+    }
+   },
+   "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0119,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.7 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_unit_engaged",
+   "variant": 2,
+   "file": "enemy_unit_engaged_2.wav",
+   "phrase": "They break and run.",
+   "motif": null,
+   "duration_seconds": 1.42,
+   "bytes": 62666,
+   "sha256": "7db02b56e518b2c84343173d7f1fb335b9e3497d951307db308bb6b0b35b724e",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -7.3,
+   "target_lufs": -18.0,
+   "gain_db": -3.1,
+   "pre_level": {
+    "integrated_lufs": -14.9,
+    "true_peak_dbfs": -4.0
+   },
+   "source": {
+    "file": "suno-ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d.wav",
+    "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
+    "parts": [
+     {
+      "start": 3.61,
+      "end": 5.03,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "They break and run.",
+     "small.en": "They break and run.",
+     "medium.en": "They break and run."
+    }
+   },
+   "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0082,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.2–1.7 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 1,
+   "file": "enemy_unit_destroyed_1.wav",
+   "phrase": "Enemy struck down.",
+   "motif": null,
+   "duration_seconds": 1.750023,
+   "bytes": 77220,
+   "sha256": "86357087c80690609fa7dec4b9cf5296afc51fffffe3d80d93f5697b53a5d7b8",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -5.6,
+   "target_lufs": -18.0,
+   "gain_db": -1.5,
+   "pre_level": {
+    "integrated_lufs": -16.5,
+    "true_peak_dbfs": -4.0
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-865789a6-03b3-4556-a6ef-27b3664f2033.wav",
+    "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
+    "parts": [
+     {
+      "start": 9.19,
+      "end": 10.94,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy struck down.",
+     "small.en": "Enemy struck down.",
+     "medium.en": "Enemy struck down."
+    }
+   },
+   "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.002,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.4–1.9 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_unit_destroyed",
+   "variant": 2,
+   "file": "enemy_unit_destroyed_2.wav",
+   "phrase": "Another enemy falls.",
+   "motif": null,
+   "duration_seconds": 1.730023,
+   "bytes": 76338,
+   "sha256": "819cf851f78a1a6731a94a2e456953e343b89233b81663c1c86718989e3ec36b",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -7.5,
+   "target_lufs": -18.0,
+   "gain_db": -4.9,
+   "pre_level": {
+    "integrated_lufs": -13.1,
+    "true_peak_dbfs": -2.5
+   },
+   "source": {
+    "file": "suno-ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d.wav",
+    "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
+    "parts": [
+     {
+      "start": 21.25,
+      "end": 22.98,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Another enemy falls.",
+     "small.en": "Another enemy falls.",
+     "medium.en": "Another enemy falls."
+    }
+   },
+   "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0023,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.3–1.8 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 1,
+   "file": "enemy_host_destroyed_1.wav",
+   "phrase": "Enemy station destroyed.",
+   "motif": null,
+   "duration_seconds": 2.130023,
+   "bytes": 93978,
+   "sha256": "72d25bbc59099c9bbfa79da8e02898bd176dc83754a627d12d01e74046598d34",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -8.0,
+   "target_lufs": -18.0,
+   "gain_db": -2.5,
+   "pre_level": {
+    "integrated_lufs": -15.5,
+    "true_peak_dbfs": -5.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-1f931593-39cd-47e9-ba5e-c5f6d7976b67.wav",
+    "sha256": "9b9b93a0c1bdcd641dd1a7a4b18c093464ac4bdea7f038f381961a3679d425ff",
+    "parts": [
+     {
+      "start": 29.79,
+      "end": 31.92,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Enemy station destroyed.",
+     "small.en": "Enemy station destroyed.",
+     "medium.en": "Enemy station destroyed."
+    }
+   },
+   "origin": "Suno take 1f931593-39cd-47e9-ba5e-c5f6d7976b67 (batch taerkasten_s2)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.004,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.9–2.5 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "enemy_host_destroyed",
+   "variant": 2,
+   "file": "enemy_host_destroyed_2.wav",
+   "phrase": "The enemy fortress falls.",
+   "motif": null,
+   "duration_seconds": 1.9,
+   "bytes": 83834,
+   "sha256": "c296524e340f507f7d31df4b735d4836089e3f4145baf27e9efa1bb651a19e3f",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -8.4,
+   "target_lufs": -18.0,
+   "gain_db": -4.6,
+   "pre_level": {
+    "integrated_lufs": -13.4,
+    "true_peak_dbfs": -3.6
+   },
+   "source": {
+    "file": "suno-ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d.wav",
+    "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
+    "parts": [
+     {
+      "start": 9.28,
+      "end": 11.18,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "The enemy fortress falls.",
+     "small.en": "The enemy fortress falls.",
+     "medium.en": "The enemy fortress falls."
+    }
+   },
+   "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0039,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.8–2.4 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "powerstation_captured",
+   "variant": 1,
+   "file": "powerstation_captured_1.wav",
+   "phrase": "Power station taken.",
+   "motif": null,
+   "duration_seconds": 2.04,
+   "bytes": 90008,
+   "sha256": "abebf87285d61c39c1584d3930ed95385f66fbec8630f4d6eb23087f594610b5",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -7.2,
+   "target_lufs": -18.0,
+   "gain_db": -3.9,
+   "pre_level": {
+    "integrated_lufs": -14.1,
+    "true_peak_dbfs": -3.3
+   },
+   "source": {
+    "file": "htdemucs vocal stem of suno-b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb.wav",
+    "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
+    "parts": [
+     {
+      "start": 10.55,
+      "end": 12.59,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "Power station taken.",
+     "small.en": "Power Station taken.",
+     "medium.en": "Power station taken."
+    }
+   },
+   "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0157,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.6–2.1 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "powerstation_captured",
+   "variant": 2,
+   "file": "powerstation_captured_2.wav",
+   "phrase": "We claim the stone.",
+   "motif": null,
+   "duration_seconds": 1.710023,
+   "bytes": 75456,
+   "sha256": "49f8d3c248a77bb6f037bb4dc0513f161b95fd83d0e3cfe653511095ed6bf620",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -6.7,
+   "target_lufs": -18.0,
+   "gain_db": -3.2,
+   "pre_level": {
+    "integrated_lufs": -14.8,
+    "true_peak_dbfs": -3.3
+   },
+   "source": {
+    "file": "suno-80c04bdc-712f-40b6-99f0-b9230b978070.wav",
+    "sha256": "09fe94428ac6539480d2645a1d64ecac6066bee83b8e5d00d4958fc9fec8f73d",
+    "parts": [
+     {
+      "start": 14.62,
+      "end": 16.33,
+      "offset": 0
+     }
+    ]
+   },
+   "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
+   "asr_final_file": {
+    "votes": 3,
+    "heard": {
+     "base.en": "We claim the stone.",
+     "small.en": "We claim the stone.",
+     "medium.en": "We claim the stone."
+    }
+   },
+   "origin": "Suno take 80c04bdc-712f-40b6-99f0-b9230b978070 (batch taerkasten_r1)",
+   "render_run": "v04-faction-voices-2026-11-02",
+   "accent_cue": {
+    "language": "de",
+    "p": 0.0009,
+    "top": "en",
+    "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
+   },
+   "cut_method": "island",
+   "duration_target": "1.3–1.8 s"
   }
  ]
 }
