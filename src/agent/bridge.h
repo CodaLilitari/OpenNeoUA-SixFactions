@@ -1,6 +1,8 @@
 #ifndef OPENNEOUA_AGENT_BRIDGE_H
 #define OPENNEOUA_AGENT_BRIDGE_H
 #include <cstdint>
+#include <string>
+#include "fork_protocol.h"
 union SDL_Event;
 namespace Agent {
 struct Snapshot {
@@ -12,6 +14,15 @@ struct Snapshot {
     double x = 0, y = 0, z = 0;
 };
 // Disabled unless OPENNEOUA_AGENT_DIR names an existing absolute directory.
+struct ForkResult {
+    bool ok = false;
+    std::string json;  // JSON object merged into the response under "fork"
+    std::string error;
+};
+using ForkHandler = ForkResult (*)(const ForkCommand &command);
+// Engine registers its fork session before Init; without a handler fork_*
+// requests fail with fork_unavailable and are not advertised in session.json.
+void SetForkHandler(ForkHandler handler);
 void Init();
 void BeforeEvents();
 void BeforeSwap();

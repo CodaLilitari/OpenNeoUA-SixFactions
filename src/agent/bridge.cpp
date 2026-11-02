@@ -60,6 +60,8 @@ Sequence sequence;
 Hold hold;
 TextPacer textPacer;
 Snapshot latest;
+ForkHandler forkHandler = nullptr;
+std::string forkJson;
 #ifdef _WIN32
 const char *platformName = "windows";
 #elif defined(__linux__)
@@ -366,6 +368,7 @@ void Respond(const char *error = nullptr, bool screenshot = false) {
         << ",\"owner\":" << latest.owner << ",\"width\":" << width << ",\"height\":" << height;
     if (error) out << ",\"error\":\"" << error << '"';
     if (screenshot && !error) out << ",\"screenshot\":\"frame.ppm\"";
+    if (!forkJson.empty()) { out << ",\"fork\":" << forkJson; forkJson.clear(); }
     if (latest.localUnit) out << ",\"local_unit\":{\"id\":" << latest.unitId << ",\"prototype\":" << latest.prototype
         << ",\"owner\":" << latest.unitOwner << ",\"energy\":" << latest.energy
         << ",\"position\":[" << Finite(latest.x) << ',' << Finite(latest.y) << ',' << Finite(latest.z) << "]}";
@@ -378,6 +381,7 @@ void Respond(const char *error = nullptr, bool screenshot = false) {
 }
 } // namespace
 
+void SetForkHandler(ForkHandler handler) { forkHandler = handler; }
 void Init() {
     const char *input = SDL_getenv("OPENNEOUA_AGENT_DIR");
     if (!input || !*input) return;
@@ -402,7 +406,8 @@ void Init() {
         "\",\"architecture\":\"" + architecture + "\",\"capture_available\":" +
         (SDL_GL_GetCurrentWindow() ? "true" : "false") +
         ",\"max_hold_ms\":2000,\"max_request_bytes\":4096,\"coordinates\":\"screenshot_pixels\","
-        "\"operations\":[\"observe\",\"key\",\"move\",\"click\",\"text\",\"release\"]}\n");
+        + std::string("\"operations\":[\"observe\",\"key\",\"move\",\"click\",\"text\",\"release\"") +
+        (forkHandler ? ",\"fork_create\",\"fork_step\",\"fork_observe\",\"fork_commit\",\"fork_discard\",\"fork_clone\"" : "") + "]}\n");
     if (!enabled) Shutdown();
 }
 void BeforeEvents() {
@@ -427,6 +432,32 @@ void BeforeEvents() {
         return;
     }
     if (line == lastRequest) return;
+    const ForkParsed forkParsed = ParseFork(line, session);
+    if (forkParsed.addressed && forkParsed.valid)
+    {
+        const Decision decision = sequence.Begin(forkParsed.command.id, false);
+        if (decision == Decision::Defer) return;
+        lastRequest = line;
+        if (decision == Decision::Ignore) return;
+        if (decision == Decision::Repeat)
+        {
+            if (!cachedResponse.empty()) responseDirty = !WriteAtomic("response.json", cachedResponse);
+            return;
+        }
+        current = Command();
+        current.id = forkParsed.command.id;
+        captureSucceeded = false; capturedPixels.clear();
+        completionError.clear(); appliedFrame = 0;
+        pending = true;
+        acknowledgeFrame = frame + 1;
+        if (forkParsed.command.expires <= UtcNow()) { Respond("expired"); return; }
+        if (!forkHandler) { Respond("fork_unavailable"); return; }
+        const ForkResult forkResult = forkHandler(forkParsed.command);
+        if (!forkResult.ok) { Respond(forkResult.error.empty() ? "fork_failed" : forkResult.error.c_str()); return; }
+        forkJson = forkResult.json;
+        Respond();
+        return;
+    }
     const Parsed parsed = Parse(line, session);
     if (!parsed.addressed || !parsed.command.id) { lastRequest = line; return; }
     const bool expired = parsed.valid && parsed.command.expires <= UtcNow();

@@ -58,6 +58,16 @@ permission change is performed by the game or adapter.
 | `game_mouse_click` | Positions the pointer, then holds and releases left, middle or right at that pixel position. |
 | `game_type_text` | Types 1–128 printable ASCII characters through the game text input. |
 | `game_release_all` | Cancels and releases agent-held controls. |
+| `game_fork_create` | Creates an isolated simulation fork of the live world for one owner. |
+| `game_fork_step` | Steps a fork with one action (hold/move/attack/create/build). |
+| `game_fork_observe` | Observes a fork, fog-filtered for one owner. |
+| `game_fork_commit` | Commits a fork action log into another fork by replay. |
+| `game_fork_clone` | Clones a fork (same base state, new controller) so a commit into the clone can succeed. |
+| `game_fork_discard` | Discards a fork without touching the live world. |
+
+Fork tools are advertised in `session.json` only when the engine has a fork
+session bound to the live world; they step the deterministic fork model, never
+the live simulation, and commit only by replaying an action log fork-to-fork.
 
 Observe after an action to establish its effect. A successful action receipt
 means input finished processing, not that the intended button or unit was hit.

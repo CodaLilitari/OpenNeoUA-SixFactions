@@ -33,7 +33,8 @@ class AgentMCPTests(unittest.TestCase):
 
     def session(self, value=SESSION):
         (self.directory / 'session.json').write_text(json.dumps({'protocol': 1, 'session': value,
-            'operations': ['observe', 'key', 'move', 'click', 'text', 'release']}))
+            'operations': ['observe', 'key', 'move', 'click', 'text', 'release',
+                           'fork_create', 'fork_step', 'fork_observe', 'fork_commit', 'fork_discard', 'fork_clone']}))
 
     def response(self, ident, **extras):
         data = {'protocol': 1, 'session': SESSION, 'id': ident, 'ok': True, **extras}
@@ -122,6 +123,13 @@ class AgentMCPTests(unittest.TestCase):
             ('game_type_text', {'text': 'a' * 129}),
             ('game_type_text', {'text': '\u263a'}),
             ('game_observe', {'path': '../../private'}),
+            ('game_fork_create', {'owner': 256}),
+            ('game_fork_create', {'owner': True}),
+            ('game_fork_step', {'fork': 1, 'action': 5, 'ticks': 1}),
+            ('game_fork_step', {'fork': 1, 'action': 1, 'ticks': 0}),
+            ('game_fork_observe', {'fork': 0, 'owner': 1}),
+            ('game_fork_commit', {'fork': 1}),
+        ('game_fork_clone', {'fork': 1, 'owner': 256}),
         ]
         for name, args in cases:
             with self.subTest(name=name, args=args), self.assertRaises(mcp.AgentError):
@@ -139,6 +147,41 @@ class AgentMCPTests(unittest.TestCase):
         start = png.index(b'IDAT')
         size = int.from_bytes(png[start - 4:start], 'big')
         self.assertEqual(zlib.decompress(png[start + 4:start + 4 + size]), b'\0' + pixels)
+
+    def test_fork_create_writes_fork_request_and_returns_fork_json(self):
+        seen = []
+        def act(request):
+            seen.extend(request)
+            self.response(int(request[2]), fork={'fork': 1, 'hash': 42, 'time_ms': 0})
+        thread = self.peer(act)
+        result = mcp.invoke(self.bridge, 'game_fork_create', {'owner': 6})
+        thread.join()
+        self.assertEqual(seen[4:], ['fork_create', '6'])
+        payload = json.loads(result['content'][0]['text'])
+        self.assertEqual(payload['fork'], {'fork': 1, 'hash': 42, 'time_ms': 0})
+
+    def test_fork_clone_writes_fork_request_and_returns_fork_json(self):
+        seen = []
+        def act(request):
+            seen.extend(request)
+            self.response(int(request[2]), fork={'fork': 2, 'src': 1, 'hash': 43, 'time_ms': 0})
+        thread = self.peer(act)
+        result = mcp.invoke(self.bridge, 'game_fork_clone', {'fork': 1, 'owner': 6})
+        thread.join()
+        self.assertEqual(seen[4:], ['fork_clone', '1', '6'])
+        payload = json.loads(result['content'][0]['text'])
+        self.assertEqual(payload['fork'], {'fork': 2, 'src': 1, 'hash': 43, 'time_ms': 0})
+
+    def test_fork_step_writes_ordered_arguments(self):
+        seen = []
+        def act(request):
+            seen.extend(request)
+            self.response(int(request[2]), fork={'fork': 3, 'hash': 7, 'time_ms': 40})
+        thread = self.peer(act)
+        mcp.invoke(self.bridge, 'game_fork_step',
+                   {'fork': 3, 'action': 2, 'gid': 10, 'target': 11, 'ticks': 5})
+        thread.join()
+        self.assertEqual(seen[4:], ['fork_step', '3', '2', '10', '11', '0', '0', '0', '0', '5'])
 
     def test_ppm_rejects_truncation_and_excessive_dimensions(self):
         for value in (b'P6\n2 1\n255\nabc', b'P6\n9999 1\n255\nabc', b'P3\n1 1\n255\n0 0 0'):
@@ -166,7 +209,7 @@ class AgentMCPTests(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stderr)
         responses = [json.loads(line) for line in p.stdout.splitlines()]
         self.assertEqual([r['id'] for r in responses], [1, 2, 3])
-        self.assertEqual(len(responses[1]['result']['tools']), 7)
+        self.assertEqual(len(responses[1]['result']['tools']), 13)
         self.assertIn(SESSION, responses[2]['result']['content'][0]['text'])
 
     def test_oversized_line_cannot_smuggle_a_tail_command(self):

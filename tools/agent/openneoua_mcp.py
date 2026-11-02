@@ -192,6 +192,19 @@ TOOLS = [
     ('game_type_text', 'Type at most 128 printable ASCII characters into the currently focused game control.',
      schema({'text': {'type': 'string', 'minLength': 1, 'maxLength': 128}}, ('text',))),
     ('game_release_all', 'Release agent-held controls, including an outstanding timed action.', schema()),
+    ('game_fork_create', 'Create an isolated simulation fork of the live world for one owner.',
+     schema({'owner': INT}, ('owner',))),
+    ('game_fork_step', 'Step a fork with one action (0 hold, 1 move, 2 attack, 3 create, 4 build).',
+     schema({'fork': INT, 'action': INT, 'gid': INT, 'target': INT, 'x': INT, 'y': INT,
+             'proto': INT, 'cost': INT, 'ticks': INT}, ('fork', 'action', 'ticks'))),
+    ('game_fork_observe', 'Observe a fork, fog-filtered for one owner.',
+     schema({'fork': INT, 'owner': INT}, ('fork', 'owner'))),
+    ('game_fork_commit', 'Commit a fork action log into another fork by replay.',
+     schema({'fork': INT, 'dst': INT}, ('fork', 'dst'))),
+    ('game_fork_clone', 'Clone a fork (same base state, new controller) so its action log can be committed into the clone.',
+     schema({'fork': INT, 'owner': INT}, ('fork', 'owner'))),
+    ('game_fork_discard', 'Discard a fork without touching the live world.',
+     schema({'fork': INT}, ('fork',))),
 ]
 
 
@@ -228,6 +241,30 @@ def invoke(bridge, name, args):
         if not isinstance(value, str) or not 1 <= len(value) <= 128 or any(not 32 <= ord(c) <= 126 for c in value):
             raise AgentError('text must contain 1 to 128 printable ASCII characters')
         result = bridge.command('text', (value.encode('ascii').hex(),))
+    elif name == 'game_fork_create':
+        result = bridge.command('fork_create', (integer(args['owner'], 0, 255, 'owner'),))
+    elif name == 'game_fork_step':
+        result = bridge.command('fork_step', (
+            integer(args['fork'], 1, 18446744073709551615, 'fork'),
+            integer(args['action'], 0, 4, 'action'),
+            integer(args.get('gid', 0), 0, 2147483647, 'gid'),
+            integer(args.get('target', 0), 0, 2147483647, 'target'),
+            integer(args.get('x', 0), -1000000, 1000000, 'x'),
+            integer(args.get('y', 0), -1000000, 1000000, 'y'),
+            integer(args.get('proto', 0), 0, 100000, 'proto'),
+            integer(args.get('cost', 0), 0, 1000000, 'cost'),
+            integer(args['ticks'], 1, 100000, 'ticks')))
+    elif name == 'game_fork_observe':
+        result = bridge.command('fork_observe', (integer(args['fork'], 1, 18446744073709551615, 'fork'),
+                                                 integer(args['owner'], 0, 255, 'owner')))
+    elif name == 'game_fork_commit':
+        result = bridge.command('fork_commit', (integer(args['fork'], 1, 18446744073709551615, 'fork'),
+                                                integer(args['dst'], 1, 18446744073709551615, 'dst')))
+    elif name == 'game_fork_clone':
+        result = bridge.command('fork_clone', (integer(args['fork'], 1, 18446744073709551615, 'fork'),
+                                               integer(args['owner'], 0, 255, 'owner')))
+    elif name == 'game_fork_discard':
+        result = bridge.command('fork_discard', (integer(args['fork'], 1, 18446744073709551615, 'fork'),))
     else:
         result = bridge.command('release')
     content = [{'type': 'text', 'text': json.dumps(result, ensure_ascii=True)}]
