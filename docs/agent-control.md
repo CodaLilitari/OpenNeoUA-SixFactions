@@ -60,7 +60,7 @@ permission change is performed by the game or adapter.
 | `game_release_all` | Cancels and releases agent-held controls. |
 | `game_fork_create` | Creates an isolated simulation fork of the live world for one owner. |
 | `game_fork_step` | Steps a fork with one action (hold/move/attack/create/build). |
-| `game_fork_observe` | Observes a fork, fog-filtered for one owner. |
+| `game_fork_observe` | Observes a fork, fog-filtered for one owner. In a network match the engine substitutes the local player's owner, so an agent cannot observe through another player's view. |
 | `game_fork_commit` | Commits a fork action log into another fork by replay. |
 | `game_fork_clone` | Clones a fork (same base state, new controller) so a commit into the clone can succeed. |
 | `game_fork_discard` | Discards a fork without touching the live world. |

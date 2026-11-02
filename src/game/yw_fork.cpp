@@ -24,9 +24,10 @@ void CollectUnits(World::RefBactList &list, World::Fork::WorldState &out)
         u.protoId = bact->_vehicleID;
         u.owner = bact->_owner;
         u.energy = bact->_energy;
-        u.x = static_cast<float>(bact->_position.x);
-        u.y = static_cast<float>(bact->_position.y);
-        u.z = static_cast<float>(bact->_position.z);
+        // Map plane, not raw engine axes: engine y is altitude and engine z
+        // runs negative across sector rows (see World::PositionToSectorID).
+        World::Fork::EnginePositionToPlane(bact->_position.x, bact->_position.y,
+                                           bact->_position.z, u.x, u.y, u.z);
         out.units.push_back(u);
         if (bact->_gid >= out.nextGid)
             out.nextGid = bact->_gid + 1;
@@ -194,7 +195,13 @@ Agent::ForkResult DispatchFork(const Agent::ForkCommand &cmd)
             result.error = "unknown_fork";
             return result;
         }
-        const World::Fork::Observation obs = fork->Observe(cmd.owner);
+        // In a network match the agent may only look through its own
+        // station's eyes; any other owner would be a map hack against the
+        // human players. Single-player analysis keeps the requested owner.
+        const std::uint8_t viewer = agentWorld->_isNetGame
+            ? static_cast<std::uint8_t>(agentWorld->GetPlayerOwner())
+            : cmd.owner;
+        const World::Fork::Observation obs = fork->Observe(viewer);
         std::string json = "{\"fork\":" + std::to_string(cmd.fork) +
             ",\"owner\":" + std::to_string(obs.owner) +
             ",\"time_ms\":" + std::to_string(obs.timeStampMs) +

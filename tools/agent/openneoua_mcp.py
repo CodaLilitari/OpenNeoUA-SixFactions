@@ -197,7 +197,7 @@ TOOLS = [
     ('game_fork_step', 'Step a fork with one action (0 hold, 1 move, 2 attack, 3 create, 4 build).',
      schema({'fork': INT, 'action': INT, 'gid': INT, 'target': INT, 'x': INT, 'y': INT,
              'proto': INT, 'cost': INT, 'ticks': INT}, ('fork', 'action', 'ticks'))),
-    ('game_fork_observe', 'Observe a fork, fog-filtered for one owner.',
+    ('game_fork_observe', 'Observe a fork, fog-filtered for one owner. In a network match the engine always uses the local player owner.',
      schema({'fork': INT, 'owner': INT}, ('fork', 'owner'))),
     ('game_fork_commit', 'Commit a fork action log into another fork by replay.',
      schema({'fork': INT, 'dst': INT}, ('fork', 'dst'))),

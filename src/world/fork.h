@@ -120,6 +120,19 @@ enum class MergePolicy : std::uint8_t
     ReplayAnyway     // replay actions even if the destination advanced
 };
 
+// Fork states live on the map plane: x grows east, y grows toward later
+// sector rows, z is altitude. The engine stores positions as (x, altitude, z)
+// with z negative toward later rows (World::PositionToSectorID uses x and
+// -z). Every capture of live units must go through this mapping, otherwise
+// sector lookup and sensor range are computed against altitude.
+inline void EnginePositionToPlane(double engineX, double engineY, double engineZ,
+                                  float &planeX, float &planeY, float &altitude)
+{
+    planeX = static_cast<float>(engineX);
+    planeY = static_cast<float>(-engineZ);
+    altitude = static_cast<float>(engineY);
+}
+
 inline int SectorIndexOf(const WorldState &s, float x, float y)
 {
     const int sx = static_cast<int>(std::floor(x / World::CVSectorLength));

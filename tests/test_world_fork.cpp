@@ -235,6 +235,34 @@ int main()
             "missing newline rejected");
     Require(!mk("fork_create 999").valid, "owner range enforced");
 
+    // Engine positions are (x, altitude, z) with z negative across rows; the
+    // fork plane must follow World::PositionToSectorID (x, -z).
+    {
+        WorldState s = MakeState();
+        float px = 0, py = 0, alt = 0;
+        EnginePositionToPlane(1800.0, -300.0, -1800.0, px, py, alt);
+        Require(px == 1800.0f && py == 1800.0f && alt == -300.0f, "engine to plane mapping");
+        Require(SectorIndexOf(s, px, py) == 1 * s.mapW + 1, "engine position lands in sector (1,1)");
+
+        // Same column and altitude, two rows apart: invisible to owner 1.
+        // Reading engine y as the plane axis would place both units 50
+        // units apart and leak the enemy through the fog.
+        UnitState own;
+        own.gid = 0x20000; own.owner = 1; own.energy = 100;
+        EnginePositionToPlane(600.0, -300.0, -600.0, own.x, own.y, own.z);
+        UnitState foe;
+        foe.gid = 0x20001; foe.owner = 6; foe.energy = 100;
+        EnginePositionToPlane(650.0, -250.0, -3000.0, foe.x, foe.y, foe.z);
+        s.units = {own, foe};
+        s.nextGid = 0x20002;
+        for (SectorState &sec : s.sectors)
+            sec.viewMask = 0;
+        Require(!UnitVisibleTo(s, foe, 1, 1800.0f), "distant row enemy stays fogged");
+        UnitState near = foe;
+        EnginePositionToPlane(650.0, -250.0, -900.0, near.x, near.y, near.z);
+        Require(UnitVisibleTo(s, near, 1, 1800.0f), "nearby enemy is within sensor range");
+    }
+
     std::cout << "world fork, snapshot, registry and agent fork protocol tests passed\n";
     return 0;
 }
