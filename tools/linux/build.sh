@@ -25,6 +25,8 @@ PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_six_faction_maps.py" 
     2>&1 | tee "$lab/logs/map-tests.log"
 PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_agent_mcp.py" -v \
     2>&1 | tee "$lab/logs/agent-mcp-tests.log"
+PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_faction_audio_manifest.py" -v \
+    2>&1 | tee "$lab/logs/faction-audio-tests.log"
 ldd "$lab/engine/OpenNeoUA" | tee "$lab/logs/runtime-libraries.log"
 python3 - "$lab/logs/runtime-libraries.log" <<'PY'
 from pathlib import Path

@@ -2,15 +2,16 @@
  "version": 5,
  "pack": "Suno + REAPER candidate packs for four factions: Black Sect, Sulgogars, Ghorkov and Taerkasten",
  "collaboration": "Coda built the REAPER lab, the v02 cuts, the Black Sect and Sulgogar production plan and the reviewed cue contract. Red generated the remaining Black Sect and Sulgogar takes, wrote, generated and selected the Ghorkov and Taerkasten packs and the Black Sect message-19 lines, verified the cuts, rendered them natively in REAPER and integrated them.",
- "listening_status": "Andrei listened to the version 4 Black Sect and Sulgogar reels on 2026-11-02 and called them good. He asked for the message-19 fix that this version makes. Nobody has heard the Ghorkov and Taerkasten files or the two new Black Sect lines yet. They are ASR-verified, and their accent is checked by a language-ID cue. Auditory, accent and in-game acceptance remain with Andrei.",
+ "listening_status": "Andrei listened to the version 4 Black Sect and Sulgogar reels on 2026-11-02 and called them good. He asked for the message-19 fix that this version makes. Nobody has heard the Ghorkov and Taerkasten files or the two new Black Sect lines yet. They are ASR-verified; a language-ID cue gives only a weak hint of the accent. Auditory, accent and in-game acceptance remain with Andrei.",
  "format": "PCM16 mono 22050 Hz",
- "level_policy": "-18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target). Ghorkov and Taerkasten use the -18 LUFS target.",
+ "level_policy": "-18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target). Ghorkov and Taerkasten use the -18 LUFS target. Their gains were set on the v04 windows; the v05 re-cut only trims near-silence and closes pauses, so the gains were kept.",
  "black_voice": "Suno v6 (Songs Advanced, spoken word, male) takes separated with Demucs htdemucs vocal stems; four lines are Coda v02 cuts of her own Suno vocal estimates. Message 19 lines: Black Sect Production 08 (Suno v6, Coda's Production 01 prompt), htdemucs vocal stem.",
  "sulg_provenance": "Suno v6 creature-call takes used unseparated; three Coda v02 salvage fragments kept.",
- "ghorkov_voice": "Suno Speech (beta), male, background music off, variety off. Each script puts a short Russian radio phrase and an ellipsis paragraph before every English line; the Russian phrases are cut away and never ship. Some takes carried a low drone bed despite music off; their htdemucs vocal stems are used.",
- "taerkasten_voice": "Suno Speech (beta), male, background music off, variety off, with a short German phrase before every English line (cut away). The last batch used a plain dry-recording tone that leaves no drone bed.",
- "accent_method": "Suno ignores accent wording in the tone, so the L1 priming phrase carries the accent. The check is Whisper small language ID. Calibrated on the GMU Speech Accent Archive (2 s chunks, per-speaker medians): native English speakers P(ru) 0.0001-0.0008, Russian second-language speakers P(ru) 0.004-0.21, German second-language speakers P(de) 0.0012-0.011. It is a cue, not a measurement of how strong the accent sounds.",
+ "ghorkov_voice": "Suno Speech (beta), male, background music off, variety off. Each script puts a short Russian radio phrase and an ellipsis paragraph before every English line; the Russian phrases are cut away and never ship. Six of the twelve takes carried a low drone bed despite music off; 20 of the 32 cues are htdemucs vocal stems of those takes (music_under_voice_db gives the bed level). One cue, enemy_unit_engaged_1 \"Enemy in retreat.\", comes from a dry-run pilot take (pilot_ru8c) with older tone wording whose exact text was not saved.",
+ "taerkasten_voice": "Suno Speech (beta), male, background music off, variety off, with a short German phrase before every English line (cut away). Twenty-four of the 30 cues are htdemucs vocal stems of the s1-s4 takes, which carried a drone bed (music_under_voice_db gives its level); the six r1 cues used a plain dry tone and have no bed.",
+ "accent_method": "Suno ignores accent wording in the tone, so the L1 priming phrase carries the accent. The check is Whisper small language ID. Calibrated on the GMU Speech Accent Archive (six speakers per group, 2 s chunks padded like the final files, per-speaker medians; calibrate_lid.py): native English speakers P(ru) 0.0001-0.0006 and P(de) 0.0002-0.0007, Russian second-language speakers P(ru) 0.0025-0.15, German second-language speakers P(de) 0.0012-0.011. Measured like the final files, a native-English control (the 32 Black Sect files and 25 retail English clips) reads P(ru) median 0.0012 (max 0.0061) and P(de) median 0.0011 (max 0.0064). Ghorkov reads about five times that median, with 15 of 32 lines above every control clip; Taerkasten about twice, with 6 of 30 above, which cannot confirm a German accent. It is a cue, not a measurement of how strong the accent sounds.",
  "selection": "Whisper word alignment locates each line; the cut sits at the silence around its vocal island. An edge audit transcribes and language-identifies every island in the cut and trims away priming phrases, breaths and clicks. A residue check rejects cuts with sound outside the line's words. A cut is eligible only if base.en, small.en and medium.en, transcribing it in isolation, hear exactly the planned line in at least two of three cases.",
+ "music_under_voice_db": "Demucs accompaniment (no_vocals) minus vocal-stem level over the shipped cut, pads included, for cues cut from htdemucs vocal stems. The version 4 Black Sect values were measured over the vocal island only.",
  "render": {
   "v03": {
    "run": "v03-full-candidate-2026-11-02",
@@ -20,9 +21,14 @@
   },
   "v04": {
    "run": "v04-faction-voices-2026-11-02",
-   "project_sha256": "64373b0bde923a307f17f9cf953a1eda801b854ddeb14a67564706bc43f8d31a",
-   "master_sha256": "115eb704271303432afc434dbab2f2af7851383087dbc29ffb03812adce4b9d2",
-   "method": "Native REAPER 7.79 render through the TwelveTake bridge; the bridge mailbox was driven by file transfer because the device shell was unavailable. Per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz. The 30 unchanged Black Sect cues re-rendered byte-identical to v03."
+   "superseded_by": "v05-faction-voices-recut-2026-11-02",
+   "note": "First render of the Ghorkov, Taerkasten and Black Sect message-19 cues. An audio review then found mid-line pauses, a leading inhale, edge clicks and long silent tails."
+  },
+  "v05": {
+   "run": "v05-faction-voices-recut-2026-11-02",
+   "project_sha256": "07005408afc4576f286631a264a9e22fada1b656708599770d0d507aa635323c",
+   "master_sha256": "81812aa66a9ef309a4bd66f32aab02356cb5b02d7d2f9898b22dff9d86329e90",
+   "method": "Native REAPER 7.79 render through the TwelveTake bridge; the bridge mailbox was driven by file transfer because the device shell was unavailable. Per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz. 54 cues were re-cut. The other 40 (all 32 Black Sect cues and 8 Ghorkov/Taerkasten cues) re-rendered byte-identical to v04, and the 30 carried Black Sect cues are byte-identical to v03."
   }
  },
  "previous": "Version 4 (Black Sect and Sulgogars only) is in this branch history up to 09f42e7; version 3 remains on red/review-fixes.",
@@ -1093,9 +1099,9 @@
     }
    },
    "origin": "Suno take 449ecba9-5e8c-4434-836b-025f22b519e6 (Black Sect Production 08)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
    "replaced": "Engaging target.",
-   "music_under_voice_db": -4.0
+   "music_under_voice_db": -2.2
   },
   {
    "faction": "black-sect-mp",
@@ -1136,9 +1142,9 @@
     }
    },
    "origin": "Suno take 449ecba9-5e8c-4434-836b-025f22b519e6 (Black Sect Production 08)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
    "replaced": "Weapons on target.",
-   "music_under_voice_db": 4.3
+   "music_under_voice_db": 5.2
   },
   {
    "faction": "black-sect-mp",
@@ -2491,10 +2497,10 @@
    "file": "unit_ready_1.wav",
    "phrase": "Reporting for duty.",
    "motif": null,
-   "duration_seconds": 1.630023,
-   "bytes": 71928,
-   "sha256": "cfbcf298bbeb7aefe94c79ffe9c34708ea7c3e35a9ec0888b68c6a12479b6254",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.350023,
+   "bytes": 59580,
+   "sha256": "226203a9dbbe2ce2d78f0f0968ac8c106835cde13dea0163e5ff959a157e4686",
+   "integrated_lufs_dual_mono": -17.8,
    "true_peak_dbfs": -6.7,
    "target_lufs": -18.0,
    "gain_db": -2.5,
@@ -2507,9 +2513,9 @@
     "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
     "parts": [
      {
-      "start": 2.57,
-      "end": 4.2,
-      "offset": 0
+      "start": 2.58,
+      "end": 3.93,
+      "offset": 0.0
      }
     ]
    },
@@ -2523,10 +2529,11 @@
     }
    },
    "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.5548,
+    "p": 0.6218,
     "top": "ru",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -2540,9 +2547,9 @@
    "file": "unit_ready_2.wav",
    "phrase": "Liberation Forces reporting.",
    "motif": null,
-   "duration_seconds": 2.230023,
-   "bytes": 98388,
-   "sha256": "260550c1c8fd083d437962bec0966f3a5db8f302391751f9f1bdfdf06627e2bd",
+   "duration_seconds": 2.18,
+   "bytes": 96182,
+   "sha256": "9f58853ee1fe61184d90f97108c40b09be7b5747514a9ffd6024381cc240d521",
    "integrated_lufs_dual_mono": -18.1,
    "true_peak_dbfs": -4.6,
    "target_lufs": -18.0,
@@ -2556,9 +2563,9 @@
     "sha256": "0947d393770ee0316829e78cd114d42a0a87c0135eb7fc63401004ff75200693",
     "parts": [
      {
-      "start": 2.6,
-      "end": 4.83,
-      "offset": 0
+      "start": 2.61,
+      "end": 4.79,
+      "offset": 0.0
      }
     ]
    },
@@ -2572,11 +2579,12 @@
     }
    },
    "origin": "Suno take aa73f942-eb08-408b-b00e-3057dbaf8a81 (batch ghorkov_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.4749,
-    "top": "ru",
+    "p": 0.3206,
+    "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
    "cut_method": "island",
@@ -2589,11 +2597,11 @@
    "file": "unit_idle_1.wav",
    "phrase": "Awaiting orders.",
    "motif": null,
-   "duration_seconds": 1.4,
-   "bytes": 61784,
-   "sha256": "3183a1360329fed43e86b4589c2597399ae15c9fd227acf0bfebbaf28e527399",
-   "integrated_lufs_dual_mono": -18.2,
-   "true_peak_dbfs": -6.0,
+   "duration_seconds": 1.250023,
+   "bytes": 55170,
+   "sha256": "6046444607ae19bae9e6a204f99c8da9340857ee67083e2d9703a8ad7e27a294",
+   "integrated_lufs_dual_mono": -17.9,
+   "true_peak_dbfs": -5.9,
    "target_lufs": -18.0,
    "gain_db": 0.0,
    "pre_level": {
@@ -2605,9 +2613,9 @@
     "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
     "parts": [
      {
-      "start": 12.44,
-      "end": 13.84,
-      "offset": 0
+      "start": 12.45,
+      "end": 13.7,
+      "offset": 0.0
      }
     ]
    },
@@ -2621,10 +2629,12 @@
     }
    },
    "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": 2.4,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0006,
+    "p": 0.0003,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -2638,10 +2648,10 @@
    "file": "unit_idle_2.wav",
    "phrase": "Orders, Commander?",
    "motif": null,
-   "duration_seconds": 2.16,
-   "bytes": 95300,
-   "sha256": "5564402886558ad5bdaf653698579842368955f5832da58f1132092b4feb8514",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.590023,
+   "bytes": 70164,
+   "sha256": "7cf2d5620bda45bafd454b58eace064b5ad41577010b345c97c7863ac64ca942",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -4.9,
    "target_lufs": -18.0,
    "gain_db": -0.3,
@@ -2654,9 +2664,14 @@
     "sha256": "0d0b0c974b9ef3470db6d1fe4b9333ac98338c04402860eef632ad8721c6d952",
     "parts": [
      {
-      "start": 2.46,
-      "end": 4.62,
-      "offset": 0
+      "start": 2.47,
+      "end": 3.28,
+      "offset": 0.0
+     },
+     {
+      "start": 3.73,
+      "end": 4.38,
+      "offset": 0.94
      }
     ]
    },
@@ -2665,16 +2680,17 @@
     "votes": 3,
     "heard": {
      "base.en": "Orders, Commander.",
-     "small.en": "Orders, Commander.",
+     "small.en": "orders commander",
      "medium.en": "Orders, Commander"
     }
    },
    "origin": "Suno take 84d5377b-15cc-4cef-a17c-cd8a2fa8ab57 (batch ghorkov_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), the pause inside the line closed to 0.25 s between two parts, nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.0516,
-    "top": "en",
+    "p": 0.0446,
+    "top": "tr",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
    "cut_method": "island",
@@ -2719,7 +2735,8 @@
     }
    },
    "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "music_under_voice_db": 10.2,
    "accent_cue": {
     "language": "ru",
     "p": 0.0058,
@@ -2736,10 +2753,10 @@
    "file": "order_ack_friendly_2.wav",
    "phrase": "Moving as one.",
    "motif": null,
-   "duration_seconds": 1.370023,
-   "bytes": 60462,
-   "sha256": "42a6ab650ad3f02d13fc54bd92544f8847f6c153f367af7c638048a75df7e564",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.24,
+   "bytes": 54728,
+   "sha256": "3b88021713287558366f3ab9d24dca2826ad4c3d70fbf448a4375fe74974f5e5",
+   "integrated_lufs_dual_mono": -18.2,
    "true_peak_dbfs": -9.2,
    "target_lufs": -18.0,
    "gain_db": -4.2,
@@ -2752,9 +2769,9 @@
     "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
     "parts": [
      {
-      "start": 11.59,
-      "end": 12.96,
-      "offset": 0
+      "start": 11.6,
+      "end": 12.84,
+      "offset": 0.0
      }
     ]
    },
@@ -2768,7 +2785,8 @@
     }
    },
    "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
     "p": 0.0004,
@@ -2785,10 +2803,10 @@
    "file": "order_ack_enemy_1.wav",
    "phrase": "Commencing attack.",
    "motif": null,
-   "duration_seconds": 1.4,
-   "bytes": 61784,
-   "sha256": "479c95d0e7bd71e3e5b1f3a7db42b8ab7c5f8a14e3f629a2ce8fe85e25b2b1f2",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.090023,
+   "bytes": 48114,
+   "sha256": "33db40599879d2831c1f979dd4dd224abc15c3f21223fbbfa89142a5bb3b7893",
+   "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -6.6,
    "target_lufs": -18.0,
    "gain_db": -3.5,
@@ -2801,9 +2819,9 @@
     "sha256": "101c6fe6fc974e0d885ae42f8f9611996e5a8cf5fe3c81efd36d0adbdb0014b0",
     "parts": [
      {
-      "start": 2.98,
-      "end": 4.38,
-      "offset": 0
+      "start": 2.99,
+      "end": 4.08,
+      "offset": 0.0
      }
     ]
    },
@@ -2817,10 +2835,12 @@
     }
    },
    "origin": "Suno take 00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44 (batch ghorkov_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -24.6,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0044,
+    "p": 0.0024,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -2834,9 +2854,9 @@
    "file": "order_ack_enemy_2.wav",
    "phrase": "Attacking the misguided.",
    "motif": null,
-   "duration_seconds": 1.76,
-   "bytes": 77660,
-   "sha256": "96f3b72e66da7c68700ac9bb7a601e58fad6f376c2c0cd28a0ef7577d974000c",
+   "duration_seconds": 1.675011,
+   "bytes": 73912,
+   "sha256": "9380ca428c2fb37928fe3cc2f7ab310f40b9e7e9700ad3af2ea82d12fcd73d69",
    "integrated_lufs_dual_mono": -18.2,
    "true_peak_dbfs": -4.5,
    "target_lufs": -18.0,
@@ -2851,8 +2871,8 @@
     "parts": [
      {
       "start": 27.98,
-      "end": 29.74,
-      "offset": 0
+      "end": 29.655,
+      "offset": 0.0
      }
     ]
    },
@@ -2861,15 +2881,16 @@
     "votes": 3,
     "heard": {
      "base.en": "Attacking the misguided.",
-     "small.en": "attacking the misguided.",
+     "small.en": "attacking the misguided",
      "medium.en": "Attacking the misguided."
     }
    },
    "origin": "Suno take 4afcfc96-1f21-4e29-991e-a58f8d9c63aa (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.0539,
+    "p": 0.0197,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -2883,9 +2904,9 @@
    "file": "unit_control_entered_1.wav",
    "phrase": "Control is yours, Commander.",
    "motif": null,
-   "duration_seconds": 1.930023,
-   "bytes": 85158,
-   "sha256": "3e9dcce54985f612b5e3aeae04ad9870d16d3dd57afecb2e81131c98776e4aa8",
+   "duration_seconds": 1.88,
+   "bytes": 82952,
+   "sha256": "0c58561877dc0fbc079cc1c3b1501a0f13bd9d104cea4d77c952c45543a7d8ea",
    "integrated_lufs_dual_mono": -18.1,
    "true_peak_dbfs": -6.8,
    "target_lufs": -18.0,
@@ -2900,8 +2921,8 @@
     "parts": [
      {
       "start": 19.79,
-      "end": 21.72,
-      "offset": 0
+      "end": 21.67,
+      "offset": 0.0
      }
     ]
    },
@@ -2909,16 +2930,17 @@
    "asr_final_file": {
     "votes": 3,
     "heard": {
-     "base.en": "Control is yours, Commander",
+     "base.en": "Control is yours commander.",
      "small.en": "Control is yours, Commander.",
      "medium.en": "Control is yours, Commander."
     }
    },
    "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.0106,
+    "p": 0.0136,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -2932,10 +2954,10 @@
    "file": "unit_control_entered_2.wav",
    "phrase": "Handing over control.",
    "motif": null,
-   "duration_seconds": 1.650023,
-   "bytes": 72810,
-   "sha256": "710f1bd3a8f7a71cc41d707e18fd2c39fa1264ac02fbeb626e739d3f07a9e184",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.530023,
+   "bytes": 67518,
+   "sha256": "970e7c7f7ebc8b994784153d15ea7831521c045d71cbc2beb882827370786e7d",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -6.5,
    "target_lufs": -18.0,
    "gain_db": -1.3,
@@ -2948,9 +2970,9 @@
     "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
     "parts": [
      {
-      "start": 27.24,
-      "end": 28.89,
-      "offset": 0
+      "start": 27.25,
+      "end": 28.78,
+      "offset": 0.0
      }
     ]
    },
@@ -2964,10 +2986,12 @@
     }
    },
    "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -3.5,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0007,
+    "p": 0.0003,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3013,7 +3037,8 @@
     }
    },
    "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "music_under_voice_db": -5.7,
    "accent_cue": {
     "language": "ru",
     "p": 0.006,
@@ -3030,11 +3055,11 @@
    "file": "enemy_sector_entered_2.wav",
    "phrase": "Reactionary sector entered.",
    "motif": null,
-   "duration_seconds": 2.0,
-   "bytes": 88244,
-   "sha256": "49c15a8754d91768a9f0a36113ae54a65b85334c0454a2a8defbe8129abea6dc",
+   "duration_seconds": 1.750023,
+   "bytes": 77220,
+   "sha256": "d0144ff2654d94b292400f2f7b6d1b0b5ee849a2d963499d3ca64ab6fba4f41c",
    "integrated_lufs_dual_mono": -18.2,
-   "true_peak_dbfs": -6.3,
+   "true_peak_dbfs": -6.4,
    "target_lufs": -18.0,
    "gain_db": -2.6,
    "pre_level": {
@@ -3046,9 +3071,9 @@
     "sha256": "0d0b0c974b9ef3470db6d1fe4b9333ac98338c04402860eef632ad8721c6d952",
     "parts": [
      {
-      "start": 11.26,
-      "end": 13.26,
-      "offset": 0
+      "start": 11.27,
+      "end": 13.02,
+      "offset": 0.0
      }
     ]
    },
@@ -3062,10 +3087,11 @@
     }
    },
    "origin": "Suno take 84d5377b-15cc-4cef-a17c-cd8a2fa8ab57 (batch ghorkov_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.0081,
+    "p": 0.009,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3079,11 +3105,11 @@
    "file": "unit_recovered_1.wav",
    "phrase": "Recharged and ready.",
    "motif": null,
-   "duration_seconds": 2.710023,
-   "bytes": 119556,
-   "sha256": "3aff3a2f1e6f59572307d7f5dc9b39799035fc1473b3bb7895589c1a29852acd",
-   "integrated_lufs_dual_mono": -18.5,
-   "true_peak_dbfs": -3.7,
+   "duration_seconds": 1.86,
+   "bytes": 82070,
+   "sha256": "d6f321ede9bb36f5f56b326c57d50b7e2c0c56341a88809297284276223249db",
+   "integrated_lufs_dual_mono": -18.6,
+   "true_peak_dbfs": -3.8,
    "target_lufs": -18.0,
    "gain_db": 0.2,
    "pre_level": {
@@ -3095,9 +3121,14 @@
     "sha256": "d75423a703ddb903049753ff6dbb9d3d30ac14e04c667775efe39b0ff257fb0c",
     "parts": [
      {
-      "start": 39.37,
+      "start": 39.38,
+      "end": 40.34,
+      "offset": 0.0
+     },
+     {
+      "start": 41.31,
       "end": 42.08,
-      "offset": 0
+      "offset": 1.09
      }
     ]
    },
@@ -3105,16 +3136,17 @@
    "asr_final_file": {
     "votes": 3,
     "heard": {
-     "base.en": "recharged and ready.",
+     "base.en": "Recharged and ready.",
      "small.en": "Recharged and ready.",
-     "medium.en": "recharged and ready."
+     "medium.en": "Recharged and ready."
     }
    },
    "origin": "Suno take 4afcfc96-1f21-4e29-991e-a58f8d9c63aa (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), the pause inside the line closed to 0.25 s between two parts, nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.0003,
+    "p": 0.0009,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3160,7 +3192,8 @@
     }
    },
    "origin": "Suno take 2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18 (batch ghorkov_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "music_under_voice_db": -10.0,
    "accent_cue": {
     "language": "ru",
     "p": 0.0095,
@@ -3177,10 +3210,10 @@
    "file": "enemy_unit_spotted_1.wav",
    "phrase": "Enemy ahead.",
    "motif": null,
-   "duration_seconds": 1.050023,
-   "bytes": 46350,
-   "sha256": "7380b2fe2a1b1c99349a0b2dd6bbb538572726cacaca1476b09766cf04350458",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 0.950023,
+   "bytes": 41940,
+   "sha256": "482a076842c3d15ce862014e87558e889bebb0d967c31f0fc10006a819d6bc97",
+   "integrated_lufs_dual_mono": -17.7,
    "true_peak_dbfs": -6.6,
    "target_lufs": -18.0,
    "gain_db": -1.8,
@@ -3193,9 +3226,9 @@
     "sha256": "67dc38378b03616a62bbdf68fb20ffb784090dfcb40c534ac8b6bc07a3ad2590",
     "parts": [
      {
-      "start": 6.83,
-      "end": 7.88,
-      "offset": 0
+      "start": 6.84,
+      "end": 7.79,
+      "offset": 0.0
      }
     ]
    },
@@ -3204,15 +3237,17 @@
     "votes": 3,
     "heard": {
      "base.en": "Enemy ahead.",
-     "small.en": "enemy ahead.",
+     "small.en": "Enemy ahead.",
      "medium.en": "enemy ahead"
     }
    },
    "origin": "Suno take 2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18 (batch ghorkov_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -26.8,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0079,
+    "p": 0.0117,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3226,9 +3261,9 @@
    "file": "enemy_unit_spotted_2.wav",
    "phrase": "Misguided force in view.",
    "motif": null,
-   "duration_seconds": 1.58,
-   "bytes": 69722,
-   "sha256": "75a9037c23c9e6c6a9e2a4415c118333a580523ae61fd6916822aefa1f9a7635",
+   "duration_seconds": 1.5,
+   "bytes": 66194,
+   "sha256": "d9489329f9a58ce28f7d938f8b57cb7c49b9580db932a11f29082f1d434d7f51",
    "integrated_lufs_dual_mono": -18.1,
    "true_peak_dbfs": -4.9,
    "target_lufs": -18.0,
@@ -3242,9 +3277,9 @@
     "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
     "parts": [
      {
-      "start": 18.0,
-      "end": 19.58,
-      "offset": 0
+      "start": 18.01,
+      "end": 19.51,
+      "offset": 0.0
      }
     ]
    },
@@ -3252,16 +3287,18 @@
    "asr_final_file": {
     "votes": 2,
     "heard": {
-     "base.en": "Misguided force in view.",
+     "base.en": "Misguided force in view",
      "small.en": "Misguided forcing view.",
      "medium.en": "Misguided force in view."
     }
    },
    "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly (except small.en's known \"Misguided forcing view\").",
+   "music_under_voice_db": -1.4,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0096,
+    "p": 0.0128,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3275,9 +3312,9 @@
    "file": "enemy_host_found_1.wav",
    "phrase": "Enemy command station located.",
    "motif": null,
-   "duration_seconds": 2.010023,
-   "bytes": 88686,
-   "sha256": "d3729161311ca01589c751887767f25a989e98f9874b46bc8bcf4b133f658235",
+   "duration_seconds": 1.850023,
+   "bytes": 81630,
+   "sha256": "7bbba86ae5790dc1ea7d2387738b7cad0e5c49b8b760b74c0dda79c88300b70f",
    "integrated_lufs_dual_mono": -18.1,
    "true_peak_dbfs": -6.5,
    "target_lufs": -18.0,
@@ -3291,9 +3328,9 @@
     "sha256": "67dc38378b03616a62bbdf68fb20ffb784090dfcb40c534ac8b6bc07a3ad2590",
     "parts": [
      {
-      "start": 19.22,
-      "end": 21.23,
-      "offset": 0
+      "start": 19.33,
+      "end": 21.18,
+      "offset": 0.0
      }
     ]
    },
@@ -3307,10 +3344,12 @@
     }
    },
    "origin": "Suno take 2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18 (batch ghorkov_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -10.8,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0021,
+    "p": 0.0037,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3324,10 +3363,10 @@
    "file": "enemy_host_found_2.wav",
    "phrase": "Reactionary stronghold found.",
    "motif": null,
-   "duration_seconds": 2.7,
-   "bytes": 119114,
-   "sha256": "2faf3fb1e9bbe7d042bbdc705855948936fdacb81233ae41047fb5665518ce52",
-   "integrated_lufs_dual_mono": -18.3,
+   "duration_seconds": 2.58,
+   "bytes": 113822,
+   "sha256": "b3261bf339061cae7ed709ebb76c986eaf3e56279fdfd5206ce99c71d60de384",
+   "integrated_lufs_dual_mono": -18.1,
    "true_peak_dbfs": -7.1,
    "target_lufs": -18.0,
    "gain_db": -3.2,
@@ -3340,9 +3379,9 @@
     "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
     "parts": [
      {
-      "start": 15.63,
-      "end": 18.33,
-      "offset": 0
+      "start": 15.64,
+      "end": 18.22,
+      "offset": 0.0
      }
     ]
    },
@@ -3350,16 +3389,18 @@
    "asr_final_file": {
     "votes": 2,
     "heard": {
-     "base.en": "Reaction is strong, hold found",
-     "small.en": "Reactionary Stronghold found.",
+     "base.en": "Reaction is stronghold found.",
+     "small.en": "Reactionary stronghold found.",
      "medium.en": "Reactionary stronghold found."
     }
    },
    "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -3.3,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0343,
+    "p": 0.0352,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3373,11 +3414,11 @@
    "file": "request_support_1.wav",
    "phrase": "Under fire, requesting support.",
    "motif": null,
-   "duration_seconds": 2.010023,
-   "bytes": 88686,
-   "sha256": "be4c1673ca09bc0da8bc30839e8ac451ff2605c0c24db8a45ee9658232c37789",
-   "integrated_lufs_dual_mono": -18.3,
-   "true_peak_dbfs": -4.3,
+   "duration_seconds": 1.92,
+   "bytes": 84716,
+   "sha256": "9165a2f4cd8edc7b1ec242ddfc6c8ca6982186126b31fa6d8f6b058f638488e2",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -4.4,
    "target_lufs": -18.0,
    "gain_db": -0.2,
    "pre_level": {
@@ -3389,9 +3430,9 @@
     "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
     "parts": [
      {
-      "start": 22.85,
-      "end": 24.86,
-      "offset": 0
+      "start": 22.86,
+      "end": 24.78,
+      "offset": 0.0
      }
     ]
    },
@@ -3400,15 +3441,17 @@
     "votes": 2,
     "heard": {
      "base.en": "and the fire requesting support.",
-     "small.en": "under fire requesting support.",
+     "small.en": "Under fire requesting support.",
      "medium.en": "Under fire requesting support."
     }
    },
    "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -2.3,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0034,
+    "p": 0.001,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3454,7 +3497,7 @@
     }
    },
    "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
    "accent_cue": {
     "language": "ru",
     "p": 0.2605,
@@ -3471,10 +3514,10 @@
    "file": "unit_retreating_1.wav",
    "phrase": "Returning to recharge.",
    "motif": null,
-   "duration_seconds": 1.890023,
-   "bytes": 83394,
-   "sha256": "6c51bbb361724a29d0f398fd0d85c0d436780753a5eba3dcf98095151ae17e0f",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.46,
+   "bytes": 64430,
+   "sha256": "b2c4b5e1fd4919bbe6fde7b5cc2afb87b5deba7c4061bee19472eedc4fe79694",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -6.3,
    "target_lufs": -18.0,
    "gain_db": -3.1,
@@ -3487,26 +3530,28 @@
     "sha256": "101c6fe6fc974e0d885ae42f8f9611996e5a8cf5fe3c81efd36d0adbdb0014b0",
     "parts": [
      {
-      "start": 15.21,
-      "end": 17.1,
-      "offset": 0
+      "start": 15.22,
+      "end": 16.68,
+      "offset": 0.0
      }
     ]
    },
    "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
    "asr_final_file": {
-    "votes": 3,
+    "votes": 2,
     "heard": {
      "base.en": "Returning to recharge.",
      "small.en": "Returning to recharge.",
-     "medium.en": "Returning to recharge."
+     "medium.en": "Returning to the Church."
     }
    },
    "origin": "Suno take 00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44 (batch ghorkov_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -1.6,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0004,
+    "p": 0.0002,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3520,10 +3565,10 @@
    "file": "unit_retreating_2.wav",
    "phrase": "Energy low, pulling back.",
    "motif": null,
-   "duration_seconds": 2.04,
-   "bytes": 90008,
-   "sha256": "f7f332ea890841c2bbaf8658096d6913f3b2a331a90043d6849fbc5e2ba268dc",
-   "integrated_lufs_dual_mono": -18.0,
+   "duration_seconds": 1.890023,
+   "bytes": 83394,
+   "sha256": "5b71f733dacfcc3831c91e63754d2ebf118f1f366c5eabc4f30a34d80c62323a",
+   "integrated_lufs_dual_mono": -17.8,
    "true_peak_dbfs": -4.2,
    "target_lufs": -18.0,
    "gain_db": -0.9,
@@ -3536,9 +3581,9 @@
     "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
     "parts": [
      {
-      "start": 8.11,
-      "end": 10.15,
-      "offset": 0
+      "start": 8.12,
+      "end": 10.01,
+      "offset": 0.0
      }
     ]
    },
@@ -3548,14 +3593,16 @@
     "heard": {
      "base.en": "Energy low, pulling back.",
      "small.en": "Energy low, pulling back.",
-     "medium.en": "Energy Low. Pulling Back."
+     "medium.en": "Energy Low, Pulling Back"
     }
    },
    "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -30.5,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0015,
+    "p": 0.0022,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3569,10 +3616,10 @@
    "file": "unit_lost_1.wav",
    "phrase": "All systems failing.",
    "motif": null,
-   "duration_seconds": 1.58,
-   "bytes": 69722,
-   "sha256": "eeae3f6a435a3c41c441b0bdf341bb96202908407c7a590f90ddb3b3fd4f6e73",
-   "integrated_lufs_dual_mono": -18.7,
+   "duration_seconds": 1.510023,
+   "bytes": 66636,
+   "sha256": "8679722dd3409e716863df8b049908e170e82dcf2d1f35ccce3208785cde3572",
+   "integrated_lufs_dual_mono": -18.4,
    "true_peak_dbfs": -6.9,
    "target_lufs": -18.0,
    "gain_db": -3.9,
@@ -3585,9 +3632,9 @@
     "sha256": "def6cff574fd445b15c53f3597bf58089bc6d7a9f87caae92ae0fb78151f7c8d",
     "parts": [
      {
-      "start": 15.98,
-      "end": 17.56,
-      "offset": 0
+      "start": 15.99,
+      "end": 17.5,
+      "offset": 0.0
      }
     ]
    },
@@ -3601,10 +3648,12 @@
     }
    },
    "origin": "Suno take 01049ca1-6a3d-4872-91b6-444c82153600 (batch ghorkov_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -33.4,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0006,
+    "p": 0.0003,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3618,10 +3667,10 @@
    "file": "unit_lost_2.wav",
    "phrase": "Our people will endure.",
    "motif": null,
-   "duration_seconds": 2.010023,
-   "bytes": 88686,
-   "sha256": "c25c186a746231209037b54866ce78d71bee979609e70d2d1274327de848946b",
-   "integrated_lufs_dual_mono": -19.8,
+   "duration_seconds": 1.88,
+   "bytes": 82952,
+   "sha256": "dffe66dbca0cccb93fa6c16be00ffb941114db1e2c9e0a5e26b984f3f42ea04f",
+   "integrated_lufs_dual_mono": -19.9,
    "true_peak_dbfs": -3.9,
    "target_lufs": -18.0,
    "gain_db": 1.4,
@@ -3634,9 +3683,9 @@
     "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
     "parts": [
      {
-      "start": 31.43,
-      "end": 33.44,
-      "offset": 0
+      "start": 31.44,
+      "end": 33.32,
+      "offset": 0.0
      }
     ]
    },
@@ -3650,10 +3699,12 @@
     }
    },
    "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": 2.7,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0009,
+    "p": 0.0014,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3698,8 +3749,8 @@
      "medium.en": "enemy in retreat"
     }
    },
-   "origin": "Suno take 961bde08-2130-43f9-bf96-97b96de70456 (batch pilot_primed)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "origin": "Suno take 961bde08-2130-43f9-bf96-97b96de70456 (batch pilot_primed); dry-run pilot pilot_ru8c: Russian-primed, older tone wording, script and tone not saved (see generation-receipt-ghorkov.json)",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
    "accent_cue": {
     "language": "ru",
     "p": 0.0095,
@@ -3716,10 +3767,10 @@
    "file": "enemy_unit_engaged_2.wav",
    "phrase": "The enemy runs from us.",
    "motif": null,
-   "duration_seconds": 1.7,
-   "bytes": 75014,
-   "sha256": "8ffda3ce2f1bc71871b9e2ef31589ed8ee9ac90b2fdfabeb858e57ad595c6dfa",
-   "integrated_lufs_dual_mono": -18.3,
+   "duration_seconds": 1.56,
+   "bytes": 68840,
+   "sha256": "5abdd393baab27d1bea4ab4ef47178a8ee408cbf15c8d664e99c1ed92a1fa8fd",
+   "integrated_lufs_dual_mono": -18.1,
    "true_peak_dbfs": -5.6,
    "target_lufs": -18.0,
    "gain_db": 1.5,
@@ -3732,9 +3783,9 @@
     "sha256": "dbb99d7a506590d907fd0133a707de22e433504cc1cca162abd1509bd71f820b",
     "parts": [
      {
-      "start": 37.19,
-      "end": 38.89,
-      "offset": 0
+      "start": 37.2,
+      "end": 38.76,
+      "offset": 0.0
      }
     ]
    },
@@ -3748,10 +3799,12 @@
     }
    },
    "origin": "Suno take f1009096-2051-4501-93eb-79a373ce9df0 (batch ghorkov_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": 3.3,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0011,
+    "p": 0.0008,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3797,7 +3850,8 @@
     }
    },
    "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "music_under_voice_db": 5.1,
    "accent_cue": {
     "language": "ru",
     "p": 0.0237,
@@ -3814,9 +3868,9 @@
    "file": "enemy_unit_destroyed_2.wav",
    "phrase": "Enemy force destroyed!",
    "motif": null,
-   "duration_seconds": 1.790023,
-   "bytes": 78984,
-   "sha256": "b3ad4bf2b4799f890558fe0e543a97efe432fb3a183714df50eb83545dab93c6",
+   "duration_seconds": 1.68,
+   "bytes": 74132,
+   "sha256": "62fa7737f6e867a9a63fc0b80be26edb2868d66da1f47d1a7a7fb48f31cb6a52",
    "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -6.6,
    "target_lufs": -18.0,
@@ -3830,9 +3884,9 @@
     "sha256": "0884c1a162e833da1966bdfcf1767f7c7d889fc38f712fa2417ec66d7b00aa29",
     "parts": [
      {
-      "start": 7.19,
-      "end": 8.98,
-      "offset": 0
+      "start": 7.2,
+      "end": 8.88,
+      "offset": 0.0
      }
     ]
    },
@@ -3841,15 +3895,16 @@
     "votes": 3,
     "heard": {
      "base.en": "Enemy force destroyed.",
-     "small.en": "enemy force destroyed",
+     "small.en": "Enemy force destroyed.",
      "medium.en": "Enemy force destroyed."
     }
    },
    "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "ru",
-    "p": 0.0191,
+    "p": 0.039,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3895,7 +3950,7 @@
     }
    },
    "origin": "Suno take 12c59ec1-e0a8-451f-a24e-89eca327aa8f (batch ghorkov_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
    "accent_cue": {
     "language": "ru",
     "p": 0.006,
@@ -3912,11 +3967,11 @@
    "file": "enemy_host_destroyed_2.wav",
    "phrase": "Stronghold destroyed, Commander!",
    "motif": null,
-   "duration_seconds": 2.670023,
-   "bytes": 117792,
-   "sha256": "3213ef4ecfd698e7d3474b186082ffd3b4fd3c95a02cdcfda5e159bf3ef8baea",
+   "duration_seconds": 2.570023,
+   "bytes": 113382,
+   "sha256": "8cdbc98103fcaa17d55e6a0c9ebee68a7fd2df9e59e4ad0c2b70b62c079f1e0e",
    "integrated_lufs_dual_mono": -18.2,
-   "true_peak_dbfs": -6.5,
+   "true_peak_dbfs": -6.4,
    "target_lufs": -18.0,
    "gain_db": -2.4,
    "pre_level": {
@@ -3928,9 +3983,9 @@
     "sha256": "2360c8047d7888f6cbcc684cdb5fca2e98698e9ff8eacf1f9789126e227a5d53",
     "parts": [
      {
-      "start": 19.83,
-      "end": 22.5,
-      "offset": 0
+      "start": 19.84,
+      "end": 22.41,
+      "offset": 0.0
      }
     ]
    },
@@ -3939,15 +3994,17 @@
     "votes": 3,
     "heard": {
      "base.en": "Stronghold destroyed commander.",
-     "small.en": "Stronghold destroyed commander.",
+     "small.en": "Stronghold destroyed, Commander.",
      "medium.en": "Stronghold destroyed, Commander."
     }
    },
    "origin": "Suno take c748073b-51bc-495f-b7ee-bf72da0a7a07 (batch ghorkov_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -7.2,
    "accent_cue": {
     "language": "ru",
-    "p": 0.3297,
+    "p": 0.1917,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -3961,10 +4018,10 @@
    "file": "powerstation_captured_1.wav",
    "phrase": "Power station taken!",
    "motif": null,
-   "duration_seconds": 1.630023,
-   "bytes": 71928,
-   "sha256": "cec4c8cfff512f8618896b16f13bede69434335b3fc2dbd58c1d47b9641c16bd",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.32,
+   "bytes": 58256,
+   "sha256": "e681cc09aee762a0f90c3180817d1ed0575c1341a8006d5188b4a62f92ec562c",
+   "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -6.5,
    "target_lufs": -18.0,
    "gain_db": -3.2,
@@ -3977,9 +4034,9 @@
     "sha256": "101c6fe6fc974e0d885ae42f8f9611996e5a8cf5fe3c81efd36d0adbdb0014b0",
     "parts": [
      {
-      "start": 10.81,
-      "end": 12.44,
-      "offset": 0
+      "start": 10.82,
+      "end": 12.14,
+      "offset": 0.0
      }
     ]
    },
@@ -3993,10 +4050,12 @@
     }
    },
    "origin": "Suno take 00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44 (batch ghorkov_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -27.7,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0005,
+    "p": 0.0004,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4010,10 +4069,10 @@
    "file": "powerstation_captured_2.wav",
    "phrase": "Energy for our people!",
    "motif": null,
-   "duration_seconds": 1.54,
-   "bytes": 67958,
-   "sha256": "8b16bfb6394395ea70b5dc99cff6b00af41c8e7341333a13c81ba87b50e051a2",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.470023,
+   "bytes": 64872,
+   "sha256": "706f4499c89bc0bd4bfa43ca3f0716806a6d08976c55681426e3a2b72bbb120e",
+   "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -7.4,
    "target_lufs": -18.0,
    "gain_db": -1.3,
@@ -4026,9 +4085,9 @@
     "sha256": "a9c3b484eef259f47477ad7c63712778a12d1241aed0b63fbdeec7ee203f6217",
     "parts": [
      {
-      "start": 20.26,
-      "end": 21.8,
-      "offset": 0
+      "start": 20.27,
+      "end": 21.74,
+      "offset": 0.0
      }
     ]
    },
@@ -4042,10 +4101,12 @@
     }
    },
    "origin": "Suno take 5d34d328-7d82-48c2-adeb-bcd00b7c84a8 (batch ghorkov_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -6.5,
    "accent_cue": {
     "language": "ru",
-    "p": 0.0011,
+    "p": 0.0009,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4059,10 +4120,10 @@
    "file": "unit_ready_1.wav",
    "phrase": "We stand ready.",
    "motif": null,
-   "duration_seconds": 1.5,
-   "bytes": 66194,
-   "sha256": "17930343c141cd817e1f31ccae14d01b83cedb01b0ea8e99433d240fe99ec371",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.16,
+   "bytes": 51200,
+   "sha256": "ce571ff6b46e26beafde393066afb1e457d7724b47319392dcaf16dc55e7c3bb",
+   "integrated_lufs_dual_mono": -18.2,
    "true_peak_dbfs": -6.8,
    "target_lufs": -18.0,
    "gain_db": -1.4,
@@ -4075,9 +4136,9 @@
     "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
     "parts": [
      {
-      "start": 4.03,
-      "end": 5.53,
-      "offset": 0
+      "start": 4.04,
+      "end": 5.2,
+      "offset": 0.0
      }
     ]
    },
@@ -4091,10 +4152,12 @@
     }
    },
    "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -24.4,
    "accent_cue": {
     "language": "de",
-    "p": 0.0012,
+    "p": 0.001,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4108,10 +4171,10 @@
    "file": "unit_ready_2.wav",
    "phrase": "New brothers for the Order.",
    "motif": null,
-   "duration_seconds": 1.86,
-   "bytes": 82070,
-   "sha256": "6e1c773260056e3ad6506c319f286165c35396825150b23499d808992320ee41",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.690023,
+   "bytes": 74574,
+   "sha256": "6d4f98c4b1b3bb060187bbf50c762071242537dfd4590c005092b6f911b95cfa",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -7.1,
    "target_lufs": -18.0,
    "gain_db": -2.1,
@@ -4124,9 +4187,9 @@
     "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
     "parts": [
      {
-      "start": 33.3,
-      "end": 35.16,
-      "offset": 0
+      "start": 33.31,
+      "end": 35.0,
+      "offset": 0.0
      }
     ]
    },
@@ -4140,10 +4203,12 @@
     }
    },
    "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -3.3,
    "accent_cue": {
     "language": "de",
-    "p": 0.0012,
+    "p": 0.001,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4157,11 +4222,11 @@
    "file": "order_ack_friendly_1.wav",
    "phrase": "Moving as ordered.",
    "motif": null,
-   "duration_seconds": 2.56,
-   "bytes": 112940,
-   "sha256": "cdda0a8d941afb215ef1844e84267e6662ae00213eee4db43a8e2d56071c4d01",
-   "integrated_lufs_dual_mono": -18.1,
-   "true_peak_dbfs": -5.0,
+   "duration_seconds": 2.190023,
+   "bytes": 96624,
+   "sha256": "b14772c1dddc8f923c8c5a15b26d96c76c2c4a9e4548960ed0a5526273c78f09",
+   "integrated_lufs_dual_mono": -18.2,
+   "true_peak_dbfs": -5.1,
    "target_lufs": -18.0,
    "gain_db": -0.5,
    "pre_level": {
@@ -4173,9 +4238,14 @@
     "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
     "parts": [
      {
-      "start": 3.29,
-      "end": 5.85,
-      "offset": 0
+      "start": 3.3,
+      "end": 4.37,
+      "offset": 0.0
+     },
+     {
+      "start": 4.8,
+      "end": 5.79,
+      "offset": 1.2
      }
     ]
    },
@@ -4189,10 +4259,12 @@
     }
    },
    "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), the pause inside the line closed to 0.25 s between two parts, nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -10.5,
    "accent_cue": {
     "language": "de",
-    "p": 0.0254,
+    "p": 0.0054,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4206,10 +4278,10 @@
    "file": "order_ack_friendly_2.wav",
    "phrase": "Brothers, we set out.",
    "motif": null,
-   "duration_seconds": 1.8,
-   "bytes": 79424,
-   "sha256": "dd3fd23da76fbbd77c323ca111aeb433ef653eda3c759492a9b372c11270c89e",
-   "integrated_lufs_dual_mono": -18.3,
+   "duration_seconds": 1.56,
+   "bytes": 68840,
+   "sha256": "ac5f37eda3cba68c0c7863996b72c8a78a525546df862924077bcfc15c4bbb9c",
+   "integrated_lufs_dual_mono": -18.4,
    "true_peak_dbfs": -7.5,
    "target_lufs": -18.0,
    "gain_db": -3.9,
@@ -4222,9 +4294,9 @@
     "sha256": "ca785d70595258eb3346b865c2b2deb778cf14b4f2eb8baed1e5f67e4cd930ea",
     "parts": [
      {
-      "start": 37.47,
-      "end": 39.27,
-      "offset": 0
+      "start": 37.48,
+      "end": 39.04,
+      "offset": 0.0
      }
     ]
    },
@@ -4238,7 +4310,9 @@
     }
    },
    "origin": "Suno take 38650425-37fb-4e8f-8329-1d8fb1609cdb (batch taerkasten_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -4.7,
    "accent_cue": {
     "language": "de",
     "p": 0.0012,
@@ -4255,10 +4329,10 @@
    "file": "order_ack_enemy_1.wav",
    "phrase": "Into battle.",
    "motif": null,
-   "duration_seconds": 1.44,
-   "bytes": 63548,
-   "sha256": "fb27d6bcbdc6fe5fd1cc1bbf9a44021b3481ea75afd2f56d5f652a57bfe11799",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.070023,
+   "bytes": 47232,
+   "sha256": "cbbfcfdb2c9aece8542bcdd2c72eebcd80f0cf39a353d68733221781b8b1dd0e",
+   "integrated_lufs_dual_mono": -18.2,
    "true_peak_dbfs": -4.3,
    "target_lufs": -18.0,
    "gain_db": 0.6,
@@ -4271,26 +4345,28 @@
     "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
     "parts": [
      {
-      "start": 27.83,
-      "end": 29.27,
-      "offset": 0
+      "start": 27.84,
+      "end": 28.91,
+      "offset": 0.0
      }
     ]
    },
    "reviewer": "Red (ASR round-trip + signal check, 2026-11-02; not heard)",
    "asr_final_file": {
-    "votes": 3,
+    "votes": 2,
     "heard": {
-     "base.en": "into battle.",
+     "base.en": "into better.",
      "small.en": "into battle.",
      "medium.en": "into battle."
     }
    },
    "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": 1.3,
    "accent_cue": {
     "language": "de",
-    "p": 0.0236,
+    "p": 0.0521,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4304,10 +4380,10 @@
    "file": "order_ack_enemy_2.wav",
    "phrase": "We strike for the Order.",
    "motif": null,
-   "duration_seconds": 2.18,
-   "bytes": 96182,
-   "sha256": "9faf41e044230d5a3a7900b72cc79ad84e079e9f91b4defccb19733fb6355be5",
-   "integrated_lufs_dual_mono": -18.3,
+   "duration_seconds": 2.030023,
+   "bytes": 89568,
+   "sha256": "4adedd71fce8256efa0e25849fff4ef3f2a53ecaa25f1db4243938b48ac8a4d5",
+   "integrated_lufs_dual_mono": -18.4,
    "true_peak_dbfs": -5.6,
    "target_lufs": -18.0,
    "gain_db": -3.2,
@@ -4320,9 +4396,9 @@
     "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
     "parts": [
      {
-      "start": 32.13,
-      "end": 34.31,
-      "offset": 0
+      "start": 32.14,
+      "end": 34.17,
+      "offset": 0.0
      }
     ]
    },
@@ -4336,10 +4412,12 @@
     }
    },
    "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -22.5,
    "accent_cue": {
     "language": "de",
-    "p": 0.0019,
+    "p": 0.0011,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4353,10 +4431,10 @@
    "file": "unit_control_entered_1.wav",
    "phrase": "Control passes to you.",
    "motif": null,
-   "duration_seconds": 1.84,
-   "bytes": 81188,
-   "sha256": "bfccf06563688de86f6f955e5d6f0480c57bf4d2434086371e06b68f6ed0145a",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.66,
+   "bytes": 73250,
+   "sha256": "d712f001c18336e12cbb616c2728e36bb7fad0d0d49c6e40002629e42c20c8e3",
+   "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -6.5,
    "target_lufs": -18.0,
    "gain_db": -2.0,
@@ -4369,9 +4447,9 @@
     "sha256": "9b9b93a0c1bdcd641dd1a7a4b18c093464ac4bdea7f038f381961a3679d425ff",
     "parts": [
      {
-      "start": 23.64,
-      "end": 25.48,
-      "offset": 0
+      "start": 23.65,
+      "end": 25.31,
+      "offset": 0.0
      }
     ]
    },
@@ -4385,10 +4463,12 @@
     }
    },
    "origin": "Suno take 1f931593-39cd-47e9-ba5e-c5f6d7976b67 (batch taerkasten_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -5.0,
    "accent_cue": {
     "language": "de",
-    "p": 0.0026,
+    "p": 0.0018,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4402,9 +4482,9 @@
    "file": "unit_control_entered_2.wav",
    "phrase": "Welcome among us.",
    "motif": null,
-   "duration_seconds": 3.310023,
-   "bytes": 146016,
-   "sha256": "92add5d816f50cec9ecfe1ea3b3ce1f8d1c79f2c9e3ca0e55be797088e90e5dd",
+   "duration_seconds": 2.48,
+   "bytes": 109412,
+   "sha256": "2b924e440586871975cea495e96bf568f8a8445963714d46893c599fdf7d8d53",
    "integrated_lufs_dual_mono": -18.9,
    "true_peak_dbfs": -3.6,
    "target_lufs": -18.0,
@@ -4418,9 +4498,14 @@
     "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
     "parts": [
      {
-      "start": 47.26,
-      "end": 50.57,
-      "offset": 0
+      "start": 47.27,
+      "end": 48.45,
+      "offset": 0.0
+     },
+     {
+      "start": 49.06,
+      "end": 50.23,
+      "offset": 1.31
      }
     ]
    },
@@ -4429,15 +4514,17 @@
     "votes": 3,
     "heard": {
      "base.en": "Welcome among us.",
-     "small.en": "Welcome Among Us.",
+     "small.en": "Welcome among us.",
      "medium.en": "Welcome among us."
     }
    },
    "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), the pause inside the line closed to 0.25 s between two parts, nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": 0.3,
    "accent_cue": {
     "language": "de",
-    "p": 0.0019,
+    "p": 0.0015,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4451,10 +4538,10 @@
    "file": "enemy_sector_entered_1.wav",
    "phrase": "Now on enemy ground.",
    "motif": null,
-   "duration_seconds": 1.750023,
-   "bytes": 77220,
-   "sha256": "cec5f0d1d73759fd1b9ef17366852d81b815ee3390f80de9be3ab5cf86ab3e59",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.650023,
+   "bytes": 72810,
+   "sha256": "7f35f2677ada4deb48c7b117d1c298919b433aad347005909a26f2083d17e8ff",
+   "integrated_lufs_dual_mono": -18.2,
    "true_peak_dbfs": -6.6,
    "target_lufs": -18.0,
    "gain_db": -1.8,
@@ -4467,9 +4554,9 @@
     "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
     "parts": [
      {
-      "start": 28.82,
-      "end": 30.57,
-      "offset": 0
+      "start": 28.83,
+      "end": 30.48,
+      "offset": 0.0
      }
     ]
    },
@@ -4483,10 +4570,12 @@
     }
    },
    "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -0.8,
    "accent_cue": {
     "language": "de",
-    "p": 0.0087,
+    "p": 0.0075,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4500,10 +4589,10 @@
    "file": "enemy_sector_entered_2.wav",
    "phrase": "Brothers, they hold this ground.",
    "motif": null,
-   "duration_seconds": 4.010023,
-   "bytes": 176886,
-   "sha256": "fc28e02732e8ebeec06792cf56c93ed25e4fb93d74c2d3aaa899b436bfc8e09c",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 2.190023,
+   "bytes": 96624,
+   "sha256": "2f5f20df2ce44a12d5aee071e345cb373cc8744d516af491c7479ef2ee9c4c13",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -6.7,
    "target_lufs": -18.0,
    "gain_db": -4.0,
@@ -4516,9 +4605,14 @@
     "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
     "parts": [
      {
-      "start": 26.63,
-      "end": 30.64,
-      "offset": 0
+      "start": 27.19,
+      "end": 27.92,
+      "offset": 0.0
+     },
+     {
+      "start": 28.94,
+      "end": 30.22,
+      "offset": 0.91
      }
     ]
    },
@@ -4528,14 +4622,15 @@
     "heard": {
      "base.en": "Brothers, they hold this ground.",
      "small.en": "Brothers, they hold this ground.",
-     "medium.en": "Brothers, they hold this ground."
+     "medium.en": "Brothers, they hold this ground"
     }
    },
    "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), the pause inside the line closed to 0.25 s between two parts, nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "de",
-    "p": 0.0011,
+    "p": 0.0002,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4549,9 +4644,9 @@
    "file": "unit_recovered_1.wav",
    "phrase": "Ready once more.",
    "motif": null,
-   "duration_seconds": 1.650023,
-   "bytes": 72810,
-   "sha256": "60e4cced28ab9394a98a6c6f6b8263c2f1e11ad78cfb01266a746e1f1641e303",
+   "duration_seconds": 1.330023,
+   "bytes": 58698,
+   "sha256": "a64e798e4b6689cb9517950387664a9c2f78c832c4112ec2ffee418faad7aaaf",
    "integrated_lufs_dual_mono": -18.1,
    "true_peak_dbfs": -6.5,
    "target_lufs": -18.0,
@@ -4565,9 +4660,9 @@
     "sha256": "ca785d70595258eb3346b865c2b2deb778cf14b4f2eb8baed1e5f67e4cd930ea",
     "parts": [
      {
-      "start": 3.29,
-      "end": 4.94,
-      "offset": 0
+      "start": 3.3,
+      "end": 4.63,
+      "offset": 0.0
      }
     ]
    },
@@ -4581,10 +4676,12 @@
     }
    },
    "origin": "Suno take 38650425-37fb-4e8f-8329-1d8fb1609cdb (batch taerkasten_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -26.0,
    "accent_cue": {
     "language": "de",
-    "p": 0.0025,
+    "p": 0.0042,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4598,10 +4695,10 @@
    "file": "unit_recovered_2.wav",
    "phrase": "Restored by the stone.",
    "motif": null,
-   "duration_seconds": 2.38,
-   "bytes": 105002,
-   "sha256": "a450d74a60639a03fd0f301bda3d5089e581b9c7ac0d7eb7722637dbcdbfe031",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 2.0,
+   "bytes": 88244,
+   "sha256": "34c26e8e451f0248f939e7656a724f116d3be495260cb68b6c05484a1358f6fb",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -6.5,
    "target_lufs": -18.0,
    "gain_db": -3.7,
@@ -4614,9 +4711,9 @@
     "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
     "parts": [
      {
-      "start": 21.62,
-      "end": 24.0,
-      "offset": 0
+      "start": 21.63,
+      "end": 23.63,
+      "offset": 0.0
      }
     ]
    },
@@ -4630,7 +4727,9 @@
     }
    },
    "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -29.7,
    "accent_cue": {
     "language": "de",
     "p": 0.002,
@@ -4679,7 +4778,8 @@
     }
    },
    "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "music_under_voice_db": -21.5,
    "accent_cue": {
     "language": "de",
     "p": 0.0008,
@@ -4696,10 +4796,10 @@
    "file": "enemy_unit_spotted_2.wav",
    "phrase": "The godless approach.",
    "motif": null,
-   "duration_seconds": 1.850023,
-   "bytes": 81630,
-   "sha256": "03dd0d4200f6d1c3722cc81c7dbc465d9bdb56b4e61badb189f2fcab00fe9307",
-   "integrated_lufs_dual_mono": -18.1,
+   "duration_seconds": 1.76,
+   "bytes": 77660,
+   "sha256": "75175d587e85f1c828dad90cda6301d79547608bd85f1281b69299d679da751e",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -6.8,
    "target_lufs": -18.0,
    "gain_db": -3.5,
@@ -4712,9 +4812,9 @@
     "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
     "parts": [
      {
-      "start": 22.54,
-      "end": 24.39,
-      "offset": 0
+      "start": 22.55,
+      "end": 24.31,
+      "offset": 0.0
      }
     ]
    },
@@ -4724,14 +4824,16 @@
     "heard": {
      "base.en": "The godless approach.",
      "small.en": "The Godless Approach",
-     "medium.en": "The godless approach."
+     "medium.en": "The Godless Approach."
     }
    },
    "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -22.3,
    "accent_cue": {
     "language": "de",
-    "p": 0.0006,
+    "p": 0.0013,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4745,11 +4847,11 @@
    "file": "enemy_host_found_1.wav",
    "phrase": "Enemy station found.",
    "motif": null,
-   "duration_seconds": 1.98,
-   "bytes": 87362,
-   "sha256": "85d4070c245fbeeb9ec643551d479756f37189f1bb8f7e3d1f96abec3fefda15",
-   "integrated_lufs_dual_mono": -18.2,
-   "true_peak_dbfs": -8.9,
+   "duration_seconds": 1.6,
+   "bytes": 70604,
+   "sha256": "65401b1ba4eba63d081ead61634ebad8aa7a4846acabf48a292fd00ad79662ec",
+   "integrated_lufs_dual_mono": -18.3,
+   "true_peak_dbfs": -9.0,
    "target_lufs": -18.0,
    "gain_db": -4.5,
    "pre_level": {
@@ -4761,9 +4863,9 @@
     "sha256": "6489c5410975bbfb3dca2086152793b9da4ac9b52c9ff8302b19518b60f45313",
     "parts": [
      {
-      "start": 16.68,
-      "end": 18.66,
-      "offset": 0
+      "start": 16.69,
+      "end": 18.29,
+      "offset": 0.0
      }
     ]
    },
@@ -4777,10 +4879,12 @@
     }
    },
    "origin": "Suno take 8a9ff52b-42aa-4647-bc85-52e206702286 (batch taerkasten_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -26.4,
    "accent_cue": {
     "language": "de",
-    "p": 0.0029,
+    "p": 0.0056,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4794,9 +4898,9 @@
    "file": "enemy_host_found_2.wav",
    "phrase": "There stands the enemy fortress.",
    "motif": null,
-   "duration_seconds": 2.88,
-   "bytes": 127052,
-   "sha256": "67b8dbd4a89354a4aacafccdcd67a7e7d35a349acc0e14f1def09db869465b46",
+   "duration_seconds": 2.470023,
+   "bytes": 108972,
+   "sha256": "0cbc8f04cb150b4291028bd9a8aac3f634d2b20f0887bebdc2c9a773caae98b5",
    "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -8.4,
    "target_lufs": -18.0,
@@ -4810,9 +4914,9 @@
     "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
     "parts": [
      {
-      "start": 33.9,
-      "end": 36.78,
-      "offset": 0
+      "start": 33.91,
+      "end": 36.38,
+      "offset": 0.0
      }
     ]
    },
@@ -4826,10 +4930,11 @@
     }
    },
    "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "de",
-    "p": 0.0025,
+    "p": 0.0023,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4843,11 +4948,11 @@
    "file": "request_support_1.wav",
    "phrase": "We need support.",
    "motif": null,
-   "duration_seconds": 1.3,
-   "bytes": 57374,
-   "sha256": "5d1b84bea241663e1e29bee88a7f3585f409216b99c25f846802005c33316e26",
-   "integrated_lufs_dual_mono": -18.2,
-   "true_peak_dbfs": -6.0,
+   "duration_seconds": 1.090023,
+   "bytes": 48114,
+   "sha256": "7b322d18a93f97ce7903b6477433a5e68603892f1a57c69e120f4fc823799c89",
+   "integrated_lufs_dual_mono": -17.8,
+   "true_peak_dbfs": -5.9,
    "target_lufs": -18.0,
    "gain_db": -2.4,
    "pre_level": {
@@ -4859,9 +4964,9 @@
     "sha256": "9b9b93a0c1bdcd641dd1a7a4b18c093464ac4bdea7f038f381961a3679d425ff",
     "parts": [
      {
-      "start": 42.9,
-      "end": 44.2,
-      "offset": 0
+      "start": 42.91,
+      "end": 44.0,
+      "offset": 0.0
      }
     ]
    },
@@ -4875,10 +4980,12 @@
     }
    },
    "origin": "Suno take 1f931593-39cd-47e9-ba5e-c5f6d7976b67 (batch taerkasten_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -2.0,
    "accent_cue": {
     "language": "de",
-    "p": 0.0041,
+    "p": 0.0038,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4892,10 +4999,10 @@
    "file": "request_support_2.wav",
    "phrase": "Brothers, stand with us.",
    "motif": null,
-   "duration_seconds": 3.18,
-   "bytes": 140282,
-   "sha256": "64e4d5f05acd7eb4bea21773a700a8bba9210474e61e268b17f9228ba5292dd6",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 2.170023,
+   "bytes": 95742,
+   "sha256": "a40e220ce2f3a0fcc44d98afb715031a1c624b00b2e1e4428a86d9307db2a4d8",
+   "integrated_lufs_dual_mono": -18.0,
    "true_peak_dbfs": -3.8,
    "target_lufs": -18.0,
    "gain_db": -0.7,
@@ -4908,9 +5015,14 @@
     "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
     "parts": [
      {
-      "start": 47.77,
-      "end": 50.95,
-      "offset": 0
+      "start": 47.78,
+      "end": 48.72,
+      "offset": 0.0
+     },
+     {
+      "start": 49.64,
+      "end": 50.74,
+      "offset": 1.07
      }
     ]
    },
@@ -4924,7 +5036,9 @@
     }
    },
    "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), the pause inside the line closed to 0.25 s between two parts, nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -6.0,
    "accent_cue": {
     "language": "de",
     "p": 0.0004,
@@ -4941,11 +5055,11 @@
    "file": "unit_retreating_1.wav",
    "phrase": "We withdraw.",
    "motif": null,
-   "duration_seconds": 1.150023,
-   "bytes": 50760,
-   "sha256": "ac1319ca5075fe354ec96c11219cca290e2b4b3ff4e8a9ec154a81531e5f4396",
-   "integrated_lufs_dual_mono": -18.5,
-   "true_peak_dbfs": -5.7,
+   "duration_seconds": 1.030023,
+   "bytes": 45468,
+   "sha256": "884ec7e164d51ec69ec12477d178ee0c38e50e2242940d8ec69c486236bddbfc",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -5.6,
    "target_lufs": -18.0,
    "gain_db": -1.2,
    "pre_level": {
@@ -4957,9 +5071,9 @@
     "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
     "parts": [
      {
-      "start": 38.17,
-      "end": 39.32,
-      "offset": 0
+      "start": 38.18,
+      "end": 39.21,
+      "offset": 0.0
      }
     ]
    },
@@ -4973,10 +5087,12 @@
     }
    },
    "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -3.9,
    "accent_cue": {
     "language": "de",
-    "p": 0.0013,
+    "p": 0.0039,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -4990,11 +5106,11 @@
    "file": "unit_retreating_2.wav",
    "phrase": "Back to the Fortress.",
    "motif": null,
-   "duration_seconds": 2.12,
-   "bytes": 93536,
-   "sha256": "ed10e595a5b62aceb494110b053ed02847205aceafb6ca430973ceb107543ffe",
-   "integrated_lufs_dual_mono": -18.4,
-   "true_peak_dbfs": -5.8,
+   "duration_seconds": 1.450023,
+   "bytes": 63990,
+   "sha256": "ba5694cb52d9b957da76c11627c41b3b162c91e65f8bb437016c5301e2222b69",
+   "integrated_lufs_dual_mono": -18.1,
+   "true_peak_dbfs": -5.7,
    "target_lufs": -18.0,
    "gain_db": -2.2,
    "pre_level": {
@@ -5006,9 +5122,9 @@
     "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
     "parts": [
      {
-      "start": 40.99,
-      "end": 43.11,
-      "offset": 0
+      "start": 41.0,
+      "end": 42.45,
+      "offset": 0.0
      }
     ]
    },
@@ -5022,10 +5138,12 @@
     }
    },
    "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -2.8,
    "accent_cue": {
     "language": "de",
-    "p": 0.0016,
+    "p": 0.0012,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5039,10 +5157,10 @@
    "file": "unit_lost_1.wav",
    "phrase": "Farewell, Commander.",
    "motif": null,
-   "duration_seconds": 1.770023,
-   "bytes": 78102,
-   "sha256": "50a6cf0e424e6b185cd1733f5c0ce7cbc50d8522e8e6c062f85b190de73343e1",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.550023,
+   "bytes": 68400,
+   "sha256": "b63b1233d975decf13a068f82488754d298d4845a4832a530f9ffbae9470cbf1",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -5.9,
    "target_lufs": -18.0,
    "gain_db": -1.6,
@@ -5055,9 +5173,9 @@
     "sha256": "9e7fbd4489b922f16b19adb73161aa9ccbd66cdc1b2fe029e079e23550283b82",
     "parts": [
      {
-      "start": 16.46,
-      "end": 18.23,
-      "offset": 0
+      "start": 16.47,
+      "end": 18.02,
+      "offset": 0.0
      }
     ]
    },
@@ -5071,10 +5189,12 @@
     }
    },
    "origin": "Suno take 1e6394ba-d608-499c-8e9a-68a9f5b5c0d9 (batch taerkasten_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -3.2,
    "accent_cue": {
     "language": "de",
-    "p": 0.0052,
+    "p": 0.0071,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5088,11 +5208,11 @@
    "file": "unit_lost_2.wav",
    "phrase": "The earth receives us.",
    "motif": null,
-   "duration_seconds": 1.86,
-   "bytes": 82070,
-   "sha256": "6aa3d8ed9732fd34a8033ac65e903f20c81bb531cc2dcf9d2c0559d4b59dbbbe",
-   "integrated_lufs_dual_mono": -18.2,
-   "true_peak_dbfs": -7.1,
+   "duration_seconds": 1.54,
+   "bytes": 67958,
+   "sha256": "8d23b48e654fe8a5da568a488be854e92007b6ced59eb45ec19ea02040143d93",
+   "integrated_lufs_dual_mono": -17.7,
+   "true_peak_dbfs": -7.0,
    "target_lufs": -18.0,
    "gain_db": -3.7,
    "pre_level": {
@@ -5104,9 +5224,9 @@
     "sha256": "7bea156a13540cc28e9b240d04bcac07acdb37a484864ba31a2696961f05d53f",
     "parts": [
      {
-      "start": 16.1,
-      "end": 17.96,
-      "offset": 0
+      "start": 16.11,
+      "end": 17.65,
+      "offset": 0.0
      }
     ]
    },
@@ -5120,10 +5240,12 @@
     }
    },
    "origin": "Suno take c4ab6651-d6ec-493d-bddb-a6666496f706 (batch taerkasten_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -7.7,
    "accent_cue": {
     "language": "de",
-    "p": 0.0012,
+    "p": 0.0007,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5137,9 +5259,9 @@
    "file": "enemy_unit_engaged_1.wav",
    "phrase": "Enemy fleeing.",
    "motif": null,
-   "duration_seconds": 1.28,
-   "bytes": 56492,
-   "sha256": "77dde813951f0cf745cd51e4028d0be1aad9709006ef09377caa380805f143ec",
+   "duration_seconds": 1.16,
+   "bytes": 51200,
+   "sha256": "e1d33d3809d0217c5c95a5525510f3b415f9af50cf827247e51a27f2ea809006",
    "integrated_lufs_dual_mono": -18.2,
    "true_peak_dbfs": -7.5,
    "target_lufs": -18.0,
@@ -5153,9 +5275,9 @@
     "sha256": "3b879fa901d517517025f21be2c92fb8a0fd6d7cae4277d3622fa99b12f63066",
     "parts": [
      {
-      "start": 40.09,
-      "end": 41.37,
-      "offset": 0
+      "start": 40.1,
+      "end": 41.26,
+      "offset": 0.0
      }
     ]
    },
@@ -5169,10 +5291,12 @@
     }
    },
    "origin": "Suno take c10443d0-b676-4914-977c-ea603735012c (batch taerkasten_s4)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -1.8,
    "accent_cue": {
     "language": "de",
-    "p": 0.0119,
+    "p": 0.022,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5186,11 +5310,11 @@
    "file": "enemy_unit_engaged_2.wav",
    "phrase": "They break and run.",
    "motif": null,
-   "duration_seconds": 1.42,
-   "bytes": 62666,
-   "sha256": "7db02b56e518b2c84343173d7f1fb335b9e3497d951307db308bb6b0b35b724e",
-   "integrated_lufs_dual_mono": -18.1,
-   "true_peak_dbfs": -7.3,
+   "duration_seconds": 1.34,
+   "bytes": 59138,
+   "sha256": "7c21eb64e5269f72095f50aa2a4975e954a71ba965c1c9069e097195984ab243",
+   "integrated_lufs_dual_mono": -17.8,
+   "true_peak_dbfs": -7.2,
    "target_lufs": -18.0,
    "gain_db": -3.1,
    "pre_level": {
@@ -5202,9 +5326,9 @@
     "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
     "parts": [
      {
-      "start": 3.61,
-      "end": 5.03,
-      "offset": 0
+      "start": 3.62,
+      "end": 4.96,
+      "offset": 0.0
      }
     ]
    },
@@ -5218,10 +5342,11 @@
     }
    },
    "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "de",
-    "p": 0.0082,
+    "p": 0.0037,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5235,10 +5360,10 @@
    "file": "enemy_unit_destroyed_1.wav",
    "phrase": "Enemy struck down.",
    "motif": null,
-   "duration_seconds": 1.750023,
-   "bytes": 77220,
-   "sha256": "86357087c80690609fa7dec4b9cf5296afc51fffffe3d80d93f5697b53a5d7b8",
-   "integrated_lufs_dual_mono": -18.2,
+   "duration_seconds": 1.410023,
+   "bytes": 62226,
+   "sha256": "d317952f5b0a8c74066265ce6d51e0f2e117ae35380cee935b416cb054bd9ac1",
+   "integrated_lufs_dual_mono": -17.9,
    "true_peak_dbfs": -5.6,
    "target_lufs": -18.0,
    "gain_db": -1.5,
@@ -5251,9 +5376,9 @@
     "sha256": "dff12826632f1ae0ddd7d9e83635f78be024367e77305716e8e90a0a342bb661",
     "parts": [
      {
-      "start": 9.19,
-      "end": 10.94,
-      "offset": 0
+      "start": 9.2,
+      "end": 10.61,
+      "offset": 0.0
      }
     ]
    },
@@ -5267,10 +5392,12 @@
     }
    },
    "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -6.7,
    "accent_cue": {
     "language": "de",
-    "p": 0.002,
+    "p": 0.0013,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5284,9 +5411,9 @@
    "file": "enemy_unit_destroyed_2.wav",
    "phrase": "Another enemy falls.",
    "motif": null,
-   "duration_seconds": 1.730023,
-   "bytes": 76338,
-   "sha256": "819cf851f78a1a6731a94a2e456953e343b89233b81663c1c86718989e3ec36b",
+   "duration_seconds": 1.46,
+   "bytes": 64430,
+   "sha256": "2568a9153c8a9b60bb5dc7e569c8583510ddf949c5ebb8baf1b4720701dae499",
    "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -7.5,
    "target_lufs": -18.0,
@@ -5300,9 +5427,9 @@
     "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
     "parts": [
      {
-      "start": 21.25,
-      "end": 22.98,
-      "offset": 0
+      "start": 21.26,
+      "end": 22.72,
+      "offset": 0.0
      }
     ]
    },
@@ -5316,10 +5443,11 @@
     }
    },
    "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "de",
-    "p": 0.0023,
+    "p": 0.0025,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5333,9 +5461,9 @@
    "file": "enemy_host_destroyed_1.wav",
    "phrase": "Enemy station destroyed.",
    "motif": null,
-   "duration_seconds": 2.130023,
-   "bytes": 93978,
-   "sha256": "72d25bbc59099c9bbfa79da8e02898bd176dc83754a627d12d01e74046598d34",
+   "duration_seconds": 1.8,
+   "bytes": 79424,
+   "sha256": "9865130665bcbd211ed9ab62c4867df41611e67d6f487e22433c257e7d03bf82",
    "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -8.0,
    "target_lufs": -18.0,
@@ -5349,9 +5477,9 @@
     "sha256": "9b9b93a0c1bdcd641dd1a7a4b18c093464ac4bdea7f038f381961a3679d425ff",
     "parts": [
      {
-      "start": 29.79,
-      "end": 31.92,
-      "offset": 0
+      "start": 29.8,
+      "end": 31.6,
+      "offset": 0.0
      }
     ]
    },
@@ -5365,10 +5493,12 @@
     }
    },
    "origin": "Suno take 1f931593-39cd-47e9-ba5e-c5f6d7976b67 (batch taerkasten_s2)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -5.0,
    "accent_cue": {
     "language": "de",
-    "p": 0.004,
+    "p": 0.0084,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5382,9 +5512,9 @@
    "file": "enemy_host_destroyed_2.wav",
    "phrase": "The enemy fortress falls.",
    "motif": null,
-   "duration_seconds": 1.9,
-   "bytes": 83834,
-   "sha256": "c296524e340f507f7d31df4b735d4836089e3f4145baf27e9efa1bb651a19e3f",
+   "duration_seconds": 1.750023,
+   "bytes": 77220,
+   "sha256": "be57357092b9fd9c48d2e818b91c9e076bccc533a0c4fb447c0ece22a533bb57",
    "integrated_lufs_dual_mono": -18.3,
    "true_peak_dbfs": -8.4,
    "target_lufs": -18.0,
@@ -5398,9 +5528,9 @@
     "sha256": "31166d4028c4109d1c40ff1123591d1a83ae7b871813157277f2d9f20e0f42db",
     "parts": [
      {
-      "start": 9.28,
-      "end": 11.18,
-      "offset": 0
+      "start": 9.29,
+      "end": 11.04,
+      "offset": 0.0
      }
     ]
    },
@@ -5414,10 +5544,11 @@
     }
    },
    "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "de",
-    "p": 0.0039,
+    "p": 0.0051,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5431,9 +5562,9 @@
    "file": "powerstation_captured_1.wav",
    "phrase": "Power station taken.",
    "motif": null,
-   "duration_seconds": 2.04,
-   "bytes": 90008,
-   "sha256": "abebf87285d61c39c1584d3930ed95385f66fbec8630f4d6eb23087f594610b5",
+   "duration_seconds": 1.970023,
+   "bytes": 86922,
+   "sha256": "cff420575852d3fdf8a188f05e7f508d3f41727be0589439039568f9635bf805",
    "integrated_lufs_dual_mono": -18.2,
    "true_peak_dbfs": -7.2,
    "target_lufs": -18.0,
@@ -5447,9 +5578,9 @@
     "sha256": "6f28b8882a068c02d570570570c059933ef1e18476580e99619ea21b47cf54ef",
     "parts": [
      {
-      "start": 10.55,
-      "end": 12.59,
-      "offset": 0
+      "start": 10.56,
+      "end": 12.53,
+      "offset": 0.0
      }
     ]
    },
@@ -5458,15 +5589,17 @@
     "votes": 3,
     "heard": {
      "base.en": "Power station taken.",
-     "small.en": "Power Station taken.",
+     "small.en": "Power Station Taken",
      "medium.en": "Power station taken."
     }
    },
    "origin": "Suno take b9700ace-ec0f-43ee-bb51-6dd1b74cd1fb (batch taerkasten_s3)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
+   "music_under_voice_db": -29.2,
    "accent_cue": {
     "language": "de",
-    "p": 0.0157,
+    "p": 0.0132,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },
@@ -5480,10 +5613,10 @@
    "file": "powerstation_captured_2.wav",
    "phrase": "We claim the stone.",
    "motif": null,
-   "duration_seconds": 1.710023,
-   "bytes": 75456,
-   "sha256": "49f8d3c248a77bb6f037bb4dc0513f161b95fd83d0e3cfe653511095ed6bf620",
-   "integrated_lufs_dual_mono": -18.3,
+   "duration_seconds": 1.370023,
+   "bytes": 60462,
+   "sha256": "9c828df2a1e83df0de1a058803aba461d5f8da506b21fa95d1f32f5c4e1046de",
+   "integrated_lufs_dual_mono": -18.0,
    "true_peak_dbfs": -6.7,
    "target_lufs": -18.0,
    "gain_db": -3.2,
@@ -5496,9 +5629,9 @@
     "sha256": "09fe94428ac6539480d2645a1d64ecac6066bee83b8e5d00d4958fc9fec8f73d",
     "parts": [
      {
-      "start": 14.62,
-      "end": 16.33,
-      "offset": 0
+      "start": 14.63,
+      "end": 16.0,
+      "offset": 0.0
      }
     ]
    },
@@ -5512,10 +5645,11 @@
     }
    },
    "origin": "Suno take 80c04bdc-712f-40b6-99f0-b9230b978070 (batch taerkasten_r1)",
-   "render_run": "v04-faction-voices-2026-11-02",
+   "render_run": "v05-faction-voices-recut-2026-11-02",
+   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "de",
-    "p": 0.0009,
+    "p": 0.0018,
     "top": "en",
     "note": "Whisper small language-ID probability of the L1 on the final file; see accent_method"
    },

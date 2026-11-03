@@ -24,6 +24,7 @@ cmake --build "$lab/tests" --parallel "$jobs" 2>&1 | tee "$lab/logs/build-tests.
 ctest --test-dir "$lab/tests" --output-on-failure 2>&1 | tee "$lab/logs/tests.log"
 python -B "$source_root/tests/test_six_faction_maps.py" -v 2>&1 | tee "$lab/logs/map-tests.log"
 python -B "$source_root/tests/test_agent_mcp.py" -v 2>&1 | tee "$lab/logs/agent-mcp-tests.log"
+python -B "$source_root/tests/test_faction_audio_manifest.py" -v 2>&1 | tee "$lab/logs/faction-audio-tests.log"
 python -B "$source_root/tests/test_windows_package.py" -v 2>&1 | tee "$lab/logs/package-tests.log"
 python -B "$source_root/tools/windows/package.py" --source "$source_root" \
   --binary "$lab/engine/OpenNeoUA.exe" --prefix "$MINGW_PREFIX" \

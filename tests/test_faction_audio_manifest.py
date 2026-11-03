@@ -57,6 +57,15 @@ class FactionAudioManifest(unittest.TestCase):
         for row in MANIFEST.get("pending", []):
             self.assertFalse((PACKS / row["faction"] / row["file"]).exists(), row["file"])
 
+    def test_pack_filenames_use_the_engine_event_keys(self):
+        # The engine finds pack files by these keys; a renamed key would silently
+        # send every pack back to the vanilla voice for that event.
+        source = (ROOT / "src" / "world" / "speech.cpp").read_text(encoding="utf-8")
+        table = source[source.index("Events[EventCount]"):]
+        table = table[:table.index("};")]
+        keys = [k for _, k in re.findall(r'\{(\d+), "([a-z_]+)"\}', table)]
+        self.assertEqual(keys, EVENTS)
+
     def test_routing_table_names_every_pack(self):
         source = (ROOT / "src" / "world" / "speech.cpp").read_text(encoding="utf-8")
         routes = dict(re.findall(r'case (\d+): return "sounds/speech/voicepacks/([a-z-]+)";', source))
