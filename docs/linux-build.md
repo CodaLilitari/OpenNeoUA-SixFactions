@@ -139,8 +139,9 @@ one agent directory per instance and `collected-<stamp>/`, whose
 `net-summary.txt` has the netauto, connection, roster and READY lines of every
 instance. Options: `--transport enet` (set for every instance), `--keep` to
 leave the match running for drills, `--sample 10` for a CPU/RSS log
-(`logs/resources.csv`), and `--fresh` after changing the binary's data, the
-maps or the retail package. Levels 200 and 201 are the generated six-start
+(`logs/resources.csv`), and `--fresh` to assemble the runtimes again (after a
+change of the retail package or the maps; the binary under test is copied
+into every runtime on each run). Levels 200 and 201 are the generated six-start
 maps; `match` generates them from the retail levels on first use.
 `drive.py status --lab DIR` prints every instance's lobby, seat, bot and flag
 state; `drive.py stop --lab DIR` stops a kept match.

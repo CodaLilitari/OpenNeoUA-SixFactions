@@ -233,11 +233,21 @@ def run(cmd, **kw):
     return subprocess.run([str(c) for c in cmd], check=True, **kw)
 
 
+def ci(path, *parts):
+    """path/parts with each part matched case-insensitively (retail trees vary: DATA, Data)."""
+    for part in parts:
+        match = next((c for c in path.iterdir() if c.name.lower() == part.lower()), None) if path.is_dir() else None
+        if match is None:
+            return None
+        path = match
+    return path
+
+
 def check_retail(retail):
-    def has(pattern):
-        return any(retail.glob(pattern))
-    missing = [p for p in ('LOCALE/*.[Dd][Ll][Ll]', 'DATA/SET46', 'DATA/FONTS', 'DATA/SCRIPTS', 'LEVELS/MULTI')
-               if not has(p)]
+    locale = ci(retail, 'LOCALE')
+    missing = [] if locale and any(p.suffix.lower() == '.dll' for p in locale.iterdir()) else ['LOCALE/*.DLL']
+    missing += ['/'.join(parts) for parts in (('DATA', 'SET46'), ('DATA', 'FONTS'), ('DATA', 'SCRIPTS'),
+                                              ('LEVELS', 'MULTI')) if ci(retail, *parts) is None]
     if missing:
         raise SystemExit(f'retail data at {retail} lacks {", ".join(missing)}; the engine would stop at init')
 
@@ -250,9 +260,12 @@ def prepare(args, lab, specs):
         raise SystemExit(f'no engine binary at {binary}')
     maps = lab / 'maps'
     if args.level in SIX_FACTION_SOURCES and not any(maps.glob(f'Levels/Multi/l{args.level}{args.level}.ldf')):
-        run([sys.executable, '-I', REPO / 'tools/make_six_faction_map.py',
-             retail / 'LEVELS/MULTI' / SIX_FACTION_SOURCES[args.level], maps,
-             '--script-root', retail / 'DATA/SCRIPTS', '--level-id', args.level], stdout=subprocess.DEVNULL)
+        source = ci(retail, 'LEVELS', 'MULTI', SIX_FACTION_SOURCES[args.level])
+        if source is None:
+            raise SystemExit(f'level {args.level} is generated from {SIX_FACTION_SOURCES[args.level]}, '
+                             'which the retail LEVELS/MULTI lacks')
+        run([sys.executable, '-I', REPO / 'tools/make_six_faction_map.py', source, maps,
+             '--script-root', ci(retail, 'DATA', 'SCRIPTS'), '--level-id', args.level], stdout=subprocess.DEVNULL)
     base = lab / 'rt-base'
     if args.fresh and base.exists():
         shutil.rmtree(base)

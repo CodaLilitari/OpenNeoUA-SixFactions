@@ -62,6 +62,18 @@ class EngineArguments(unittest.TestCase):
         for part in ('C1', 'step=wait_start', 'role=client', 'enet', 'level=132', 'lobby=[HOST1/1+ C1/4-]'):
             self.assertIn(part, line)
 
+    def test_retail_check_ignores_directory_case(self):
+        with tempfile.TemporaryDirectory(prefix='live-retail-') as d:
+            root = Path(d)
+            for part in ('Data/Set46', 'Data/fonts', 'Data/Scripts', 'Levels/Multi', 'Locale'):
+                (root / part).mkdir(parents=True)
+            with self.assertRaisesRegex(SystemExit, 'LOCALE'):
+                drive.check_retail(root)
+            (root / 'Locale/English.dll').write_text('x')
+            drive.check_retail(root)
+            self.assertEqual(drive.ci(root, 'DATA', 'SET46'), root / 'Data/Set46')
+            self.assertIsNone(drive.ci(root, 'DATA', 'MC2RES'))
+
     def test_adapter_plumbing_against_a_fake_engine(self):
         self.assertEqual(drive.selftest(), 0)
 
