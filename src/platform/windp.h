@@ -217,6 +217,7 @@ protected:
     };
 
     void _clear();
+    void ClearConnectionState();
 
     void ReloadUsersList();
     void ReloadSessionsList();
@@ -238,7 +239,7 @@ public:
     ZNDNet::ZNDNet    *zcon;
     ZNDNet::ZNDEnet   *zenet = nullptr; // ENet cutover (OPENNEOUA_TRANSPORT=enet)
     bool _hasLobby;
-    uint64_t    _myID;
+    uint64_t    _myID = 0;
     std::string _myName;
     ZNDNet::UserInfoVect _rawUsers;
     int32_t _myIndex = -1;

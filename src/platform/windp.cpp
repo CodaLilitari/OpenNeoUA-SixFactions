@@ -38,16 +38,9 @@ void NC_STACK_windp::_clear()
     for(int i = 0; i < MAX_PROVIDERS; i++)
         providers[i].clear();
 
-    connType = 0;
+    ClearConnectionState();
 
-    _hasLobby = false;
     _myName = "";
-
-    _nextUsersGet = 0;
-    _nextSessionsGet = 0;
-
-    _sesID = 0;
-    _sesName = "";
 
     version_ident = "";
     version_check = 0;
@@ -63,6 +56,27 @@ void NC_STACK_windp::_clear()
     zcli = nullptr;
     zhost = nullptr;
     zcon = nullptr;
+    zenet = nullptr;
+}
+
+// Everything a connection leaves behind besides the transport objects. After
+// Reset() the provider has no connection: connType 0 makes IsConnected,
+// IsJoined, Connect and Host refuse instead of dereferencing a transport that
+// was deleted, and the next session starts without the old roster, ids,
+// session or queued broadcast bytes. The requested callsign (_myName) stays.
+void NC_STACK_windp::ClearConnectionState()
+{
+    connType = 0;
+    _hasLobby = false;
+    _myID = 0;
+    _myIndex = -1;
+    _rawUsers.clear();
+    _rawSessions.clear();
+    _nextUsersGet = 0;
+    _nextSessionsGet = 0;
+    _sesID = 0;
+    _sesName.clear();
+    broadcastBuff_off = 0;
 }
 
 bool NC_STACK_windp::init()
@@ -102,6 +116,11 @@ size_t NC_STACK_windp::Deinit()
 
 size_t NC_STACK_windp::SetMode(bool hosting)
 {
+    // A transport left over from an earlier session would leak with its
+    // threads (and, for a host, keep the port bound).
+    if (zcon)
+        Reset(nullptr);
+
     if (hosting)
     {
         connType = 1;
@@ -148,7 +167,7 @@ std::string NC_STACK_windp::GetMyName()
 
 bool NC_STACK_windp::Connect(const std::string &connString)
 {
-    if (connType != 2)
+    if (connType != 2 || (!zenet && !zcli))
         return false;
 
     IPaddress server;
@@ -222,7 +241,7 @@ bool NC_STACK_windp::IsConnected()
         return false;
 
     if (zenet) return zenet->GetStatus() == ZNDNet::NetUser::STATUS_CONNECTED;
-    return zcli->GetStatus() == ZNDNet::NetUser::STATUS_CONNECTED;
+    return zcli && zcli->GetStatus() == ZNDNet::NetUser::STATUS_CONNECTED;
 }
 
 bool NC_STACK_windp::HasLobby()
@@ -235,7 +254,7 @@ bool NC_STACK_windp::HasLobby()
 
 bool NC_STACK_windp::IsJoined()
 {
-    if (connType != 2)
+    if (connType != 2 || !zcon)
         return false;
 
     return zcon->GetMySesID() != 0;
@@ -244,7 +263,7 @@ bool NC_STACK_windp::IsJoined()
 
 bool NC_STACK_windp::Host(const std::string &gameName, int playerNum)
 {
-    if (connType != 1)
+    if (connType != 1 || (!zenet && !zhost))
         return false;
 
     if (zenet) zenet->Start(_myName, 61234, gameName, playerNum); else zhost->Start(_myName, 61234, gameName, playerNum);
@@ -453,6 +472,9 @@ size_t NC_STACK_windp::SendLowLevel(void *data, size_t dataSize, const std::stri
 
 bool NC_STACK_windp::Recv(windp_recvMsg *recv)
 {
+    if (!zcon)
+        return false;
+
     ZNDNet::Event *evt = zcon->Events_Pop();
 
     if (!evt)
@@ -586,8 +608,8 @@ size_t NC_STACK_windp::Reset(IDVPair *stak)
     zcon = nullptr;
     zcli = nullptr;
     zhost = nullptr;
-    // reset
-    
+    ClearConnectionState();
+
     return 0;
 }
 
