@@ -341,14 +341,19 @@ struct Action
 class Driver
 {
 public:
-    static constexpr std::uint32_t MenuTimeoutMs = 120000;
-    static constexpr std::uint32_t JoinTimeoutMs = 120000;
-    static constexpr std::uint32_t JoinRetryMs = 2000;
-    static constexpr std::uint32_t WelcomeTimeoutMs = 60000;
-    static constexpr std::uint32_t WidgetTimeoutMs = 15000;
-    static constexpr std::uint32_t SettleMs = 1500;     // after a faction change, before READY
-    static constexpr std::uint32_t StartHoldMs = 2000;  // start condition must hold this long
-    static constexpr std::uint32_t ProgressMs = 15000;
+    // Enumerators, not static constexpr members: C++14 would need an
+    // out-of-line definition the moment one is bound to a reference.
+    enum : std::uint32_t
+    {
+        MenuTimeoutMs = 120000,
+        JoinTimeoutMs = 120000,
+        JoinRetryMs = 2000,
+        WelcomeTimeoutMs = 60000,
+        WidgetTimeoutMs = 15000,
+        SettleMs = 1500,      // after a faction change, before READY
+        StartHoldMs = 2000,   // the start condition must hold this long
+        ProgressMs = 15000,
+    };
 
     // botFaction: the -bot spec's owner, used when -net-faction is absent.
     explicit Driver(const Options &options, int botFaction = 0)
