@@ -132,8 +132,12 @@ work without the agent bridge; with it, `net.auto` reports their progress.
 | `-net-ready` | Client: tick Ready once the faction has settled and the Ready box is enabled. |
 | `-net-start-when <n>` | Host: press Start once at least n players are in the lobby, all of them ready, and the roster check has passed for 2 s. With n = 1 and nobody else in the lobby the host starts alone, without the "start alone?" confirmation a click opens. |
 
+A host, a client and a bot on level 100, whose four stations belong to
+Resistance, Mykonian, Taerkasten and Ghorkov (a level with fewer stations than
+`-net-start-when`, or without the faction asked for, stops the flags):
+
 ```text
-OpenNeoUA -net-host 132 -net-name HOST1 -net-faction resistance -net-start-when 3
+OpenNeoUA -net-host 100 -net-name HOST1 -net-faction resistance -net-start-when 3
 OpenNeoUA -net-join 192.168.1.10 -net-name C1 -net-faction taerkasten -net-ready
 OpenNeoUA -bot Ghorkov:Veteran -net-join 192.168.1.10 -net-name BOT1 -net-ready
 ```

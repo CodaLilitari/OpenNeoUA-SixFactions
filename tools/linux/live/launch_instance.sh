@@ -11,6 +11,8 @@
 #                -bot Ghorkov:Veteran -net-join 127.0.0.1 -net-name BOT1 -net-ready
 # Run it inside the match's network namespace: nsenter -t NSPID -n bash launch_instance.sh ...
 # Env passthrough: OPENNEOUA_TRANSPORT=enet selects ENet (set it for EVERY peer or none).
+#                  A relaunch into a kept match (this instance's Xvfb still runs) without
+#                  it reuses the transport the instance last started with (pids/NAME.transport).
 #                  NICE (default 5), LP_NUM_THREADS (default 1), XVFB_SCREEN (default 1024x768x24)
 set -euo pipefail
 name=$1 disp=$2 rt=$(realpath -- "$3") lab=$(realpath -m -- "$4"); shift 4
@@ -21,6 +23,11 @@ chmod 700 -- "$agent"
 if [ -f "$pids/$name.xvfb.pid" ] && kill -0 "$(cat "$pids/$name.xvfb.pid")" 2>/dev/null; then
     [ -f "$pids/$name.display" ] && disp=$(cat "$pids/$name.display")
     echo "reusing Xvfb :$disp"
+    # A relaunch into the running match: a peer on the other transport gets no answer.
+    if [ -z "${OPENNEOUA_TRANSPORT:-}" ] && [ -f "$pids/$name.transport" ]; then
+        OPENNEOUA_TRANSPORT=$(cat "$pids/$name.transport")
+        echo "reusing transport $OPENNEOUA_TRANSPORT"
+    fi
 else
     Xvfb ":$disp" -screen 0 "${XVFB_SCREEN:-1024x768x24}" -nolisten tcp -noreset \
         </dev/null >"$logs/$name.xvfb.log" 2>&1 &
@@ -32,6 +39,7 @@ else
     fi
     echo "$disp" >"$pids/$name.display"
 fi
+printf '%s\n' "${OPENNEOUA_TRANSPORT:-zndnet}" >"$pids/$name.transport"
 # The engine truncates Data/Env/ypa_log.txt (log and netlog) at every start: keep the
 # previous one, so a relaunched instance's pre-drop log survives.
 if [ -f "$rt/Data/Env/ypa_log.txt" ]; then

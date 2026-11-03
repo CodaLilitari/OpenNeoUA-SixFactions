@@ -186,10 +186,12 @@ Drills on a match started with `--keep` (`LAB` is the run directory):
   (and the same with `--dport`); delete both rules with `-D` to heal it.
 * Crash and relaunch it: `kill -9 $(cat LAB/pids/C1.pid)`, then
   `nsenter -t $(cat LAB/pids/netns.bgpid) -n bash tools/linux/live/launch_instance.sh C1 $(cat LAB/pids/C1.display) LAB/rt-C1 LAB -net-join 127.0.0.1 -net-name C1 -net-ready`.
-  The instance's Xvfb is reused and the crashed engine's log is archived in
-  `logs/` first. Rejoining a running match does not exist yet (the rejoin
-  work in the netcode design): today the relaunched client enters the still
-  open session as a new player, and a client without a loaded level can
+  The instance's Xvfb and transport are reused (without `OPENNEOUA_TRANSPORT`
+  the relaunch takes the one in `pids/C1.transport`, so an ENet match stays on
+  ENet; set the variable to override it), and the crashed engine's log is
+  archived in `logs/` first. Rejoining a running match does not exist yet (the
+  rejoin work in the netcode design): today the relaunched client enters the
+  still open session as a new player, and a client without a loaded level can
   crash on the first in-game sector message. Leave out `-net-join` to bring
   it back to the menu only.
 

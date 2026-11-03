@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Multi-instance OpenNeoUA matches on one Linux box (Xvfb, llvmpipe, agent bridge).
 
-One command for a match, here host + client + -bot client on level 132:
+One command for a match, here host + client + -bot client on level 100 (four stations:
+Resistance, Mykonian, Taerkasten, Ghorkov; level 132 has two, Resistance and Taerkasten):
 
     python3 -B tools/linux/live/drive.py match --retail RETAIL --binary BUILD/engine/OpenNeoUA \\
-        --lab LAB --level 132 --host HOST1:resistance --client C1:ghorkov --bot BOT1:mykonian:veteran
+        --lab LAB --level 100 --host HOST1:resistance --client C1:taerkasten --bot BOT1:mykonian:veteran
 
 `match` assembles one runtime per instance (assemble_runtime.py, then real copies),
 creates a private network namespace (ns_holder.sh), starts one Xvfb and one engine
@@ -385,10 +386,10 @@ def match(args):
     lab.mkdir(parents=True, exist_ok=True)
     runtimes = prepare(args, lab, specs)
     env = dict(os.environ)
-    env.pop('OPENNEOUA_TRANSPORT', None)
-    if args.transport == 'enet':
-        env['OPENNEOUA_TRANSPORT'] = 'enet'
-    prefix = [] if args.no_netns else ['nsenter', '-t', start_namespace(lab), '-n']
+    # Always explicit: launch_instance.sh records it, and a relaunch into this match
+    # without the variable reuses it. The engine takes any value but "enet" as ZNDNet.
+    env['OPENNEOUA_TRANSPORT'] = args.transport
+    prefix =[] if args.no_netns else ['nsenter', '-t', start_namespace(lab), '-n']
     insts, displays, ok = [], set(), False
     try:
         for spec in specs:

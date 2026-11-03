@@ -7,9 +7,11 @@ import io
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 sys.dont_write_bytecode = True
@@ -109,6 +111,58 @@ class EngineArguments(unittest.TestCase):
         for script in ('launch_instance.sh', 'ns_holder.sh', 'collect_logs.sh', 'sample.sh'):
             with self.subTest(script=script):
                 subprocess.run(['bash', '-n', str(LIVE / script)], check=True, timeout=10)
+
+
+class Launcher(unittest.TestCase):
+    """launch_instance.sh with a fake Xvfb on PATH and a fake engine (no display, no game).
+    A fresh Xvfb costs the launcher's 5 s socket wait, since the fake creates none."""
+
+    def test_a_relaunch_into_a_kept_match_keeps_its_transport(self):
+        with tempfile.TemporaryDirectory(prefix='live-launch-') as d:
+            root = Path(d)
+            bin_dir, rt, lab = root / 'bin', root / 'rt-C1', root / 'lab'
+            bin_dir.mkdir()
+            (rt / 'Data/Env').mkdir(parents=True)
+            (bin_dir / 'Xvfb').write_text('#!/usr/bin/env bash\nexec sleep 120\n')
+            (bin_dir / 'Xvfb').chmod(0o755)
+            (rt / 'OpenNeoUA').write_text('#!/usr/bin/env bash\necho "${OPENNEOUA_TRANSPORT:-unset}" >>seen.txt\n')
+            (rt / 'OpenNeoUA').chmod(0o755)
+            env = dict(os.environ, PATH=f'{bin_dir}{os.pathsep}{os.environ["PATH"]}', NICE='0')
+            env.pop('OPENNEOUA_TRANSPORT', None)
+            seen = rt / 'seen.txt'
+
+            def launch(transport=None):
+                count = len(seen.read_text().split()) if seen.exists() else 0
+                run_env = dict(env, OPENNEOUA_TRANSPORT=transport) if transport else env
+                subprocess.run(['bash', str(LIVE / 'launch_instance.sh'), 'C1', '977', str(rt), str(lab),
+                                '-net-join', '127.0.0.1'], env=run_env, check=True, capture_output=True, timeout=60)
+                deadline = time.monotonic() + 10
+                while (len(seen.read_text().split()) if seen.exists() else 0) == count:
+                    self.assertLess(time.monotonic(), deadline, 'the fake engine did not run')
+                    time.sleep(0.05)
+                return (lab / 'pids/C1.transport').read_text().strip()
+
+            def stop_match():
+                # As drive.py stop: Xvfb terminated, pid files removed (the fake
+                # engine has exited already, so its pid is not signalled).
+                xvfb = lab / 'pids/C1.xvfb.pid'
+                if xvfb.exists():
+                    try:
+                        os.kill(int(xvfb.read_text()), signal.SIGTERM)
+                    except (OSError, ValueError):
+                        pass
+                for pid_file in (xvfb, lab / 'pids/C1.pid'):
+                    pid_file.unlink(missing_ok=True)
+
+            try:
+                self.assertEqual(launch('enet'), 'enet')    # the match starts on ENet
+                self.assertEqual(launch(), 'enet')          # crash drill: relaunch without the variable
+                self.assertEqual(launch('zndnet'), 'zndnet')  # an explicit choice wins
+                stop_match()
+                self.assertEqual(launch(), 'zndnet')        # a new start: no stale transport
+            finally:
+                stop_match()
+            self.assertEqual(seen.read_text().split(), ['enet', 'enet', 'zndnet', 'unset'])
 
 
 class RuntimeAssembly(unittest.TestCase):
