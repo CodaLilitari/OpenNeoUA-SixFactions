@@ -11,9 +11,21 @@ export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-0}
 mkdir -p -- "$lab/engine" "$lab/tests" "$lab/logs" "$lab/tmp" "$lab/package"
 export TMPDIR="$lab/tmp"
 
+# Name the source revision that the agent interface reports in session.json.
+# CI exports GITHUB_SHA, which src/CMakeLists.txt also uses as its default.
+# A local build names its git commit, marked -dirty when tracked files differ
+# from that commit, and "unknown" outside a git checkout.
+if [[ -n ${GITHUB_SHA:-} ]]; then
+    revision=$GITHUB_SHA
+elif revision=$(git -C "$source_root" rev-parse --short=12 HEAD 2>/dev/null); then
+    git -C "$source_root" diff --quiet HEAD -- 2>/dev/null || revision+=-dirty
+else
+    revision=unknown
+fi
+
 cmake -S "$source_root/src" -B "$lab/engine" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release '-DCMAKE_CXX_FLAGS_RELEASE=-O2 -DNDEBUG' \
-    -DOPENNEOUA_AGENT_FORK=six-factions \
+    -DOPENNEOUA_AGENT_FORK=six-factions -DOPENNEOUA_AGENT_REVISION="$revision" \
     2>&1 | tee "$lab/logs/configure-engine.log"
 cmake --build "$lab/engine" --parallel "$jobs" 2>&1 | tee "$lab/logs/build-engine.log"
 cmake -S "$source_root/tests" -B "$lab/tests" -G Ninja \
