@@ -1160,19 +1160,6 @@ static bool yw_netValidateNormMsg(NC_STACK_ypaworld *yw, const void *data, size_
         break;
     }
 
-    case UAMSG_SECTORENERGY:
-    {
-        if ( !levelLoaded )
-            break;
-        // ypaworld_func129 indexes the sector grid with this position; a
-        // position off the map makes PlaneVector::At throw.
-        const uamessage_sectorEnergy *energyMsg = static_cast<const uamessage_sectorEnergy *>(data);
-        const Common::Point mapSize = yw->GetMapSize();
-        if ( !NetPositionOnMap(energyMsg->pos.x, energyMsg->pos.y, energyMsg->pos.z, mapSize.x, mapSize.y) )
-            return fail("sector energy position off the map");
-        break;
-    }
-
     case UAMSG_UPGRADE:
     {
         if ( !levelLoaded )
@@ -1983,6 +1970,17 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
 
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
+
+        // ypaworld_func129 indexes the sector grid with this position, and a
+        // position off the map throws in PlaneVector::At or wraps into
+        // another row. Such a message is skipped alone: it is well framed, so
+        // the rest of its packet still runs.
+        const Common::Point mapSize = yw->GetMapSize();
+        if ( !NetPositionOnMap(seMsg->pos.x, seMsg->pos.y, seMsg->pos.z, mapSize.x, mapSize.y) )
+        {
+            yw_netLogIgnored(msgID, msg->senderName, "sector energy position off the map");
+            break;
+        }
 
         NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(seMsg->owner);
 

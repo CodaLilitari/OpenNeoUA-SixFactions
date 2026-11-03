@@ -128,22 +128,41 @@ int main()
         REQUIRE(NetMsgScopeOf(id) == NetMsgScope::Level);
     REQUIRE(NetMsgScopeOf(UAMSG_BASE + 99) == NetMsgScope::Level);
 
-    // SECTORENERGY positions: x east, -z south, on a 4 x 3 sector map.
+    // SECTORENERGY positions on a 4 x 3 sector map, read like
+    // World::PositionToSectorID: column x / length, row -z / length, each
+    // truncated toward zero. A position the sender's own lookup puts on the
+    // map must pass, including those less than a sector west or north of it,
+    // which truncate to column or row 0.
     const double len = World::CVSectorLength;
+    const auto engineCellOnMap = [len](double x, double z, int w, int h) {
+        const int column = static_cast<int>(x / len), row = static_cast<int>(-z / len);
+        return column >= 0 && column < w && row >= 0 && row < h;
+    };
     REQUIRE(NetPositionOnMap(0.0, 0.0, 0.0, 4, 3));
     REQUIRE(NetPositionOnMap(4 * len - 0.5, -300.0, -(3 * len - 0.5), 4, 3));
     REQUIRE(NetPositionOnMap(len * 1.5, 0.0, -0.0, 4, 3));
+    REQUIRE(NetPositionOnMap(-0.5, 0.0, -len, 4, 3));         // column 0 on the sender too
+    REQUIRE(NetPositionOnMap(-(len - 1.0), 0.0, -len, 4, 3)); // still column 0
+    REQUIRE(NetPositionOnMap(len, 0.0, 0.5, 4, 3));           // row 0
+    REQUIRE(NetPositionOnMap(len, 0.0, len - 1.0, 4, 3));     // still row 0
+    REQUIRE(!NetPositionOnMap(-len, 0.0, -len, 4, 3));        // column -1
+    REQUIRE(!NetPositionOnMap(len, 0.0, len, 4, 3));          // row -1
     REQUIRE(!NetPositionOnMap(4 * len, 0.0, -len, 4, 3));     // one past the east edge
     REQUIRE(!NetPositionOnMap(len, 0.0, -3 * len, 4, 3));     // one past the south edge
-    REQUIRE(!NetPositionOnMap(-0.5, 0.0, -len, 4, 3));        // west of the map
-    REQUIRE(!NetPositionOnMap(len, 0.0, 0.5, 4, 3));          // north of the map
     REQUIRE(!NetPositionOnMap(len, 0.0, -len, 0, 0));         // no map loaded
+    for (double x = -2.5 * len; x <= 5.5 * len; x += len / 8)
+        for (double z = 1.5 * len; z >= -4.5 * len; z -= len / 8)
+            for (double nudge : {0.0, 1e-9, -1e-9})
+                REQUIRE(NetPositionOnMap(x + nudge, 0.0, z + nudge, 4, 3) ==
+                        engineCellOnMap(x + nudge, z + nudge, 4, 3));
     const double nan = std::nan("");
     const double inf = HUGE_VAL;
     REQUIRE(!NetPositionOnMap(nan, 0.0, -len, 4, 3));
     REQUIRE(!NetPositionOnMap(len, nan, -len, 4, 3));
     REQUIRE(!NetPositionOnMap(len, 0.0, -inf, 4, 3));
     REQUIRE(!NetPositionOnMap(1e300, 0.0, -len, 4, 3));
+    REQUIRE(!NetPositionOnMap(-1e300, 0.0, -len, 4, 3));
+    REQUIRE(!NetPositionOnMap(len, 0.0, 1e300, 4, 3));
 
     std::cout << "every wire message clears to zero bytes, padding included; "
                  "scopes and map positions checked\n";

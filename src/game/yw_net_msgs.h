@@ -519,16 +519,20 @@ inline NetMsgScope NetMsgScopeOf(std::uint32_t msgID)
     }
 }
 
-// Whether a world position lies on a map of mapW x mapH sectors, read the
-// way World::PositionToSectorID reads it (x east, -z south). Non-finite
-// coordinates fail: converting them to a sector index is undefined.
+// Whether a world position lies on a map of mapW x mapH sectors, read
+// exactly the way World::PositionToSectorID reads it: column x / length and
+// row -z / length, each truncated toward zero by the conversion to int. So a
+// position less than one sector west or north of the map lands in column or
+// row 0, as it does on the sender. Coordinates that are not finite are off
+// the map: converting them to int is undefined.
 inline bool NetPositionOnMap(double x, double y, double z, int mapW, int mapH)
 {
     if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z))
         return false;
     const double east = x / World::CVSectorLength;
     const double south = -z / World::CVSectorLength;
-    return east >= 0.0 && east < mapW && south >= 0.0 && south < mapH;
+    // Truncated toward zero, v gives a cell in [0, n) exactly when -1 < v < n.
+    return east > -1.0 && east < mapW && south > -1.0 && south < mapH;
 }
 
 #endif
