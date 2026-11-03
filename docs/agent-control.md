@@ -30,6 +30,11 @@ cd /path/to/complete/game
 ./run-openneoua.sh
 ```
 
+For several instances on one machine (one agent directory, virtual display
+and runtime copy each, in a private network namespace), use
+`tools/linux/live/drive.py`; see
+[Linux build](linux-build.md#several-instances-on-one-machine).
+
 Configure the MCP client to run the adapter on the same machine/filesystem:
 
 ```json

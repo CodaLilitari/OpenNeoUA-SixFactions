@@ -34,6 +34,8 @@ PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_faction_audio_manifes
     2>&1 | tee "$lab/logs/faction-audio-tests.log"
 PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_source_revision.py" -v \
     2>&1 | tee "$lab/logs/source-revision-tests.log"
+PYTHONDONTWRITEBYTECODE=1 python3 "$source_root/tests/test_live_harness.py" -v \
+    2>&1 | tee "$lab/logs/live-harness-tests.log"
 ldd "$lab/engine/OpenNeoUA" | tee "$lab/logs/runtime-libraries.log"
 python3 - "$lab/logs/runtime-libraries.log" <<'PY'
 from pathlib import Path

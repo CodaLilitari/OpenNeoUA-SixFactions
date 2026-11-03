@@ -111,6 +111,81 @@ rendered or gameplay worked. Preserve startup logs, inspect the virtual display
 when authorized, and record the executable and data hashes. Menu visibility,
 station control, combat and six-peer networking are separate acceptance steps.
 
+## Several instances on one machine
+
+`tools/linux/live/` runs scripted network matches on one Linux box: every
+instance gets its own virtual display and runtime copy, all of them inside a
+private network namespace, and the [unattended lobby flags](agent-control.md#unattended-lobby-flags)
+walk the lobby. It needs Xvfb, Mesa (llvmpipe), `unshare` and `nsenter`
+(util-linux), Python 3.10 or newer and a complete retail package: the engine
+stops at init without `LOCALE/*.DLL`, `DATA/SET1`..`SET6`, `DATA/SET46`,
+`DATA/FONTS` and `DATA/MC2RES`.
+
+One command starts a three-player match (host, client and a `-bot` client),
+waits until all three passed the start barrier, collects the logs and stops
+everything again:
+
+```sh
+python3 -B tools/linux/live/drive.py match \
+    --retail "/path/to/OpenUA Standalone Package" \
+    --binary /var/tmp/openneoua-build-lab/engine/OpenNeoUA \
+    --lab /var/tmp/openneoua-live --level 100 \
+    --host HOST1:taerkasten --client C1:mykonian --bot BOT1:ghorkov:veteran
+```
+
+The exit code is 0 only when every instance reached the game. The run
+directory (outside any Git checkout) keeps the runtimes, `logs/`, `pids/`,
+one agent directory per instance and `collected-<stamp>/`, whose
+`net-summary.txt` has the netauto, connection, roster and READY lines of every
+instance. Options: `--transport enet` (set for every instance), `--keep` to
+leave the match running for drills, `--sample 10` for a CPU/RSS log
+(`logs/resources.csv`), and `--fresh` after changing the binary's data, the
+maps or the retail package. Levels 200 and 201 are the generated six-start
+maps; `match` generates them from the retail levels on first use.
+`drive.py status --lab DIR` prints every instance's lobby, seat, bot and flag
+state; `drive.py stop --lab DIR` stops a kept match.
+
+What these tools do, and what any other multi-instance setup must do too:
+
+* **One runtime copy per instance** (`assemble_runtime.py`, then real copies).
+  The engine writes `Data/Env`, `Data/Save` and its INI files. Its file system
+  ignores symlinks and takes the first case-insensitive match, so retail
+  `SCRIPTS`, `LEVELS`, `LOCALE`, ... and the repository's `Scripts`, `Levels`,
+  `Locale`, ... are merged into one directory each.
+* **Unattended settings**: `gfx.movie_player = no`, `menu.windowed = on` and
+  `game.new.debug = no`. Retail `DATA/MOV` is left out by default: the first
+  load of the retail SDU7 profile resets the options and writes
+  `gfx.movie_player = yes` back, after which the intro would hold the menu,
+  and the agent bridge, for about a minute.
+* **One Xvfb per instance** (`launch_instance.sh`): focus changes on a shared
+  display cancel agent requests. Software rendering with `LP_NUM_THREADS=1`
+  and null audio.
+* **A private network namespace** (`ns_holder.sh`; enter it with
+  `nsenter -t PID -n`). UDP port 61234 is fixed, so a second match or another
+  program on the box would collide, and the namespace keeps `iptables`
+  partition drills off the host network.
+* **Unique callsigns** without spaces, at most 20 characters.
+* **Logs**: the engine truncates `Data/Env/ypa_log.txt` (log and netlog) at
+  every start; `launch_instance.sh` archives the previous one in `logs/`
+  before it starts an instance again.
+
+Drills on a match started with `--keep` (`LAB` is the run directory):
+
+* Freeze a client: `kill -STOP $(cat LAB/pids/C1.pid)`, later `kill -CONT`.
+* Partition it: `python3 -I tools/linux/live/udp_ports.py $(cat LAB/pids/C1.pid)`
+  prints its UDP port; then
+  `nsenter -t $(cat LAB/pids/netns.bgpid) -n iptables -I INPUT -p udp --sport PORT -j DROP`
+  (and the same with `--dport`); delete both rules with `-D` to heal it.
+* Crash and relaunch it: `kill -9 $(cat LAB/pids/C1.pid)`, then
+  `nsenter -t $(cat LAB/pids/netns.bgpid) -n bash tools/linux/live/launch_instance.sh C1 $(cat LAB/pids/C1.display) LAB/rt-C1 LAB -net-join 127.0.0.1 -net-name C1 -net-ready`.
+  The instance's Xvfb is reused and the crashed engine's log is archived in
+  `logs/` first.
+
+Measured on a shared 2-vCPU, 8 GB box on 2026-11-02 with the retail package:
+about 160 MB resident per instance in the menu; two instances on level 132
+(ZNDNet and ENet) and three on level 100 (host, client, `-bot` client) reached
+the game about ten seconds after launch. Six instances need a bigger machine.
+
 This branch prepares a Linux artifact for later GPT-6 Pro testing if that
 environment becomes available and permits it. It does not claim future access,
 compatible graphics/network capability, a completed upload, or a gameplay test
