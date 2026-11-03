@@ -52,7 +52,8 @@ permission change is performed by the game or adapter.
 | Tool | Behavior |
 |---|---|
 | `game_capabilities` | Reads the explicit engine session and supported operations. |
-| `game_observe` | Captures a completed rendered frame and local-player state. |
+| `game_observe` | Captures a completed rendered frame and local-player, lobby and network state. |
+| `game_status` | Returns the same state as `game_observe` without a screenshot, for cheap polling. |
 | `game_key_press` | Holds a named key for 1–2000 ms, then releases it. |
 | `game_mouse_move` | Uses screenshot pixel coordinates; optional relative `dx`/`dy` move the view. |
 | `game_mouse_click` | Positions the pointer, then holds and releases left, middle or right at that pixel position. |
@@ -68,6 +69,31 @@ permission change is performed by the game or adapter.
 Fork tools are advertised in `session.json` only when the engine has a fork
 session bound to the live world; they step the deterministic fork model, never
 the live simulation, and commit only by replaying an action log fork-to-fork.
+
+## Lobby and network state
+
+Since observation schema 2 (`observation_schema` in `session.json`), every
+`observe` and `status` receipt carries a `net` object once the game world
+exists. It is read-only and mirrors what the multiplayer screens and the
+netlog show, so lobby, drop and rejoin checks need neither screenshots nor
+log scraping:
+
+| Field | Meaning |
+|---|---|
+| `lobby_screen` | Multiplayer screen (`netSelMode`): `provider`, `name`, `address`, `map`, `session`, `session_select`. |
+| `menu_open` | The multiplayer menu is the active shell screen. |
+| `role`, `transport` | `host`, `client` or `none`; `zndnet`, `enet` or `none`. Both are `none` without a transport object (before the host/join choice and after leaving a session). |
+| `name` | Own callsign; once connected, the name the transport assigned (ZNDNet renames a duplicate to `name.NNNN`). |
+| `is_host`, `level_id` | Lobby host flag and the chosen network level (0 = none). |
+| `net_game`, `started` | `_isNetGame` and `_isNetGameStarted` (start barrier passed). |
+| `local_owner`, `player_index` | Owner seated for this process at level load (0 before), and own transport roster index (-1 outside a session). |
+| `can_start`, `problem` | Host: the roster check allows a launch. `netProblem` (0 = none). |
+| `lobby` | Lobby rows in roster order: `slot`, `name`, `faction`, `ready`, `me`, `welcomed`, `conflict`. |
+| `seats` | Per owner of a loaded level: `owner`, `name`, `ready`, `destroyed` (destroy flags), `status` (3 after an explicit quit), `latency_ms`, `silent_ms` (game time since the owner's last message; -1 before the start). |
+| `bots` | Bots run by this process (`-bot`): requested `faction`, `difficulty`, lifecycle `phase` (`lobby`, `joining`, `ready`, `in_game`, `leaving`, `gone`, `takeover`, `reclaiming`) and the `owner` played (0 before the start). |
+
+Factions are owner ids: 1 Resistance, 2 Sulgogars, 3 Mykonian, 4 Taerkasten,
+5 Black Sect, 6 Ghorkov. Callsigns are escaped to plain ASCII JSON.
 
 Observe after an action to establish its effect. A successful action receipt
 means input finished processing, not that the intended button or unit was hit.

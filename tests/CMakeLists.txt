@@ -18,6 +18,8 @@ add_test(NAME tests_survive_ndebug COMMAND ${CMAKE_COMMAND}
 
 add_executable(test_agent_protocol test_agent_protocol.cpp)
 add_test(NAME agent_protocol COMMAND test_agent_protocol)
+add_executable(test_agent_observation test_agent_observation.cpp)
+add_test(NAME agent_observation COMMAND test_agent_observation)
 
 option(OPENNEOUA_AGENT_BRIDGE_TEST "Test native agent files and actual SDL events" OFF)
 option(OPENNEOUA_AGENT_MOUSE_TEST "Also test positioned clicks in a hidden native OpenGL window" OFF)

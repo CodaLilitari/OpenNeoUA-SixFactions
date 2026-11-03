@@ -181,7 +181,8 @@ def schema(properties=None, required=()):
 INT = {'type': 'integer'}
 TOOLS = [
     ('game_capabilities', 'Read the opted-in engine session and supported controls.', schema()),
-    ('game_observe', 'Observe the rendered game and local-player state; returns a native PNG image.', schema()),
+    ('game_observe', 'Observe the rendered game, local-player, lobby and network state; returns a native PNG image.', schema()),
+    ('game_status', 'Read local-player, lobby and network state without a screenshot (cheap polling).', schema()),
     ('game_key_press', 'Press a normal game key for a bounded duration. Debug bindings follow game settings.',
      schema({'key': {'type': 'string', 'enum': list(KEYS)}, 'duration_ms': {'type': 'integer', 'minimum': 1, 'maximum': 2000}}, ('key',))),
     ('game_mouse_move', 'Move in framebuffer pixel coordinates, with optional relative motion for the view.',
@@ -223,6 +224,8 @@ def invoke(bridge, name, args):
         result = bridge.capabilities()
     elif name == 'game_observe':
         result = bridge.command('observe')
+    elif name == 'game_status':
+        result = bridge.command('status')
     elif name == 'game_key_press':
         key = args['key']
         if not isinstance(key, str) or key not in KEYS:

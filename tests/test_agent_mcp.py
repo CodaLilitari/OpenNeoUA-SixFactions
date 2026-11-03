@@ -31,10 +31,12 @@ class AgentMCPTests(unittest.TestCase):
         self.bridge.close()
         self.temp.cleanup()
 
-    def session(self, value=SESSION):
+    def session(self, value=SESSION, operations=None):
+        if operations is None:
+            operations = ['observe', 'status', 'key', 'move', 'click', 'text', 'release',
+                          'fork_create', 'fork_step', 'fork_observe', 'fork_commit', 'fork_discard', 'fork_clone']
         (self.directory / 'session.json').write_text(json.dumps({'protocol': 1, 'session': value,
-            'operations': ['observe', 'key', 'move', 'click', 'text', 'release',
-                           'fork_create', 'fork_step', 'fork_observe', 'fork_commit', 'fork_discard', 'fork_clone']}))
+            'observation_schema': 2, 'operations': operations}))
 
     def response(self, ident, **extras):
         data = {'protocol': 1, 'session': SESSION, 'id': ident, 'ok': True, **extras}
@@ -148,6 +150,45 @@ class AgentMCPTests(unittest.TestCase):
         size = int.from_bytes(png[start - 4:start], 'big')
         self.assertEqual(zlib.decompress(png[start + 4:start + 4 + size]), b'\0' + pixels)
 
+    def test_status_returns_net_state_without_an_image(self):
+        net = {'lobby_screen': 'session', 'role': 'client', 'transport': 'enet', 'name': 'C1',
+               'level_id': 200, 'started': False, 'player_index': 1,
+               'lobby': [{'slot': 0, 'name': 'HOST1', 'faction': 1, 'ready': True, 'me': False},
+                         {'slot': 1, 'name': 'C1', 'faction': 6, 'ready': False, 'me': True}],
+               'seats': [], 'bots': []}
+        seen = []
+        def act(request):
+            seen.extend(request)
+            self.response(int(request[2]), screen='menu', net=net)
+        thread = self.peer(act)
+        result = mcp.invoke(self.bridge, 'game_status', {})
+        thread.join()
+        self.assertEqual(seen[4:], ['status'])
+        self.assertEqual(len(result['content']), 1)
+        self.assertEqual(json.loads(result['content'][0]['text'])['net'], net)
+        self.assertFalse((self.directory / 'frame.ppm').exists())
+
+    def test_status_requires_an_engine_that_advertises_it(self):
+        self.session(operations=['observe', 'key', 'move', 'click', 'text', 'release'])
+        with self.assertRaisesRegex(mcp.AgentError, 'does not advertise operation: status'):
+            mcp.invoke(self.bridge, 'game_status', {})
+        self.assertFalse((self.directory / 'request.txt').exists())
+
+    def test_status_takes_no_arguments(self):
+        with self.assertRaises(mcp.AgentError):
+            mcp.invoke(self.bridge, 'game_status', {'path': 'frame.ppm'})
+        self.assertFalse((self.directory / 'request.txt').exists())
+
+    def test_observe_passes_the_net_state_through(self):
+        (self.directory / 'frame.ppm').write_bytes(b'P6\n1 1\n255\n\0\0\0')
+        net = {'lobby_screen': 'map', 'role': 'host', 'level_id': 0, 'lobby': [], 'seats': [],
+               'bots': [{'faction': 6, 'difficulty': 'veteran', 'phase': 'lobby', 'owner': 0}]}
+        thread = self.peer(lambda r: self.response(int(r[2]), screenshot='frame.ppm', net=net))
+        result = mcp.invoke(self.bridge, 'game_observe', {})
+        thread.join()
+        self.assertEqual(json.loads(result['content'][0]['text'])['net'], net)
+        self.assertEqual(result['content'][1]['mimeType'], 'image/png')
+
     def test_fork_create_writes_fork_request_and_returns_fork_json(self):
         seen = []
         def act(request):
@@ -209,7 +250,8 @@ class AgentMCPTests(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stderr)
         responses = [json.loads(line) for line in p.stdout.splitlines()]
         self.assertEqual([r['id'] for r in responses], [1, 2, 3])
-        self.assertEqual(len(responses[1]['result']['tools']), 13)
+        self.assertEqual(len(responses[1]['result']['tools']), 14)
+        self.assertIn('game_status', [tool['name'] for tool in responses[1]['result']['tools']])
         self.assertIn(SESSION, responses[2]['result']['content'][0]['text'])
 
     def test_oversized_line_cannot_smuggle_a_tail_command(self):

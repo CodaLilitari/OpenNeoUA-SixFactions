@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include "fork_protocol.h"
+#include "net_observation.h"
 union SDL_Event;
 namespace Agent {
 struct Snapshot {
@@ -12,6 +13,7 @@ struct Snapshot {
     uint32_t unitId = 0;
     int prototype = 0, unitOwner = 0, energy = 0, hostEnergy = 0;
     double x = 0, y = 0, z = 0;
+    NetState net;  // reported under "net" when valid
 };
 // Disabled unless OPENNEOUA_AGENT_DIR names an existing absolute directory.
 struct ForkResult {
@@ -24,6 +26,7 @@ using ForkHandler = ForkResult (*)(const ForkCommand &command);
 // requests fail with fork_unavailable and are not advertised in session.json.
 void SetForkHandler(ForkHandler handler);
 void Init();
+bool Enabled();  // an agent directory is active; the engine fills Snapshot::net only then
 void BeforeEvents();
 void BeforeSwap();
 void AfterFrame(const Snapshot &snapshot);

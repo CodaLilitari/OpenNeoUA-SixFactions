@@ -6,7 +6,9 @@
 #include <vector>
 
 namespace Agent {
-enum class Op { Observe, Key, Move, Click, Text, Release };
+// Status is an observation without the screenshot (cheap polling of the
+// lobby, network and local-player state).
+enum class Op { Observe, Key, Move, Click, Text, Release, Status };
 struct Command {
     uint32_t id = 0;
     uint64_t expires = 0;
@@ -61,6 +63,7 @@ inline Parsed Parse(const std::string &line, const std::string &session) {
         return index < tokens.size() && Integer(tokens[index], lo, hi, out);
     };
     if (tokens[3] == "observe" && tokens.size() == 4) c.op = Op::Observe;
+    else if (tokens[3] == "status" && tokens.size() == 4) c.op = Op::Status;
     else if (tokens[3] == "release" && tokens.size() == 4) c.op = Op::Release;
     else if (tokens[3] == "key" && tokens.size() == 6 &&
              number(4, 1, 511, c.a) && number(5, 1, 2000, c.ms)) c.op = Op::Key;

@@ -373,6 +373,7 @@ void Respond(const char *error = nullptr, bool screenshot = false) {
         << ",\"owner\":" << latest.unitOwner << ",\"energy\":" << latest.energy
         << ",\"position\":[" << Finite(latest.x) << ',' << Finite(latest.y) << ',' << Finite(latest.z) << "]}";
     if (latest.localHost) out << ",\"host_energy\":" << latest.hostEnergy;
+    if (latest.net.valid) out << ",\"net\":" << NetStateJson(latest.net);
     out << "}\n";
     cachedResponse = out.str();
     responseDirty = !WriteAtomic("response.json", cachedResponse);
@@ -382,6 +383,7 @@ void Respond(const char *error = nullptr, bool screenshot = false) {
 } // namespace
 
 void SetForkHandler(ForkHandler handler) { forkHandler = handler; }
+bool Enabled() { return enabled; }
 void Init() {
     const char *input = SDL_getenv("OPENNEOUA_AGENT_DIR");
     if (!input || !*input) return;
@@ -400,13 +402,14 @@ void Init() {
     if (envelopeType == static_cast<uint32_t>(-1)) { Shutdown(); return; }
     sequence = Sequence(); pending = held = responseDirty = false; frame = 0;
     lastRequest.clear(); cachedResponse.clear(); nextPoll = 0; completionError.clear(); envelopes.clear();
+    // protocol_minor 1 adds the "status" operation; observation_schema 2 adds "net".
     enabled = WriteAtomic("session.json", "{\"protocol\":1,\"session\":\"" + session +
-        "\",\"protocol_major\":1,\"protocol_minor\":0,\"observation_schema\":1,\"fork\":\"" OPENNEOUA_AGENT_FORK
+        "\",\"protocol_major\":1,\"protocol_minor\":1,\"observation_schema\":2,\"fork\":\"" OPENNEOUA_AGENT_FORK
         "\",\"revision\":\"" OPENNEOUA_AGENT_REVISION "\",\"platform\":\"" + platformName +
         "\",\"architecture\":\"" + architecture + "\",\"capture_available\":" +
         (SDL_GL_GetCurrentWindow() ? "true" : "false") +
         ",\"max_hold_ms\":2000,\"max_request_bytes\":4096,\"coordinates\":\"screenshot_pixels\","
-        + std::string("\"operations\":[\"observe\",\"key\",\"move\",\"click\",\"text\",\"release\"") +
+        + std::string("\"operations\":[\"observe\",\"status\",\"key\",\"move\",\"click\",\"text\",\"release\"") +
         (forkHandler ? ",\"fork_create\",\"fork_step\",\"fork_observe\",\"fork_commit\",\"fork_discard\",\"fork_clone\"" : "") + "]}\n");
     if (!enabled) Shutdown();
 }
@@ -473,7 +476,7 @@ void BeforeEvents() {
     current = parsed.command;
     captureSucceeded = false; capturedPixels.clear();
     completionError.clear(); appliedFrame = 0;
-    if (current.op == Op::Observe || current.op == Op::Release) appliedFrame = frame + 1;
+    if (current.op == Op::Observe || current.op == Op::Status || current.op == Op::Release) appliedFrame = frame + 1;
     pending = true;
     acknowledgeFrame = frame + 1;
     if (!parsed.valid) { Respond(parsed.error.c_str()); return; }
@@ -524,7 +527,8 @@ int EventFilter(void *, SDL_Event *event) {
         (event->type == SDL_MOUSEMOTION && (event->motion.xrel || event->motion.yrel)) ||
         event->type == SDL_CONTROLLERBUTTONDOWN || event->type == SDL_CONTROLLERBUTTONUP ||
         event->type == SDL_CONTROLLERAXISMOTION || event->type == SDL_JOYBUTTONDOWN || event->type == SDL_JOYBUTTONUP;
-    if (!enabled || !pending || (!focusLost && !physical) || current.op == Op::Observe) return 1;
+    if (!enabled || !pending || (!focusLost && !physical) || current.op == Op::Observe ||
+        current.op == Op::Status) return 1;
     completionError = focusLost ? "focus_lost" : "human_override";
     DiscardQueuedAgentEvents();
     acknowledgeFrame = frame + 1;

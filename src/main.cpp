@@ -49,6 +49,7 @@
 #include "agent/bridge.h"
 #include "game/yw_bot.h"
 #include "game/yw_fork.h"
+#include "game/yw_netobserve.h"
 
 namespace
 {
@@ -822,6 +823,8 @@ int main(int argc, char *argv[])
                 snapshot.hostEnergy = host->_energy;
             }
         }
+        if (Agent::Enabled())
+            NetObserve::Fill(ypaworld, snapshot.net);
         Agent::AfterFrame(snapshot);
         BotRuntime::Tick(ypaworld);
         Agent::BeforeEvents();

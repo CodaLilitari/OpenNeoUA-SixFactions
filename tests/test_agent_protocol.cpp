@@ -27,6 +27,9 @@ int main() {
     check(!Agent::Parse("2 " + session + " 5 9999999999999 observe\n", session).valid, "wrong version accepted");
     check(!Agent::Parse("1 " + session + " 5 -1 observe\n", session).valid, "negative expiry accepted");
     check(!Agent::Parse("1 " + session + " 5 10000000000000 observe\n", session).valid, "oversized expiry accepted");
+    auto status = parse("6 status");
+    check(status.valid && status.command.op == Agent::Op::Status && status.command.id == 6, "status request rejected");
+    check(!parse("6 status extra").valid, "status with arguments accepted");
     check(parse("4 move 4095 0 -4095 4095").valid, "valid motion bounds rejected");
     check(parse("5 click 3 0 4095 1").valid, "valid click bounds rejected");
     Agent::Sequence sequence;

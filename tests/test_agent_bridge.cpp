@@ -138,7 +138,49 @@ int main(int argc, char **argv) {
     check(read(root + "/response.json").find("agent_io_failure") != std::string::npos, "I/O failure reported success");
     request("13 key 4 2000", session); check(count(SDL_KEYDOWN) == 1, "shutdown fixture key missing");
     Agent::Shutdown(); check(count(SDL_KEYUP) == 1, "shutdown did not release input through ordinary dispatch");
+    Agent::Shutdown();
+    check(!Agent::Enabled(), "bridge still enabled after shutdown");
+
+    // Observation schema 2: a fresh engine session reports lobby/network state
+    // under "net"; "status" answers without a screenshot and is not cancelled by input.
+    Agent::Init();
+    check(Agent::Enabled(), "bridge not enabled after a second init");
+    const auto meta2 = read(root + "/session.json");
+    check(meta2.find("\"observation_schema\":2") != std::string::npos, "observation schema not bumped");
+    check(meta2.find("\"protocol_minor\":1") != std::string::npos, "protocol minor not bumped for status");
+    check(meta2.find("\"observe\",\"status\",") != std::string::npos, "status operation not advertised");
+    const auto marker2 = meta2.find("\"session\":\"");
+    check(marker2 != std::string::npos, "second session metadata missing");
+    const std::string session2 = meta2.substr(marker2 + 11, 32);
+    check(session2 != session, "second engine session reused the nonce");
+    Agent::Snapshot lobby; lobby.screen = "menu";
+    lobby.net.valid = true; lobby.net.lobbyScreen = "session"; lobby.net.role = "host";
+    lobby.net.transport = "zndnet"; lobby.net.name = "HOST1"; lobby.net.levelId = 200;
+    Agent::LobbyRow row; row.slot = 0; row.name = "H\"1"; row.faction = 1; row.ready = true; row.me = true;
+    lobby.net.lobby.push_back(row);
+    request("1 status", session2);
+    check(read(root + "/response.json").find(session2) == std::string::npos, "status acknowledged before a frame");
+    SDL_Event press = {}; press.type = SDL_KEYDOWN; press.key.keysym.scancode = SDL_SCANCODE_B;
+    check(SDL_PushEvent(&press) == 1, "status override fixture failed");
+    count(SDL_KEYDOWN);
+    Agent::AfterFrame(lobby);
+    const auto status = read(root + "/response.json");
+    check(status.find("\"session\":\"" + session2 + "\",\"id\":1,\"ok\":true") != std::string::npos,
+        "status not acknowledged, or cancelled by physical input");
+    check(status.find("screenshot") == std::string::npos, "status captured or failed a screenshot");
+    check(status.find(",\"net\":{\"lobby_screen\":\"session\",\"menu_open\":false,\"role\":\"host\","
+        "\"transport\":\"zndnet\",\"name\":\"HOST1\"") != std::string::npos, "status lacks the net state");
+    check(status.find("\"lobby\":[{\"slot\":0,\"name\":\"H\\\"1\",\"faction\":1,\"ready\":true,\"me\":true") !=
+        std::string::npos, "lobby row missing or callsign not escaped");
+    request("2 observe", session2); Agent::AfterFrame(lobby);
+    const auto observed = read(root + "/response.json");
+    check(observed.find("\"id\":2,") != std::string::npos && observed.find("screenshot_failed") != std::string::npos,
+        "headless observe did not report its capture failure");
+    check(observed.find(",\"net\":{\"lobby_screen\":\"session\"") != std::string::npos, "observe lacks the net state");
+    Agent::Snapshot plain; plain.screen = "menu";
+    request("3 status", session2); Agent::AfterFrame(plain);
+    check(read(root + "/response.json").find("\"net\"") == std::string::npos, "net reported without a world");
     Agent::Shutdown(); SDL_Quit();
-    std::cout << "PASS: actual SDL queue, native files, post-release acknowledgment, session/replay isolation, paced text, cancellation and honest capture failure\n";
+    std::cout << "PASS: actual SDL queue, native files, post-release acknowledgment, session/replay isolation, paced text, cancellation, honest capture failure and net status\n";
     return 0;
 }
