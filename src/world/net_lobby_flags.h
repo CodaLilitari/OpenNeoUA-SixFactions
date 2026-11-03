@@ -322,7 +322,7 @@ enum class ActionKind
     ChooseLevel,    // select levelId at listIndex in the map list, then OK (code)
     JoinSession,    // connected but not in the session yet: join it
     PressCode,      // a click on widget, reporting code
-    StartAlone,     // the host's start with no other player (the confirm dialog's OK)
+    StartAlone,     // Start (code) for a host with no other player; see Press::startAlone
     Fail,           // stop; message says why
 };
 
@@ -340,12 +340,17 @@ struct Action
 
 // A widget press waiting for the multiplayer screen. The screen takes it in
 // its own input handling, where a click would land (Driver::TakePress), so
-// whatever the press starts runs inside the shell frame like a click.
+// whatever the press starts runs inside the shell frame like a click. That
+// matters for Start: the launch sets the shell's envAction, which the main
+// loop reads right after the shell frame and the next frame clears first, so
+// a launch requested between frames is lost.
 struct Press
 {
     std::uint16_t code = 0;         // the result code a click on the widget reports; 0: none
     int widget = 0;
     Screen screen = Screen::Other;  // the only screen that may take it
+    bool startAlone = false;        // Start for a lone host: launch without the "start alone?"
+                                    // confirmation a click opens (its OK would launch)
 };
 
 class Driver
@@ -363,6 +368,7 @@ public:
         SettleMs = 1500,      // after a faction change, before READY
         StartHoldMs = 2000,   // the start condition must hold this long
         ProgressMs = 15000,
+        StartAttempts = 5,    // Start taken this often in a row, condition held, no launch: fail
     };
 
     // botFaction: the -bot spec's owner, used when -net-faction is absent.
@@ -439,6 +445,7 @@ public:
             press_.code = a.code;
             press_.widget = a.widget;
             press_.screen = v.screen;
+            press_.startAlone = a.kind == ActionKind::StartAlone;
         }
         return a;
     }
@@ -777,21 +784,27 @@ private:
             return Action(); // client: the host starts the match
         if (sent_)
         {
-            // The start was pressed but the lobby is still here: the launch
-            // re-check refused it (roster or readiness changed).
+            // The screen took Start, but the lobby is still here: the launch
+            // re-check refused it (roster or readiness changed in between), or
+            // the press started nothing. Waiting again covers the first; a
+            // start that fails while the condition keeps holding is the second.
             sent_ = false;
             holding_ = false;
-            return Note("the launch was deferred by the roster check; waiting again");
+            if (++failedStarts_ >= StartAttempts)
+                return Fail("Start was taken " + std::to_string(failedStarts_) +
+                            " times in a row while the start condition held, and the match did not start");
+            return Note("the start did not take effect; waiting again");
         }
         const std::size_t count = v.players.size();
         std::size_t ready = 0;
         for (const Player &p : v.players)
             ready += p.ready ? 1 : 0;
         const bool met = count >= static_cast<std::size_t>(o_.startWhen) && ready == count &&
-                         v.rosterCanStart && (count <= 1 || v.okEnabled);
+                         v.rosterCanStart && v.okEnabled;
         if (!met)
         {
             holding_ = false;
+            failedStarts_ = 0;
             if (v.nowMs - lastProgress_ >= ProgressMs)
             {
                 lastProgress_ = v.nowMs;
@@ -808,9 +821,11 @@ private:
         }
         if (v.nowMs - holdSince_ < StartHoldMs)
             return Action();
-        if (count <= 1)
-            return Do(ActionKind::StartAlone, "starting the match alone");
-        Action a = Do(ActionKind::PressCode, "starting the match with " + std::to_string(count) + " players");
+        // Alone, a click on Start only opens the "start alone?" confirmation;
+        // the press says to launch instead, as that dialog's OK would.
+        Action a = count <= 1 ? Do(ActionKind::StartAlone, "starting the match alone")
+                              : Do(ActionKind::PressCode, "starting the match with " + std::to_string(count) +
+                                                          " players");
         a.code = CodeOk;
         a.widget = WidgetOk;
         return a;
@@ -828,6 +843,7 @@ private:
     bool pending_ = false;
     std::uint32_t pendingSince_ = 0;
     int attempts_ = 0;
+    int failedStarts_ = 0; // Start presses in a row that did not start the match
     std::uint32_t since_ = 0;
     std::uint32_t notBefore_ = 0;
     std::uint32_t holdSince_ = 0;

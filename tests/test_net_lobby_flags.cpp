@@ -143,6 +143,9 @@ struct Shell
     std::vector<std::string> notes; // messages
     int launchFrames = -1;          // frames until the start barrier passes
     bool deferNextLaunch = false;
+    bool launchLost = false;        // Start is handled but no launch follows (as when the engine
+                                    // asked for it between frames, where the next frame clears it)
+    bool confirmDialog = false;     // the "start alone?" confirmation is open
     bool stuck = false;             // the screen never takes a pressed widget
 
     Shell()
@@ -257,13 +260,23 @@ struct Shell
                     Me().ready = true;
                 }
                 if (c == CodeOk && v.isHost)
-                    Launch();
+                {
+                    // Alone, a click on Start only opens the confirmation.
+                    if (v.players.size() <= 1 && !press.startAlone)
+                    {
+                        confirmDialog = true;
+                        trace.push_back("confirm-dialog");
+                    }
+                    else
+                        Launch();
+                }
             }
         }
         Roster();
         Widgets();
     }
 
+    // Only a press handled inside Frame() launches, as in the engine.
     void Launch()
     {
         if (deferNextLaunch || !v.rosterCanStart)
@@ -271,6 +284,8 @@ struct Shell
             deferNextLaunch = false;
             return;
         }
+        if (launchLost)
+            return;
         v.shellOpen = false; // the level loads, then the start barrier holds the frame
         launchFrames = 3;
     }
@@ -309,8 +324,7 @@ struct Shell
             trace.push_back("code:" + std::to_string(a.code));
             break;
         case ActionKind::StartAlone:
-            trace.push_back("start-alone");
-            Launch();
+            trace.push_back("start-alone"); // queued in the driver like any press
             break;
         case ActionKind::Fail:
             trace.push_back("fail");
@@ -392,10 +406,12 @@ static void TestHostFlow()
     s.deferNextLaunch = true;
     s.Run(d, 100, 50, [&] { return s.trace.back() == "code:1200"; });
     Require(s.trace.back() == "code:1200", "host never pressed Start");
+    Require(d.queued().code == CodeOk && d.queued().widget == WidgetOk && !d.queued().startAlone,
+            "Start with three players is not a plain press of the Start button");
     s.Run(d, 5);
     reported = false;
     for (const std::string &n : s.notes)
-        reported = reported || Contains(n, "deferred");
+        reported = reported || Contains(n, "did not take effect; waiting again");
     Require(reported && d.step() == Step::WaitStart, "a deferred launch was not noticed");
     s.Run(d, 200);
     Require(d.step() == Step::InGame, "match did not start: " + s.Trace());
@@ -548,10 +564,54 @@ static void TestHostProblems()
         Require(d.step() == Step::Failed && Contains(d.error(), "pass -net-name"), "unusable profile callsign used");
     }
     {
+        // Alone, Start is pressed like any widget and launches in the shell's
+        // own frame; a plain press would only open the confirmation.
         Driver d(P({"-net-host", "200", "-net-name", "SOLO", "-net-start-when", "1"}));
         Shell s;
+        s.Run(d, 300, 50, [&] { return d.queued().code != 0 && d.step() == Step::WaitStart; });
+        Require(d.queued().code == CodeOk && d.queued().widget == WidgetOk && d.queued().startAlone &&
+                d.queued().screen == Screen::Session, "a lone host's Start is not a marked press: " + s.Trace());
+        Require(!s.v.started && s.v.shellOpen, "the match started before the screen took Start");
         s.Run(d, 300);
-        Require(d.step() == Step::InGame && s.trace.back() == "start-alone", "single-player start: " + s.Trace());
+        Require(d.step() == Step::InGame && s.trace.back() == "start-alone" && !s.confirmDialog,
+                "single-player start: " + s.Trace() + " / " + d.error());
+    }
+    {
+        // A Start that is taken but never launches (as when the launch is
+        // asked for between frames) must not be retried until a harness
+        // timeout: the driver gives up after StartAttempts presses.
+        Driver d(P({"-net-host", "200", "-net-name", "SOLO", "-net-start-when", "1"}));
+        Shell s;
+        s.launchLost = true;
+        s.Run(d, 2000);
+        int starts = 0;
+        for (const std::string &t : s.trace)
+            starts += t == "start-alone" ? 1 : 0;
+        Require(d.step() == Step::Failed && Contains(d.error(), "the match did not start") &&
+                starts == Driver::StartAttempts, "lost launches retried " + std::to_string(starts) +
+                " times: " + d.error());
+        Require(d.queued().code == 0, "a press is left after giving up on the start");
+    }
+    {
+        // Deferred launches while the lobby keeps changing do not count up:
+        // only a start that fails with the condition holding does.
+        Driver d(P({"-net-host", "200", "-net-name", "HOST1", "-net-start-when", "2"}));
+        Shell s;
+        s.Run(d, 100, 50, [&] { return d.step() == Step::WaitStart; });
+        s.v.players.push_back(Remote("C1", 3, true));
+        for (int round = 0; round < Driver::StartAttempts + 2; ++round)
+        {
+            s.deferNextLaunch = true;
+            s.Run(d, 200, 50, [&] { return d.queued().code != 0; });
+            s.Run(d, 3);
+            s.v.players.back().ready = false; // the client unticks Ready, then ticks it again
+            s.Run(d, 3);
+            s.v.players.back().ready = true;
+        }
+        Require(d.step() == Step::WaitStart, "deferred launches in a changing lobby made the host give up: " +
+                d.error());
+        s.Run(d, 200);
+        Require(d.step() == Step::InGame, "the match did not start after the lobby settled: " + s.Trace());
     }
     {
         Driver d(P({"-net-host", "200", "-net-name", "HOST1", "-net-start-when", "2"}));

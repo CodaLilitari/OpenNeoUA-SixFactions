@@ -23,6 +23,7 @@ namespace {
 namespace Flags = World::NetLobbyFlags;
 
 std::unique_ptr<Flags::Driver> g_driver; // holds a widget press until the screen takes it
+bool g_startAlone = false; // the press taken in this shell frame is a lone host's Start
 
 void Log(const std::string &line)
 {
@@ -149,11 +150,9 @@ void Execute(NC_STACK_ypaworld *world, const Flags::Action &a)
     case Flags::ActionKind::JoinSession:
         usr.JoinLobbyLessGame();      // what ConnectToServer runs after a connect
         break;
-    case Flags::ActionKind::PressCode:
-        break;                        // faction button, Ready (1208) or Start (1200): queued in the driver
-    case Flags::ActionKind::StartAlone:
-        usr.sub_46DC1C();             // the "start alone?" confirmation's OK
-        break;
+    case Flags::ActionKind::PressCode:  // faction button, Ready (1208) or Start (1200)
+    case Flags::ActionKind::StartAlone: // Start (1200) that launches without the confirmation
+        break;                          // queued in the driver: the screen takes it in its frame
     default:
         break;
     }
@@ -198,6 +197,7 @@ bool InitFromCmdLine()
 
 void Tick(NC_STACK_ypaworld *world)
 {
+    g_startAlone = false; // only for the shell frame that took the press, which is over
     if (!g_driver || !world || !world->_GameShell)
         return;
     const Flags::Step before = g_driver->step();
@@ -218,15 +218,18 @@ void Tick(NC_STACK_ypaworld *world)
 void Shutdown()
 {
     g_driver.reset();
+    g_startAlone = false;
 }
 
 std::uint16_t TakeNetworkCode(NC_STACK_button *networkButtons, int netSelMode)
 {
+    g_startAlone = false;
     if (!g_driver)
         return 0;
     const Flags::Press press = g_driver->TakePress(ScreenOf(netSelMode));
     if (!press.code)
         return 0;
+    g_startAlone = press.startAlone;
     if (press.widget == Flags::WidgetReady && networkButtons)
     {
         // The checkbox shows what a click would have left it showing.
@@ -236,6 +239,13 @@ std::uint16_t TakeNetworkCode(NC_STACK_button *networkButtons, int netSelMode)
         networkButtons->SetState(&state);
     }
     return press.code;
+}
+
+bool TakeStartAlone()
+{
+    const bool startAlone = g_startAlone;
+    g_startAlone = false;
+    return startAlone;
 }
 
 bool Active()

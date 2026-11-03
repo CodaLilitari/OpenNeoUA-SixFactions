@@ -3469,8 +3469,13 @@ void UserData::GameShellUiHandleInput()
 
                     if ( p_YW->_netDriver->GetPlayerCount() <= 1 )
                     {
-                        ShowConfirmDialog(2, Locale::Text::Advanced(Locale::ADV_WANTSTART)
-                                    , Locale::Text::Advanced(Locale::ADV_NETALONE), 0);
+                        // -net-start-when 1 answers the confirmation itself, in
+                        // this frame like the dialog's OK (yw_netauto.h).
+                        if ( NetAuto::TakeStartAlone() )
+                            sub_46DC1C();
+                        else
+                            ShowConfirmDialog(2, Locale::Text::Advanced(Locale::ADV_WANTSTART)
+                                        , Locale::Text::Advanced(Locale::ADV_NETALONE), 0);
                     }
                     else
                     {

@@ -130,7 +130,7 @@ work without the agent bridge; with it, `net.auto` reports their progress.
 | `-net-name <callsign>` | The callsign: no spaces, no `*`, at most 20 characters. Without it the profile's callsign is used and checked the same way. |
 | `-net-faction <faction>` | Owner number 1-6 or `resistance`, `sulgogars`, `mykonian`, `taerkasten`, `black-sect`, `ghorkov`. A client chooses only after every other player's WELCOME arrived. With `-bot` and no `-net-faction`, the bot's faction is chosen when it is on the level and free; otherwise the lobby's choice stays. |
 | `-net-ready` | Client: tick Ready once the faction has settled and the Ready box is enabled. |
-| `-net-start-when <n>` | Host: press Start once at least n players are in the lobby, all of them ready, and the roster check has passed for 2 s. With n = 1 the host starts alone. |
+| `-net-start-when <n>` | Host: press Start once at least n players are in the lobby, all of them ready, and the roster check has passed for 2 s. With n = 1 and nobody else in the lobby the host starts alone, without the "start alone?" confirmation a click opens. |
 
 ```text
 OpenNeoUA -net-host 132 -net-name HOST1 -net-faction resistance -net-start-when 3
@@ -141,7 +141,10 @@ OpenNeoUA -bot Ghorkov:Veteran -net-join 192.168.1.10 -net-name BOT1 -net-ready
 The flags press only what a player could press at that moment (enabled
 widgets) and go through the same handlers: the host/join choice, the name and
 address fields' OK, the level list and `AfterMapChoose`, `ConnectToServer`, the
-faction buttons, Ready (code 1208) and Start (code 1200). Each step is logged
+faction buttons, Ready (code 1208) and Start (code 1200; for a lone host the
+handler launches as the confirmation's OK would). A press waits for the
+multiplayer screen's own input handling in the next frame, where a click would
+land, so a launch happens inside the shell frame as with a click. Each step is logged
 as `netauto: ...` in `Data/Env/ypa_log.txt`; `net.auto.step` is one of
 `wait_menu`, `provider`, `name`, `address`, `map`, `faction`, `ready`,
 `in_session`, `wait_start`, `in_game` or `failed`. Bad input stops them with a
@@ -150,9 +153,11 @@ interactive: an unknown, repeated or value-less flag, a callsign with a space
 or more than 20 characters, an unknown faction or level, a faction that is not
 on the level or already taken, or a level with fewer starts than
 `-net-start-when`. A step that does not take effect stops them the same way,
-for example a widget press that the screen has not taken within 15 s, or a
-screen that changed before it took the press; once they have stopped they
-press nothing more. They act once; after the match has started nothing more
+for example a widget press that the screen has not taken within 15 s, a
+screen that changed before it took the press, or a Start that was taken five
+times in a row while the start condition held without the match starting (a
+launch refused because the lobby changed in between is retried); once they
+have stopped they press nothing more. They act once; after the match has started nothing more
 happens. Without a `-net-*` flag nothing changes.
 
 A failed connection attempt is logged with its reason in the netlog:
