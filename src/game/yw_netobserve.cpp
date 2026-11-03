@@ -119,7 +119,9 @@ void Fill(NC_STACK_ypaworld *world, Agent::NetState &out)
         seat.destroyFlags = player.DestroyFlags;
         seat.status = player.Status;
         seat.latencyMs = player.Latency;
-        if (world->_isNetGameStarted)
+        // Own messages never refresh the own seat's time, so it has no
+        // meaningful silence (the watchdog skips it too).
+        if (world->_isNetGameStarted && owner != usr.netPlayerOwner)
         {
             const long long silent = static_cast<long long>(world->_updateMessage.gTime) -
                                      static_cast<long long>(player.LastMessageTime);

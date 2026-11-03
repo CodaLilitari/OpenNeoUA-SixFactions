@@ -29,7 +29,8 @@ struct Seat {
     int destroyFlags = 0;    // non-zero once the owner's station was removed
     int status = 0;          // 3 after an explicit quit (EXIT)
     int latencyMs = 0;
-    int silentMs = -1;       // game ms since the owner's last message; -1 before start
+    int silentMs = -1;       // game ms since the owner's last message; -1 before the
+                             // start and for the own seat
 };
 // One bot controller run by this process.
 struct BotInfo {
