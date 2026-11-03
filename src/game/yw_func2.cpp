@@ -3285,7 +3285,7 @@ void UserData::GameShellUiHandleInput()
 
     // Unattended lobby flags (-net-*, yw_netauto.h) press the same widgets.
     if ( !r && EnvMode == ENVMODE_NETPLAY )
-        r = NC_STACK_button::ResCode( NetAuto::TakeNetworkCode(network_button) );
+        r = NC_STACK_button::ResCode( NetAuto::TakeNetworkCode(network_button, netSelMode) );
 
     if ( r )
     {

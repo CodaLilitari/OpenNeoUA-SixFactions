@@ -149,7 +149,10 @@ as `netauto: ...` in `Data/Env/ypa_log.txt`; `net.auto.step` is one of
 interactive: an unknown, repeated or value-less flag, a callsign with a space
 or more than 20 characters, an unknown faction or level, a faction that is not
 on the level or already taken, or a level with fewer starts than
-`-net-start-when`. They act once; after the match has started nothing more
+`-net-start-when`. A step that does not take effect stops them the same way,
+for example a widget press that the screen has not taken within 15 s, or a
+screen that changed before it took the press; once they have stopped they
+press nothing more. They act once; after the match has started nothing more
 happens. Without a `-net-*` flag nothing changes.
 
 A failed connection attempt is logged with its reason in the netlog:

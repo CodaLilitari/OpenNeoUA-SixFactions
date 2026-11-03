@@ -126,13 +126,13 @@ static void TestParse()
     Require(failed.Next(title).kind == ActionKind::None && failed.step() == Step::Failed, "failed driver acted");
 }
 
-// A small model of the multiplayer shell: widget codes are processed on the
-// next frame like a click, direct calls take effect at once.
+// A small model of the multiplayer shell. As in the engine, the screen takes
+// the driver's queued press in its own frame, where a click would land, and
+// handles it then; direct calls (menu, host/join choice) take effect at once.
 struct Shell
 {
     LobbyView v;
     bool hostMode = false;
-    std::uint16_t code = 0;
     std::string text;
     int level = 0;
     int listIndex = -1;
@@ -185,17 +185,19 @@ struct Shell
         return none;
     }
 
-    void Frame()
+    void Frame(Driver &d)
     {
         if (launchFrames > 0 && --launchFrames == 0)
         {
             v.started = true;
             v.shellOpen = false;
         }
-        if (code && !stuck)
+        // The multiplayer screen's input handling: nobody clicks here, so it
+        // takes the press the flags queued, if one was made on this screen.
+        const Press press = v.shellOpen && v.netMenu && !stuck ? d.TakePress(v.screen) : Press();
+        if (press.code)
         {
-            const std::uint16_t c = code;
-            code = 0;
+            const std::uint16_t c = press.code;
             if (v.screen == Screen::Name && c == CodeOk)
             {
                 v.profileCallsign = text;
@@ -258,7 +260,6 @@ struct Shell
                     Launch();
             }
         }
-        v.actionPending = code != 0;
         Roster();
         Widgets();
     }
@@ -293,12 +294,10 @@ struct Shell
             trace.push_back(a.host ? "provider:host" : "provider:join");
             break;
         case ActionKind::SubmitText:
-            code = a.code;
-            text = a.text;
+            text = a.text;            // the field's text; the OK press is queued in the driver
             trace.push_back("text:" + a.text);
             break;
         case ActionKind::ChooseLevel:
-            code = a.code;
             level = a.levelId;
             listIndex = a.listIndex;
             trace.push_back("level:" + std::to_string(a.levelId) + "@" + std::to_string(a.listIndex));
@@ -307,7 +306,6 @@ struct Shell
             trace.push_back("join-session");
             break;
         case ActionKind::PressCode:
-            code = a.code;
             trace.push_back("code:" + std::to_string(a.code));
             break;
         case ActionKind::StartAlone:
@@ -318,7 +316,6 @@ struct Shell
             trace.push_back("fail");
             break;
         }
-        v.actionPending = code != 0;
     }
 
     // Runs frames of frameMs until the driver stops at a terminal step or a
@@ -328,7 +325,7 @@ struct Shell
     {
         for (int i = 0; i < frames; ++i)
         {
-            Frame();
+            Frame(d);
             v.nowMs += frameMs;
             Apply(d.Next(v));
             if (until() || d.step() == Step::Failed || d.step() == Step::InGame)
@@ -574,6 +571,9 @@ static void TestHostProblems()
         s.Run(d, 1000, 50);
         Require(d.step() == Step::Failed && Contains(d.error(), "did not take the pressed widget") &&
                 s.trace.back() == "fail", "a widget press that never lands was waited for forever: " + d.error());
+        // The game is interactive again: the press must not land later.
+        Require(d.queued().code == 0 && d.TakePress(s.v.screen).code == 0,
+                "a failed driver still holds its press");
     }
     {
         Driver d(P({"-net-host", "200", "-net-name", "HOST1"}));
@@ -581,6 +581,57 @@ static void TestHostProblems()
         s.v.titleScreen = false; // some other menu screen, never the main menu
         s.Run(d, 3000, 50);
         Require(d.step() == Step::Failed && Contains(d.error(), "main menu"), "missing main menu not reported");
+    }
+}
+
+// The queued press: only its own screen takes it, once, and nothing is left
+// queued after the driver stopped.
+static void TestPressBookkeeping()
+{
+    {
+        // Start (1200) is queued, then the lobby is left (Escape) before the
+        // screen took it: the press must not land on the next screen.
+        Driver d(P({"-net-host", "200", "-net-name", "HOST1", "-net-start-when", "2"}));
+        Shell s;
+        s.Run(d, 100, 50, [&] { return d.step() == Step::WaitStart; });
+        s.v.players.push_back(Remote("C1", 3, true));
+        s.Run(d, 200, 50, [&] { return d.queued().code != 0; });
+        Require(d.queued().code == CodeOk && d.queued().widget == WidgetOk && d.queued().screen == Screen::Session,
+                "Start was not queued for the session screen: " + s.Trace());
+        s.v.netMenu = false;
+        s.v.titleScreen = true;
+        s.v.screen = Screen::Provider;
+        s.Apply(d.Next(s.v));
+        Require(d.step() == Step::Failed && Contains(d.error(), "changed before it took"),
+                "a press orphaned by leaving the lobby was not reported: " + d.error());
+        s.v.netMenu = true; // the player opens the multiplayer menu again
+        Require(d.queued().code == 0 && d.TakePress(Screen::Provider).code == 0 &&
+                d.TakePress(Screen::Session).code == 0, "the orphaned press is still queued");
+    }
+    {
+        // A press made on one screen is never handed to another one.
+        Driver d(P({"-net-join", "127.0.0.1", "-net-name", "C1", "-net-faction", "4"}));
+        Shell s;
+        s.remote = {Remote("HOST1", 1, true)};
+        s.v.welcomed = true;
+        s.Run(d, 300, 50, [&] { return d.queued().code != 0 && d.step() == Step::Faction; });
+        Require(d.queued().code == FactionCode(4), "the faction press was not queued: " + s.Trace());
+        Require(d.TakePress(Screen::Map).code == 0 && d.queued().code == FactionCode(4),
+                "a press was handed to another screen");
+        const Press taken = d.TakePress(Screen::Session);
+        Require(taken.code == FactionCode(4) && taken.widget == FactionWidget(4), "the press was not handed out");
+        Require(d.queued().code == 0 && d.TakePress(Screen::Session).code == 0, "a press was handed out twice");
+    }
+    {
+        // The match started: nothing more is pressed.
+        Driver d(P({"-net-join", "127.0.0.1", "-net-name", "C1", "-net-ready"}));
+        Shell s;
+        s.remote = {Remote("HOST1", 1, true)};
+        s.v.welcomed = true;
+        s.Run(d, 300, 50, [&] { return d.step() == Step::WaitStart; });
+        s.v.started = true;
+        s.Run(d, 2);
+        Require(d.step() == Step::InGame && d.queued().code == 0, "a press is queued after the start");
     }
 }
 
@@ -593,6 +644,7 @@ int main()
     TestJoinFailures();
     TestFactionProblems();
     TestHostProblems();
+    TestPressBookkeeping();
     std::cout << "PASS: -net-* parsing, validation and the host/client lobby drivers\n";
     return 0;
 }

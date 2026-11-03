@@ -26,9 +26,11 @@ bool InitFromCmdLine();            // after BotRuntime::InitFromCmdLine (uses th
 void Tick(NC_STACK_ypaworld *world); // once per main-loop frame
 void Shutdown();
 
-// Called by the multiplayer screen when no widget was clicked this frame:
-// the result code the flags press, or 0. Marks the Ready checkbox it presses.
-std::uint16_t TakeNetworkCode(NC_STACK_button *networkButtons);
+// Called by the multiplayer screen's input handling when no widget was
+// clicked this frame: the result code the flags press on this screen
+// (netSelMode), or 0. A press made on another screen is never handed out, and
+// none is left once the flags failed. Marks the Ready checkbox it presses.
+std::uint16_t TakeNetworkCode(NC_STACK_button *networkButtons, int netSelMode);
 
 bool Active();                     // -net-* flags were given
 const char *StepName();

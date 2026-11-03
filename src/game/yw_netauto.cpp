@@ -22,9 +22,7 @@ namespace NetAuto {
 namespace {
 namespace Flags = World::NetLobbyFlags;
 
-std::unique_ptr<Flags::Driver> g_driver;
-std::uint16_t g_pendingCode = 0; // widget result code for the next multiplayer-screen frame
-int g_pendingWidget = 0;
+std::unique_ptr<Flags::Driver> g_driver; // holds a widget press until the screen takes it
 
 void Log(const std::string &line)
 {
@@ -68,7 +66,6 @@ void BuildView(NC_STACK_ypaworld *world, Flags::LobbyView &v)
     const auto &regions = world->_globalMapRegions.MapRegions;
 
     v.nowMs = SDL_GetTicks();
-    v.actionPending = g_pendingCode != 0;
     v.shellOpen = usr.HasInited;
     v.titleScreen = usr.EnvMode == ENVMODE_TITLE;
     v.netMenu = usr.EnvMode == ENVMODE_NETPLAY;
@@ -136,10 +133,8 @@ void Execute(NC_STACK_ypaworld *world, const Flags::Action &a)
         usr.yw_NetOKProvider();
         break;
     case Flags::ActionKind::SubmitText:
-        usr.netName = a.text;         // the name or address field, then OK (1200)
+        usr.netName = a.text;         // the name or address field; the driver then presses OK (1200)
         usr.netNameCurPos = static_cast<int16_t>(usr.netName.size());
-        g_pendingCode = a.code;
-        g_pendingWidget = a.widget;
         break;
     case Flags::ActionKind::ChooseLevel:
         for (const UserData::TMapDescription &desc : usr.mapDescriptions)
@@ -149,17 +144,13 @@ void Execute(NC_STACK_ypaworld *world, const Flags::Action &a)
                 usr.netLevelName = desc.pstring;
                 break;
             }
-        usr.netSel = static_cast<int16_t>(a.listIndex); // list entry, then OK -> AfterMapChoose
-        g_pendingCode = a.code;
-        g_pendingWidget = a.widget;
+        usr.netSel = static_cast<int16_t>(a.listIndex); // list entry; OK (1200) -> AfterMapChoose
         break;
     case Flags::ActionKind::JoinSession:
         usr.JoinLobbyLessGame();      // what ConnectToServer runs after a connect
         break;
     case Flags::ActionKind::PressCode:
-        g_pendingCode = a.code;       // faction button, Ready (1208) or Start (1200)
-        g_pendingWidget = a.widget;
-        break;
+        break;                        // faction button, Ready (1208) or Start (1200): queued in the driver
     case Flags::ActionKind::StartAlone:
         usr.sub_46DC1C();             // the "start alone?" confirmation's OK
         break;
@@ -189,8 +180,6 @@ std::string Plan(const Flags::Options &o, int faction)
 bool InitFromCmdLine()
 {
     g_driver.reset();
-    g_pendingCode = 0;
-    g_pendingWidget = 0;
     const Flags::Options options = Flags::Parse(System::GetCmdLineArray());
     if (!options.any)
         return false;
@@ -229,16 +218,16 @@ void Tick(NC_STACK_ypaworld *world)
 void Shutdown()
 {
     g_driver.reset();
-    g_pendingCode = 0;
-    g_pendingWidget = 0;
 }
 
-std::uint16_t TakeNetworkCode(NC_STACK_button *networkButtons)
+std::uint16_t TakeNetworkCode(NC_STACK_button *networkButtons, int netSelMode)
 {
-    const std::uint16_t code = g_pendingCode;
-    if (!code)
+    if (!g_driver)
         return 0;
-    if (g_pendingWidget == Flags::WidgetReady && networkButtons)
+    const Flags::Press press = g_driver->TakePress(ScreenOf(netSelMode));
+    if (!press.code)
+        return 0;
+    if (press.widget == Flags::WidgetReady && networkButtons)
     {
         // The checkbox shows what a click would have left it showing.
         NC_STACK_button::button_66arg state;
@@ -246,9 +235,7 @@ std::uint16_t TakeNetworkCode(NC_STACK_button *networkButtons)
         state.field_4 = 1;
         networkButtons->SetState(&state);
     }
-    g_pendingCode = 0;
-    g_pendingWidget = 0;
-    return code;
+    return press.code;
 }
 
 bool Active()

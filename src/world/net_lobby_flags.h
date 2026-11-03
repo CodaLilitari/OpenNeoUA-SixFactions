@@ -3,7 +3,8 @@
 // walks the multiplayer screens. SDL- and engine-free so it can be unit-tested
 // (tests/test_net_lobby_flags.cpp). src/game/yw_netauto.cpp fills a LobbyView
 // from the shell every frame and carries out the returned Action through the
-// same code paths a player's clicks reach.
+// same code paths a player's clicks reach. A widget press stays queued in the
+// Driver until the multiplayer screen takes it during its own input handling.
 #ifndef WORLD_NET_LOBBY_FLAGS_H_INCLUDED
 #define WORLD_NET_LOBBY_FLAGS_H_INCLUDED
 
@@ -290,7 +291,6 @@ struct Level
 struct LobbyView
 {
     std::uint32_t nowMs = 0;
-    bool actionPending = false;     // the last widget code has not been processed yet
     bool shellOpen = false;         // the menu shell is up (not a level or replay)
     bool titleScreen = false;       // main menu
     bool netMenu = false;           // the multiplayer menu is the active screen
@@ -333,9 +333,19 @@ struct Action
     std::string text;
     int levelId = 0;
     int listIndex = -1;
-    std::uint16_t code = 0;
+    std::uint16_t code = 0;         // non-zero: the driver queues this press (see Press)
     int widget = 0;
     std::string message;
+};
+
+// A widget press waiting for the multiplayer screen. The screen takes it in
+// its own input handling, where a click would land (Driver::TakePress), so
+// whatever the press starts runs inside the shell frame like a click.
+struct Press
+{
+    std::uint16_t code = 0;         // the result code a click on the widget reports; 0: none
+    int widget = 0;
+    Screen screen = Screen::Other;  // the only screen that may take it
 };
 
 class Driver
@@ -374,6 +384,7 @@ public:
     Step step() const { return step_; }
     const std::string &error() const { return error_; }
     int wantedFaction() const { return want_; }
+    const Press &queued() const { return press_; } // the press not taken yet (code 0: none)
 
     Action Next(const LobbyView &v)
     {
@@ -386,11 +397,17 @@ public:
         }
         if (v.started)
         {
+            press_ = Press();
             Enter(Step::InGame, v);
             return Note("the match started");
         }
-        if (v.actionPending)
+        if (press_.code)
         {
+            // Only the screen the press was made on takes it (TakePress). Once
+            // that screen or the menu is gone, nothing ever will, and a press
+            // left queued would land on whatever screen opens next.
+            if (!v.netMenu || v.screen != press_.screen)
+                return Fail("the multiplayer screen changed before it took the pressed widget");
             if (!pending_)
             {
                 pending_ = true;
@@ -403,19 +420,40 @@ public:
         pending_ = false;
         if (!v.shellOpen || Before(v.nowMs, notBefore_))
             return Action();
+        Action a;
         switch (step_)
         {
-        case Step::WaitMenu:  return WaitMenu(v);
-        case Step::Provider:  return Provider(v);
-        case Step::Name:      return Name(v);
-        case Step::Address:   return Address(v);
-        case Step::Map:       return Map(v);
-        case Step::Faction:   return Faction(v);
-        case Step::Ready:     return Ready(v);
-        case Step::WaitStart: return WaitStart(v);
-        case Step::InSession: return InSession(v);
-        default:              return Action();
+        case Step::WaitMenu:  a = WaitMenu(v); break;
+        case Step::Provider:  a = Provider(v); break;
+        case Step::Name:      a = Name(v); break;
+        case Step::Address:   a = Address(v); break;
+        case Step::Map:       a = Map(v); break;
+        case Step::Faction:   a = Faction(v); break;
+        case Step::Ready:     a = Ready(v); break;
+        case Step::WaitStart: a = WaitStart(v); break;
+        case Step::InSession: a = InSession(v); break;
+        default:              break;
         }
+        if (a.code && step_ != Step::Failed)
+        {
+            press_.code = a.code;
+            press_.widget = a.widget;
+            press_.screen = v.screen;
+        }
+        return a;
+    }
+
+    // For the multiplayer screen's input handling, once per shell frame in
+    // which no widget was clicked: the queued press if screen is the one it
+    // was made on, else nothing. Taking it clears it. A driver that failed or
+    // finished has nothing queued.
+    Press TakePress(Screen screen)
+    {
+        if (!press_.code || screen != press_.screen)
+            return Press();
+        const Press press = press_;
+        press_ = Press();
+        return press;
     }
 
 private:
@@ -443,6 +481,7 @@ private:
     {
         step_ = Step::Failed;
         error_ = message;
+        press_ = Press(); // the game is interactive again: nothing may press later
         Action a;
         a.kind = ActionKind::Fail;
         a.message = message;
@@ -780,6 +819,7 @@ private:
     Options o_;
     Step step_ = Step::Off;
     std::string error_;
+    Press press_;
     int want_ = 0;
     bool explicit_ = false;
     bool began_ = false;
