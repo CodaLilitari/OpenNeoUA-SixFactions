@@ -25,6 +25,7 @@
 #include "platform/windp.h"
 #include "platform/wav.h"
 #include "game/yw_net.h"
+#include "world/net_lobby.h"
 #include "gui/uacommon.h"
 #include "gui/root.h"
 #include "gui/uamsgbox.h"
@@ -298,7 +299,8 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
 
         if ( usr->isHost )
         {
-            usr->lobbyPlayers[ _netDriver->GetMyIndex() ].Ready = true;
+            if ( UserData::TNetPlayerLobbyData *row = World::NetLobby::RowAt(usr->lobbyPlayers, _netDriver->GetMyIndex()) )
+                row->Ready = true;
             usr->rdyStart = true;
             usr->netSelMode = UserData::NETSCREEN_CHOOSE_MAP;
         }
@@ -308,7 +310,8 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
         }
 
         for(uint32_t i = 0; i < _netDriver->GetPlayerCount(); i++)
-            _GameShell->lobbyPlayers[i].Name = _netDriver->GetPlayerName(i);
+            if ( UserData::TNetPlayerLobbyData *row = World::NetLobby::RowAt(_GameShell->lobbyPlayers, i) )
+                row->Name = _netDriver->GetPlayerName(i);
 
         usr->update_time_norm = 400;
         usr->flush_time_norm = 400;

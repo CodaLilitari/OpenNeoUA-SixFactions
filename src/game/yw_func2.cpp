@@ -28,6 +28,7 @@
 #include "common/utils.h"
 #include "nucleus/IFFile.h"
 #include "world/gunrotation.h"
+#include "world/net_lobby.h"
 #include "game/yw_shell_menus.h"
 #include "game/model_preview.h"
 
@@ -3491,10 +3492,8 @@ void UserData::GameShellUiHandleInput()
 
                 rdyStart = true;
 
-                int myIndex = p_YW->_netDriver->GetMyIndex();
-
-                if (myIndex >= 0)
-                    lobbyPlayers[myIndex].Ready = true;
+                if ( TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, p_YW->_netDriver->GetMyIndex()) )
+                    row->Ready = true;
 
                 rdyMsg.msgID = UAMSG_READY;
                 rdyMsg.owner = 0;
@@ -3511,10 +3510,8 @@ void UserData::GameShellUiHandleInput()
 
                 rdyStart = false;
 
-                int myIndex = p_YW->_netDriver->GetMyIndex();
-
-                if (myIndex >= 0)
-                    lobbyPlayers[myIndex].Ready = false;
+                if ( TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, p_YW->_netDriver->GetMyIndex()) )
+                    row->Ready = false;
 
                 rdyMsg.msgID = UAMSG_READY;
                 rdyMsg.owner = 0;

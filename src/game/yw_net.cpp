@@ -2,6 +2,7 @@
 #include "world/net_faction_selection.h"
 #include "world/net_restore.h"
 #include "world/net_building_units.h"
+#include "world/net_lobby.h"
 // Multiplayer game logic: message handling and synchronisation of units and sectors.
 #include <stdlib.h>
 #include <string.h>
@@ -958,6 +959,19 @@ NC_STACK_ypabact * yw_netFindReorderUnit(NC_STACK_ypabact *bact_host, uint32_t I
 
     yw_netReportError(bact_host, ID);
     return nullptr;
+}
+
+// The lobby row of transport user `index`, or nullptr. -1 means the user is
+// not in the transport's list; an index past the rows means the transport
+// holds more users than the lobby (an ENet resume skips the capacity check),
+// which is logged.
+static UserData::TNetPlayerLobbyData *yw_netLobbyRow(UserData *usr, int64_t index)
+{
+    UserData::TNetPlayerLobbyData *row = World::NetLobby::RowAt(usr->lobbyPlayers, index);
+    if ( !row && index >= 0 )
+        log_netlog("Transport user %lld has no lobby row (%zu rows): ignored\n",
+                   static_cast<long long>(index), usr->lobbyPlayers.size());
+    return row;
 }
 
 // A network level is loaded from the moment ypaworld_func179 seats the local
@@ -2527,12 +2541,9 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         yw->_GameShell->FreeFraction &= ~frMsg->newfrac;
         yw->_GameShell->FreeFraction |= frMsg->freefrac;
 
-        int32_t indx = yw->_netDriver->GetPlayerIndex( msg->senderName );
-        if ( indx != -1 )
-        {
-            yw->_GameShell->lobbyPlayers[indx].NetFraction = frMsg->newfrac;
-            break;
-        }
+        if ( UserData::TNetPlayerLobbyData *row =
+                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex( msg->senderName )) )
+            row->NetFraction = frMsg->newfrac;
     }
     break;
 
@@ -2544,15 +2555,15 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
 
-        int32_t indx = yw->_netDriver->GetPlayerIndex( msg->senderName );
-        if ( indx != -1 )
+        if ( UserData::TNetPlayerLobbyData *row =
+                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex( msg->senderName )) )
         {
             if ( yw->_GameShell->remoteMode )
-                yw->_GameShell->FreeFraction |= yw->_GameShell->lobbyPlayers[indx].NetFraction;
+                yw->_GameShell->FreeFraction |= row->NetFraction;
 
-            yw->_GameShell->lobbyPlayers[indx].NetFraction = wmMsg->fraction;
-            yw->_GameShell->lobbyPlayers[indx].Ready = wmMsg->rdy;
-            yw->_GameShell->lobbyPlayers[indx].Welcomed = true;
+            row->NetFraction = wmMsg->fraction;
+            row->Ready = wmMsg->rdy;
+            row->Welcomed = true;
         }
 
         const auto selection = World::NetFactions::SelectionAfterWelcome(
@@ -2584,12 +2595,9 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
 
-        int32_t index = yw->_netDriver->GetPlayerIndex( msg->senderName );
-        if ( index != -1 )
-        {
-            yw->_GameShell->lobbyPlayers[index].Ready = rdMsg->rdy;
-            break;
-        }
+        if ( UserData::TNetPlayerLobbyData *row =
+                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex( msg->senderName )) )
+            row->Ready = rdMsg->rdy;
     }
     break;
 
@@ -2794,7 +2802,8 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         int32_t index = yw->_netDriver->GetPlayerIndex( lobbyMsg->hostName );
         if ( index != -1 )
         {
-            yw->_GameShell->lobbyPlayers[index].Ready = true;
+            if ( UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(yw->_GameShell, index) )
+                row->Ready = true;
             break;
         }
 
@@ -3054,9 +3063,9 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
 
-        int32_t index = yw->_netDriver->GetPlayerIndex(msg->senderName);
-        if ( index != -1 )
-            yw->_GameShell->lobbyPlayers[index].DataChecksum = crcMsg->checksum;
+        if ( UserData::TNetPlayerLobbyData *row =
+                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex(msg->senderName)) )
+            row->DataChecksum = crcMsg->checksum;
 
         yw->_GameShell->takTime = 0;
     }
@@ -3367,11 +3376,13 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     if ( usr->netLevelID )
                         yw->SendCRC(usr->netLevelID);
 
-                    int plid = yw->_netDriver->GetPlayerCount();
+                    const int64_t plid = yw->_netDriver->GetPlayerCount();
 
-
-                    usr->lobbyPlayers[plid - 1].Name = recvMsg.senderName;
-                    usr->lobbyPlayers[plid - 1].Welcomed = true;
+                    if ( UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(usr, plid - 1) )
+                    {
+                        row->Name = recvMsg.senderName;
+                        row->Welcomed = true;
+                    }
                 }
                 break;
 
@@ -3443,9 +3454,8 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                         usr->rdyStart = true;
                         usr->blocked = false;
 
-                        int32_t index = yw->_netDriver->GetMyIndex();
-                        if ( index != -1 )
-                            usr->lobbyPlayers[index].Ready = true;
+                        if ( UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(usr, yw->_netDriver->GetMyIndex()) )
+                            row->Ready = true;
                     }
                     break;
 
@@ -3630,6 +3640,10 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
             return false;
         }
 
+        UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(_GameShell, plData.Index);
+        if ( !row )
+            return false;
+
         int selFraction;
 
         if ( plData.IsItMe() )
@@ -3638,7 +3652,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
         }
         else
         {
-            selFraction = _GameShell->lobbyPlayers[plData.Index].NetFraction;
+            selFraction = row->NetFraction;
         }
 
         if ( selFraction == 0 )
@@ -3655,7 +3669,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
         }
 
         selHost = nullptr;
-        _GameShell->lobbyPlayers[plData.Index].Owner = owner;
+        row->Owner = owner;
 
         for ( const MapRobo &host: Robos )
         {

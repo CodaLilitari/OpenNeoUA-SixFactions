@@ -1,5 +1,6 @@
 #include "world/net_factions.h"
 #include "world/net_protocol.h"
+#include "world/net_lobby.h"
 // Multiplayer provider layer (sessions, players, messages) used by the network game.
 #include <inttypes.h>
 #include <stdio.h>
@@ -877,14 +878,17 @@ void UserData::AfterMapChoose()
             network_listvw.firstShownEntries = 0;
             network_listvw.selectedEntry = 0;
 
-            int plid = p_YW->_netDriver->GetPlayerCount();
+            const int64_t plid = p_YW->_netDriver->GetPlayerCount();
+            TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, plid - 1);
 
-            lobbyPlayers[ plid - 1 ].Name = cp.name;
+            if ( row )
+                row->Name = cp.name;
 
             yw_FractionInit();
 
             rdyStart = true;
-            lobbyPlayers[ plid - 1].Ready = true;
+            if ( row )
+                row->Ready = true;
         }
     }
 }
@@ -954,11 +958,15 @@ void UserData::yw_JoinNetGame()
 
                 for(TDPPlayerData &p : p_YW->_netDriver->GetPlayersData())
                 {
-                    lobbyPlayers[p.Index].Name = p.name;
+                    TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, p.Index);
+                    if ( !row )
+                        continue;
+
+                    row->Name = p.name;
 
                     if (p.IsItMe())
                     {
-                        lobbyPlayers[p.Index].Name += "X";
+                        row->Name += "X";
                     }
                 }
 
@@ -981,9 +989,8 @@ void UserData::yw_JoinNetGame()
                 }
 
                 rdyStart = false;
-                int32_t myIndex = p_YW->_netDriver->GetMyIndex();
-                if (myIndex != -1)
-                    lobbyPlayers[myIndex].Ready = false;
+                if ( TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, p_YW->_netDriver->GetMyIndex()) )
+                    row->Ready = false;
 
                 p_YW->SendCRC(netLevelID);
             }
@@ -1054,11 +1061,15 @@ void UserData::JoinLobbyLessGame()
 
             for(TDPPlayerData &p : p_YW->_netDriver->GetPlayersData())
             {
-                lobbyPlayers[p.Index].Name = p.name;
+                TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, p.Index);
+                if ( !row )
+                    continue;
+
+                row->Name = p.name;
 
                 if (p.IsItMe())
                 {
-                    lobbyPlayers[p.Index].Name += "X";
+                    row->Name += "X";
                 }
             }
 
@@ -1113,11 +1124,15 @@ void UserData::JoinLobbyLessGame()
 
                 for(TDPPlayerData &p : p_YW->_netDriver->GetPlayersData())
                 {
-                    lobbyPlayers[p.Index].Name = p.name;
+                    TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, p.Index);
+                    if ( !row )
+                        continue;
+
+                    row->Name = p.name;
 
                     if (p.IsItMe())
                     {
-                        lobbyPlayers[p.Index].Name += "X";
+                        row->Name += "X";
                     }
                 }
 
@@ -1140,9 +1155,8 @@ void UserData::JoinLobbyLessGame()
                 }
 
                 rdyStart = false;
-                int32_t myIndex = p_YW->_netDriver->GetMyIndex();
-                if (myIndex != -1)
-                    lobbyPlayers[myIndex].Ready = false;
+                if ( TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, p_YW->_netDriver->GetMyIndex()) )
+                    row->Ready = false;
 
                 p_YW->SendCRC(netLevelID);
             }
@@ -1300,9 +1314,13 @@ void UserData::yw_NetPrintStartInfo()
             {
                 id = SelectedFraction;
             }
+            else if ( const TNetPlayerLobbyData *row = World::NetLobby::RowAt(lobbyPlayers, i) )
+            {
+                id = row->NetFraction;
+            }
             else
             {
-                id = lobbyPlayers[i].NetFraction;
+                id = 0;
             }
 
             std::string name = p_YW->_netDriver->GetPlayerName(i);
