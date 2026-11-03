@@ -111,6 +111,11 @@ rendered or gameplay worked. Preserve startup logs, inspect the virtual display
 when authorized, and record the executable and data hashes. Menu visibility,
 station control, combat and six-peer networking are separate acceptance steps.
 
+This branch prepares a Linux artifact for later GPT-6 Pro testing if that
+environment becomes available and permits it. It does not claim future access,
+compatible graphics/network capability, a completed upload, or a gameplay test
+in that environment.
+
 ## Several instances on one machine
 
 `tools/linux/live/` runs scripted network matches on one Linux box: every
@@ -180,14 +185,15 @@ Drills on a match started with `--keep` (`LAB` is the run directory):
 * Crash and relaunch it: `kill -9 $(cat LAB/pids/C1.pid)`, then
   `nsenter -t $(cat LAB/pids/netns.bgpid) -n bash tools/linux/live/launch_instance.sh C1 $(cat LAB/pids/C1.display) LAB/rt-C1 LAB -net-join 127.0.0.1 -net-name C1 -net-ready`.
   The instance's Xvfb is reused and the crashed engine's log is archived in
-  `logs/` first.
+  `logs/` first. Rejoining a running match does not exist yet (the rejoin
+  work in the netcode design): today the relaunched client enters the still
+  open session as a new player, and a client without a loaded level can
+  crash on the first in-game sector message. Leave out `-net-join` to bring
+  it back to the menu only.
 
 Measured on a shared 2-vCPU, 8 GB box on 2026-11-02 with the retail package:
-about 160 MB resident per instance in the menu; two instances on level 132
-(ZNDNet and ENet) and three on level 100 (host, client, `-bot` client) reached
-the game about ten seconds after launch. Six instances need a bigger machine.
-
-This branch prepares a Linux artifact for later GPT-6 Pro testing if that
-environment becomes available and permits it. It does not claim future access,
-compatible graphics/network capability, a completed upload, or a gameplay test
-in that environment.
+about 160 MB resident per instance in the menu. Two instances on level 132
+(ZNDNet and ENet), and three (host, client, `-bot` client) on level 100
+(ZNDNet and ENet) and on the generated levels 200 and 201 (ZNDNet), reached
+the game about ten seconds after launch. These runs stop at the start; they
+are not played matches. Six instances need a bigger machine.
