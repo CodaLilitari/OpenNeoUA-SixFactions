@@ -786,6 +786,7 @@ void UserData::AfterMapChoose()
             pl.DataChecksum = 0;
 
         uamessage_setLevel msg_slvl;
+        NetMsgClear(msg_slvl);
         msg_slvl.lvlID = netLevelID;
         msg_slvl.msgID = UAMSG_SETLEVEL;
         msg_slvl.owner = 0;
@@ -831,6 +832,7 @@ void UserData::AfterMapChoose()
         }
 
         uamessage_lobbyInit limsg;
+        NetMsgClear(limsg);
         limsg.lvlID = netLevelID;
         limsg.msgID = UAMSG_LOBBYINIT;
         limsg.owner = 0;

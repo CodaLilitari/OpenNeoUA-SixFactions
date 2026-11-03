@@ -689,6 +689,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                     newbact->_commandID |= newbact->_owner << 24;
 
                     uamessage_newVhcl nvMsg;
+                    NetMsgClear(nvMsg);
                     nvMsg.msgID = UAMSG_NEWVHCL;
                     nvMsg.owner = newbact->_owner;
                     nvMsg.pos = newbact->_position;
@@ -748,6 +749,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                     newbact2->_gid |= newbact2->_owner << 24;
 
                     uamessage_newVhcl nvMsg;
+                    NetMsgClear(nvMsg);
                     nvMsg.msgID = UAMSG_NEWVHCL;
                     nvMsg.owner = newbact2->_owner;
                     nvMsg.pos = newbact2->_position;
@@ -789,6 +791,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
                 if ( _world->_isNetGame )
                 {
                     uamessage_startBuild sbMsg;
+                    NetMsgClear(sbMsg);
                     sbMsg.msgID = UAMSG_STARTBUILD;
                     sbMsg.owner = _owner;
                     sbMsg.bproto = arg->protoID;
@@ -816,6 +819,7 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
             if ( _world->_isNetGame )
             {
                 uamessage_startBeam stbMsg;
+                NetMsgClear(stbMsg);
                 stbMsg.msgID = UAMSG_STARTBEAM;
                 stbMsg.owner = _owner;
                 stbMsg.id = _gid;

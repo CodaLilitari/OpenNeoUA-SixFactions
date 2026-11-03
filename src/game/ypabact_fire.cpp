@@ -694,6 +694,7 @@ size_t NC_STACK_ypabact::LaunchMissile(bact_arg79 *arg)
         }
 
         uamessage_newWeapon wpnMsg;
+        NetMsgClear(wpnMsg);
         wpnMsg.targetPos = missileArg.tgt_pos;
 
         if ( v42 == 2 )

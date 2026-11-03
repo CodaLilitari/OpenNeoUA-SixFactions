@@ -1788,6 +1788,7 @@ void sub_47C29C(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
     if ( yw->_isNetGame && yw->_netExclusiveGem )
     {
         uamessage_upgrade upMsg;
+        NetMsgClear(upMsg);
         upMsg.msgID = UAMSG_UPGRADE;
         upMsg.owner = yw->_GameShell->netPlayerOwner;
         upMsg.enable = 1;
@@ -1827,6 +1828,7 @@ void ypaworld_func129__sub1(NC_STACK_ypaworld *yw, cellArea *cell, int a3)
     if ( yw->_isNetGame )
     {
         uamessage_upgrade upMsg;
+        NetMsgClear(upMsg);
         upMsg.msgID = UAMSG_UPGRADE;
         upMsg.owner = yw->_GameShell->netPlayerOwner;
         upMsg.enable = 0;

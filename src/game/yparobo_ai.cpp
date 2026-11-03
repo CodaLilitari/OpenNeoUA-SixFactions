@@ -1148,6 +1148,7 @@ NC_STACK_ypabact *NC_STACK_yparobo::AllocForce(robo_loct1 *arg)
             newUnit->_commandID |= newUnit->_owner << 24;
 
             uamessage_newVhcl nvMsg;
+            NetMsgClear(nvMsg);
 
             nvMsg.msgID = UAMSG_NEWVHCL;
             nvMsg.owner = newUnit->_owner;
@@ -2173,6 +2174,7 @@ void NC_STACK_yparobo::checkCommander()
                     if ( enemy )
                     {
                         uamessage_logmsg logMsg;
+                        NetMsgClear(logMsg);
                         logMsg.msgID = UAMSG_LOGMSG;
                         logMsg.owner = _owner;
                         logMsg.sender = enemy->_gid;

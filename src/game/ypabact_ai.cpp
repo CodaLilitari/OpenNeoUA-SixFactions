@@ -2885,6 +2885,7 @@ void NC_STACK_ypabact::sub_493480(NC_STACK_ypabact *bact2, int mode)
     if ( _world->_isNetGame )
     {
         static uamessage_reorder ordMsg;
+        NetMsgClear(ordMsg);
 
         ordMsg.comm = bact2->_gid;
         ordMsg.num = 0;

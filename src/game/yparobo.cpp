@@ -423,6 +423,7 @@ void NC_STACK_yparobo::InitForce(NC_STACK_ypabact *unit)
         newUnit->_gid |= newUnit->_owner << 24;
 
         uamessage_newVhcl nvMsg;
+        NetMsgClear(nvMsg);
         nvMsg.msgID = UAMSG_NEWVHCL;
         nvMsg.owner = newUnit->_owner;
         nvMsg.pos = newUnit->_position;
@@ -742,6 +743,7 @@ void NC_STACK_yparobo::doBeamUpdate(int a2)
         if ( _world->_isNetGame )
         {
             uamessage_endBeam ebMsg;
+            NetMsgClear(ebMsg);
             ebMsg.msgID = UAMSG_ENDBEAM;
             ebMsg.owner = _owner;
             ebMsg.id = _gid;
@@ -1486,6 +1488,7 @@ void NC_STACK_yparobo::Die()
     int a4 = getBACT_yourLastSeconds();
 
     uamessage_hostDie hdMsg;
+    NetMsgClear(hdMsg);
 
     if ( !(_status_flg & BACT_STFLAG_DEATH1) )
     {
@@ -2149,6 +2152,7 @@ void NC_STACK_yparobo::DeadTimeUpdate(update_msg *arg)
         if ( _world->_isNetGame )
         {
             uamessage_startPlasma sbMsg;
+            NetMsgClear(sbMsg);
             sbMsg.msgID = UAMSG_STARTPLASMA;
             sbMsg.owner = _owner;
             sbMsg.scale = 0.75;

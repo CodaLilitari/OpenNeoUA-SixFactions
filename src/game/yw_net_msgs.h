@@ -11,6 +11,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <new>
+#include <type_traits>
 
 #include "common/matrix.h"
 #include "common/types.h"
@@ -473,5 +476,21 @@ YWNET_WIRE_SIZE(uamessage_endproblem, 20);
 YWNET_WIRE_SIZE(uamessage_cd, 20);
 YWNET_WIRE_SIZE(uamessage_score, 240);
 #undef YWNET_WIRE_SIZE
+
+// Outgoing messages go onto the wire byte for byte, padding included, and
+// default member values do not touch padding: IMPULSE, STARTPLASMA,
+// SECTORENERGY, STARTBEAM, WELCOME, SETLEVEL, the BUILDINGVHCL records and the
+// UPDATE and VHCLDATA_E records all have holes that would carry whatever the
+// stack held. NetMsgClear() fills a message with zero bytes and then applies
+// its default member values again. Every sender calls it before setting
+// fields, also on the static buffers that are reused for each send.
+template <typename T>
+inline void NetMsgClear(T &msg)
+{
+    static_assert(std::is_trivially_copyable<T>::value && std::is_trivially_destructible<T>::value,
+                  "network messages are raw byte copies");
+    std::memset(static_cast<void *>(&msg), 0, sizeof(T));
+    ::new (static_cast<void *>(&msg)) T;
+}
 
 #endif

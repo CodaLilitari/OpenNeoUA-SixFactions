@@ -756,6 +756,7 @@ size_t NC_STACK_ypabact::Init(IDVList &stak)
                 case BACT_ATT_VIEWER:
                 {
                     uamessage_viewer viewMsg;
+                    NetMsgClear(viewMsg);
 
                     if ( val.Get<int32_t>() )
                     {
@@ -2261,6 +2262,7 @@ void NC_STACK_ypabact::SetState(setState_msg *arg)
             if ( v6 && _owner && _bact_type != BACT_TYPES_MISSLE )
             {
                 uamessage_setState ssMsg;
+                NetMsgClear(ssMsg);
                 ssMsg.msgID = UAMSG_SETSTATE;
                 ssMsg.owner = _owner;
                 ssMsg.id = _gid;
@@ -2874,6 +2876,7 @@ void NC_STACK_ypabact::Release()
             if ( _bact_type != BACT_TYPES_MISSLE )
             {
                 uamessage_destroyVhcl destrMsg;
+                NetMsgClear(destrMsg);
 
                 destrMsg.msgID = UAMSG_DESTROYVHCL;
                 destrMsg.owner = _owner;
@@ -3348,6 +3351,7 @@ void NC_STACK_ypabact::ypabact_func123(update_msg *upd)
 void NC_STACK_ypabact::setBACT_viewer(bool vwr)
 {
     uamessage_viewer viewMsg;
+    NetMsgClear(viewMsg);
 
     if ( !vwr )
         ResetAlternativeView();

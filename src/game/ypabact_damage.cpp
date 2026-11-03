@@ -423,6 +423,7 @@ void NC_STACK_ypabact::Die()
     int maxx = _world->getYW_mapSizeX();
 
     uamessage_dead deadMsg;
+    NetMsgClear(deadMsg);
     deadMsg.msgID = UAMSG_DEAD;
     deadMsg.owner = _owner;
     deadMsg.id = _gid;
@@ -1434,6 +1435,7 @@ void NC_STACK_ypabact::ModifyEnergy(bact_arg84 *arg)
     if ( isNetGame && friendlyFire == false )
     {
         uamessage_vhclEnergy vhclEnrgy;
+        NetMsgClear(vhclEnrgy);
         vhclEnrgy.msgID = UAMSG_VHCLENERGY;
         vhclEnrgy.owner = _owner;
         vhclEnrgy.id = _gid;
@@ -1784,6 +1786,7 @@ bool NC_STACK_ypabact::CollectPlasmaFrom(NC_STACK_ypabact *source)
     if ( _world->_isNetGame )
     {
         uamessage_endPlasma epMsg;
+        NetMsgClear(epMsg);
         epMsg.msgID = UAMSG_ENDPLASMA;
         epMsg.owner = source->_owner;
         epMsg.id = source->_gid;
@@ -2102,6 +2105,7 @@ void NC_STACK_ypabact::ChangeSectorEnergy(yw_arg129 *arg)
     if ( _world->_isNetGame )
     {
         uamessage_sectorEnergy seMsg;
+        NetMsgClear(seMsg);
         seMsg.msgID = UAMSG_SECTORENERGY;
         seMsg.owner = _owner;
         seMsg.pos = arg->pos;
@@ -2240,6 +2244,7 @@ void NC_STACK_ypabact::DeadTimeUpdate(update_msg *arg)
                 if ( _world->_isNetGame )
                 {
                     uamessage_startPlasma splMsg;
+                    NetMsgClear(splMsg);
                     splMsg.msgID = UAMSG_STARTPLASMA;
                     splMsg.owner = _owner;
                     splMsg.scale = 0.75;

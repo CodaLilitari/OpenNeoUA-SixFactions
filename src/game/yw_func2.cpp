@@ -939,6 +939,7 @@ void UserData::sub_46DC1C()
     }
 
     uamessage_load lvlMsg;
+    NetMsgClear(lvlMsg);
     lvlMsg.msgID = UAMSG_LOAD;
     lvlMsg.owner = 0;
     lvlMsg.level = netLevelID;
@@ -3276,6 +3277,7 @@ void UserData::GameShellUiHandleInput()
     }
 
     uamessage_fraction fracMsg;
+    NetMsgClear(fracMsg);
 
     r = network_button->ProcessWidgetsEvents(Input);
 
@@ -3485,6 +3487,7 @@ void UserData::GameShellUiHandleInput()
             else if ( r.code == 1208 )
             {
                 uamessage_ready rdyMsg;
+                NetMsgClear(rdyMsg);
 
                 rdyStart = true;
 
@@ -3504,6 +3507,7 @@ void UserData::GameShellUiHandleInput()
             else if ( r.code == 1209 )
             {
                 uamessage_ready rdyMsg;
+                NetMsgClear(rdyMsg);
 
                 rdyStart = false;
 
@@ -3531,6 +3535,7 @@ void UserData::GameShellUiHandleInput()
                 if ( !netName.empty() )
                 {
                     uamessage_message msgMsg;
+                    NetMsgClear(msgMsg);
                     msgMsg.msgID = UAMSG_MESSAGE;
                     msgMsg.owner = 0;
 
@@ -3737,6 +3742,7 @@ void UserData::GameShellUiHandleInput()
                     if ( !netName.empty() )
                     {
                         uamessage_message msgMsg;
+                        NetMsgClear(msgMsg);
                         msgMsg.msgID = UAMSG_MESSAGE;
                         msgMsg.owner = 0;
 

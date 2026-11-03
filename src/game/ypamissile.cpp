@@ -1745,6 +1745,7 @@ void NC_STACK_ypamissile::Impact()
     if ( _world->_isNetGame && hasLegacyImpulseTarget )
     {
         uamessage_impulse impMsg;
+        NetMsgClear(impMsg);
         impMsg.msgID = UAMSG_IMPULSE;
         impMsg.p[0] = modernPushWeapon ? 1 : 0;
         impMsg.p[1] = (uint8_t)cellRadius;

@@ -53,6 +53,7 @@ void SendChat(NC_STACK_ypaworld *world, const char *line)
     if (!World::NetBot::ValidBotChatLine(line))
         return;
     uamessage_message msg;
+    NetMsgClear(msg);
     msg.msgID = UAMSG_MESSAGE;
     msg.owner = static_cast<std::uint8_t>(world->GetPlayerOwner());
     std::strncpy(msg.message, line, sizeof(msg.message) - 1);
@@ -148,6 +149,7 @@ bool RequestLeave(NC_STACK_ypaworld *world)
     if (!g_lifecycle.OnLeaveRequested())
         return false;
     uamessage_exit msg;
+    NetMsgClear(msg);
     msg.msgID = UAMSG_EXIT;
     msg.norm = 1;
     msg.owner = static_cast<std::uint8_t>(world->GetPlayerOwner());

@@ -1656,6 +1656,7 @@ NC_STACK_ypabact *NC_STACK_ypaworld::FindLiveBactByGid(int32_t gid)
 void NC_STACK_ypaworld::sb_0x456384(const Common::Point &cellId, int ownerid2, int blg_id, int a7)
 {
     uamessage_bldVhcl bvMsg;
+    NetMsgClear(bvMsg);
 
     cellArea &cell = _cells(cellId);
     World::TBuildingProto *bld = &_buildProtos[ blg_id ];

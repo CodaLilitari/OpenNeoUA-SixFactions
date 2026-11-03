@@ -114,6 +114,7 @@ void NC_STACK_ypaworld::SendCRC(int lvlid)
     _GameShell->netCRC = crc;
 
     uamessage_crc crcmsg;
+    NetMsgClear(crcmsg);
     crcmsg.msgID = UAMSG_CRC;
     crcmsg.owner = _GameShell->netPlayerOwner;
     crcmsg.checksum = crc;
@@ -761,6 +762,7 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
     }
 
     static uamessage_update updinf;
+    NetMsgClear(updinf);
 
     NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(owner);
 
@@ -774,7 +776,8 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
         updinf.data, sizeof(updinf.data) / sizeof(updinf.data[0]));
     const auto append = [&](uint8_t type, NC_STACK_ypabact *bact)
     {
-        vhclUpdData record = {};
+        vhclUpdData record;
+        NetMsgClear(record);
         yw_netAddVhclUpdData(&record, type, bact);
         return writer.Append(record);
     };
@@ -2503,6 +2506,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         }
 
         uamessage_fraction frMsg;
+        NetMsgClear(frMsg);
         frMsg.msgID = UAMSG_FRACTION;
         frMsg.freefrac = 0;
         frMsg.newfrac = yw->_GameShell->SelectedFraction;
@@ -2989,6 +2993,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             break;
 
         uamessage_ping pongMsg;
+        NetMsgClear(pongMsg);
         pongMsg.owner = yw->_GameShell->netPlayerOwner;
         pongMsg.msgID = UAMSG_PONG;
         pongMsg.timestamp = pingMsg->timestamp;
@@ -3024,6 +3029,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             yw->_GameShell->latencyCheck = 5;
 
             uamessage_startproblem prblm;
+            NetMsgClear(prblm);
             prblm.owner = yw->_GameShell->netPlayerOwner;
             prblm.msgID = UAMSG_STARTPROBLEM;
             prblm.problem = 1;
@@ -3157,11 +3163,13 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
         uamessage_vhclData *vhcldata;
         if ( yw->_netInterpolate )
         {
+            NetMsgClear(vhcldata_interpolate);
             vhcldata = &vhcldata_interpolate;
             vhcldata_interpolate.msgID = UAMSG_VHCLDATA_I;
         }
         else
         {
+            NetMsgClear(vhcldata_exact);
             vhcldata = &vhcldata_exact;
             vhcldata_exact.msgID = UAMSG_VHCLDATA_E;
         }
@@ -3190,6 +3198,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
             if ( usr->sendScoreCountDown < 0 )
             {
                 uamessage_score scoreMsg;
+                NetMsgClear(scoreMsg);
                 scoreMsg.owner = usr->netPlayerOwner;
                 scoreMsg.msgID = UAMSG_SCORE;
 
@@ -3246,6 +3255,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                         if ( usr->netLevelID > 0 && usr->netLevelID < 256 )
                         {
                             uamessage_lobbyInit lbyMsg;
+                            NetMsgClear(lbyMsg);
                             strncpy(lbyMsg.hostName, usr->netPlayerName.c_str(), sizeof(lbyMsg.hostName) - 1); // Always NUL-terminated.
                             lbyMsg.hostName[sizeof(lbyMsg.hostName) - 1] = 0;
                             lbyMsg.msgID = UAMSG_LOBBYINIT;
@@ -3257,6 +3267,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     }
 
                     uamessage_welcome wlcmMsg;
+                    NetMsgClear(wlcmMsg);
                     wlcmMsg.owner = 0;
                     wlcmMsg.msgID = UAMSG_WELCOME;
                     wlcmMsg.fraction = usr->SelectedFraction;
@@ -3431,6 +3442,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                                 log_netlog("Drastic Error: Request Update from %s\n", err_sender.c_str());
 
                                 uamessage_requpdate updMsg;
+                                NetMsgClear(updMsg);
                                 updMsg.msgID = UAMSG_REQUPDATE;
                                 updMsg.owner = usr->netPlayerOwner;
 
@@ -3748,6 +3760,7 @@ size_t NC_STACK_ypaworld::ypaworld_func179(yw_arg161 *arg)
     if ( fndHost )
     {
         uamessage_syncgame syncMsg;
+        NetMsgClear(syncMsg);
         syncMsg.owner = _GameShell->netPlayerOwner;
         syncMsg.msgID = UAMSG_SYNCGM;
         syncMsg.hostID = fndHost->_gid;
@@ -3825,6 +3838,7 @@ void yw_NetHandleProblems(NC_STACK_ypaworld *yw)
             if ( usr->isHost )
             {
                 uamessage_endproblem eProblm;
+                NetMsgClear(eProblm);
                 eProblm.owner = usr->netPlayerOwner;
                 eProblm.msgID = UAMSG_ENDPROBLEM;
                 eProblm.solved = 3;
@@ -3910,6 +3924,7 @@ int yw_NetCheckPlayers(NC_STACK_ypaworld *yw)
                         if ( usr->isHost )
                         {
                             uamessage_kick msgKk;
+                            NetMsgClear(msgKk);
                             msgKk.owner = plr->Owner;
                             msgKk.msgID = UAMSG_KICK;
                             strcpy(msgKk.text, plr->Name.c_str());
@@ -4026,6 +4041,7 @@ int yw_NetCheckPlayersInGame(NC_STACK_ypaworld *yw)
         if ( yw->_netStartTimer <= 0 && usr->isHost )
         {
             uamessage_kick msgKk;
+            NetMsgClear(msgKk);
             strcpy(msgKk.text, pl->Name.c_str());
             msgKk.msgID = UAMSG_KICK;
             msgKk.owner = pl->Owner;
@@ -4092,6 +4108,7 @@ void yw_NetCheckPing(NC_STACK_ypaworld *yw)
             usr->latencyCheck = 2000;
 
         uamessage_ping rPing;
+        NetMsgClear(rPing);
         rPing.owner = usr->netPlayerOwner;
         rPing.msgID = UAMSG_REQPING;
         rPing.timestamp = yw->_timeStamp;

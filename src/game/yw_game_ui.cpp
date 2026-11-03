@@ -1220,6 +1220,7 @@ GuiBase * ypaworld_func64__sub7__sub6__sub1()
 void NC_STACK_ypaworld::NetSendExitMsg(uint8_t normExit)
 {
     uamessage_exit exMsg;
+    NetMsgClear(exMsg);
     exMsg.msgID = UAMSG_EXIT;
     exMsg.owner = _GameShell->netPlayerOwner;
     exMsg.norm = normExit;

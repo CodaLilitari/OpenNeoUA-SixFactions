@@ -188,6 +188,7 @@ void NC_STACK_ypacar::DoKamikaze()
                                     v63 = 1;
 
                                     uamessage_vhclEnergy veMsg;
+                                    NetMsgClear(veMsg);
                                     veMsg.msgID = UAMSG_VHCLENERGY;
                                     veMsg.tstamp = _world->_timeStamp;
                                     veMsg.owner = v19->_owner;
