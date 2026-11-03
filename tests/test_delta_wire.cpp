@@ -1,5 +1,5 @@
 #include "../src/world/delta_wire.h"
-#include <cassert>
+#include "require.h"
 #include <cstring>
 using namespace World::Fork;
 
@@ -47,44 +47,44 @@ int main() {
     ForkConfig cfg;
     auto base = Fork::Create(MakeState(80, false, 1), cfg, ForkId{1});
     auto next = Fork::Create(MakeState(55, true, 6), cfg, ForkId{2});
-    assert(base && next);
+    REQUIRE(base && next);
     const ForkDiff diff = base->Diff(*next);
-    assert(!diff.Empty());
+    REQUIRE(!diff.Empty());
 
-    // Calls are unconditional: assert() may be compiled out (NDEBUG), so no
-    // side effects inside assert expressions in this suite.
+    // REQUIRE never compiles out, but the calls stay outside the checks so
+    // each step reads as one action followed by its expectation.
     std::vector<std::uint8_t> bytes;
     const bool encoded = World::DeltaWire::EncodeDiff(diff, bytes);
-    assert(encoded);
+    REQUIRE(encoded);
     ForkDiff back;
     const bool decoded = World::DeltaWire::DecodeDiff(bytes.data(), bytes.size(), back);
-    assert(decoded);
-    assert(SameDiff(diff, back));
+    REQUIRE(decoded);
+    REQUIRE(SameDiff(diff, back));
 
     // Empty diff round-trips (heartbeat case).
     ForkDiff empty;
-    assert(empty.Empty());
+    REQUIRE(empty.Empty());
     const bool emptyEncoded = World::DeltaWire::EncodeDiff(empty, bytes);
-    assert(emptyEncoded);
+    REQUIRE(emptyEncoded);
     const bool emptyDecoded = World::DeltaWire::DecodeDiff(bytes.data(), bytes.size(), back);
-    assert(emptyDecoded && back.Empty());
+    REQUIRE(emptyDecoded && back.Empty());
 
     // Fail closed: truncations, trailing garbage, null, bad kind.
     const bool reencoded = World::DeltaWire::EncodeDiff(diff, bytes);
-    assert(reencoded);
+    REQUIRE(reencoded);
     for (std::size_t cut = 0; cut < bytes.size(); ++cut)
     {
         const bool truncatedOk = World::DeltaWire::DecodeDiff(bytes.data(), cut, back);
-        assert(!truncatedOk);
+        REQUIRE(!truncatedOk);
     }
     std::vector<std::uint8_t> tail = bytes; tail.push_back(0);
     const bool tailOk = World::DeltaWire::DecodeDiff(tail.data(), tail.size(), back);
-    assert(!tailOk);
+    REQUIRE(!tailOk);
     const bool nullOk = World::DeltaWire::DecodeDiff(nullptr, 4, back);
-    assert(!nullOk);
+    REQUIRE(!nullOk);
     std::vector<std::uint8_t> badKind = bytes;
     badKind[4 + 4] = 9; // first unit kind byte: count(4) + gid(4)
     const bool badKindOk = World::DeltaWire::DecodeDiff(badKind.data(), badKind.size(), back);
-    assert(!badKindOk);
+    REQUIRE(!badKindOk);
     return 0;
 }

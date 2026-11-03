@@ -1,19 +1,10 @@
 #include "../src/world/fork.h"
 #include "../src/agent/fork_protocol.h"
-#include <cassert>
+#include "require.h"
 #include <cstdlib>
 #include <iostream>
 
 using namespace World::Fork;
-
-static void Require(bool ok, const char *msg)
-{
-    if (!ok)
-    {
-        std::cerr << "FAIL: " << msg << '\n';
-        std::exit(1);
-    }
-}
 
 static WorldState MakeState()
 {
@@ -65,18 +56,18 @@ int main()
     // RNG determinism.
     ForkRng a(42), b(42);
     for (int i = 0; i < 100; ++i)
-        assert(a.Next() == b.Next());
+        REQUIRE(a.Next() == b.Next());
     ForkRng c(7);
     for (int i = 0; i < 100; ++i)
-        assert(c.Below(5) < 5);
-    assert(c.Below(0) == 0);
+        REQUIRE(c.Below(5) < 5);
+    REQUIRE(c.Below(0) == 0);
 
     // Snapshot round-trip + strict decode.
     const WorldState state = MakeState();
     const std::vector<std::uint8_t> bytes = EncodeState(state);
     WorldState back;
     Require(DecodeState(bytes.data(), bytes.size(), 1024, back), "snapshot round-trips");
-    assert(HashState(back) == HashState(state));
+    REQUIRE(HashState(back) == HashState(state));
     Require(!DecodeState(bytes.data(), bytes.size() - 1, 1024, back), "truncated snapshot rejected");
     Require(!DecodeState(nullptr, 0, 1024, back), "null snapshot rejected");
     Require(!ValidateState(back, 2), "unit cap enforced by validation");
@@ -98,8 +89,8 @@ int main()
     m.x = 1300; m.y = 100;
     move.push_back(m);
     Require(f1->Step(move, 10) && f2->Step(move, 10), "move steps");
-    assert(f1->Capture().hash == f2->Capture().hash);
-    assert(f1->Capture().hash != HashState(state));
+    REQUIRE(f1->Capture().hash == f2->Capture().hash);
+    REQUIRE(f1->Capture().hash != HashState(state));
 
     // ForkFrom isolation.
     auto child = f1->ForkFrom(ForkId{3});
@@ -108,7 +99,7 @@ int main()
     ForkActionBatch hold;
     hold.push_back(ForkAction());
     Require(child->Step(hold, 25), "child steps");
-    assert(f1->Capture().hash == parentHash);
+    REQUIRE(f1->Capture().hash == parentHash);
 
     // Illegal batch is atomic: enemy move rejected, nothing applied.
     ForkActionBatch illegal;
@@ -120,8 +111,8 @@ int main()
     illegal.push_back(em);
     const std::uint64_t beforeIllegal = f1->Capture().hash;
     Require(!f1->Step(illegal, 1), "ordering an enemy unit is rejected");
-    assert(f1->Capture().hash == beforeIllegal);
-    assert(f1->ActionLog().size() == 1);
+    REQUIRE(f1->Capture().hash == beforeIllegal);
+    REQUIRE(f1->ActionLog().size() == 1);
 
     // Tick limit.
     Require(!f1->Step(hold, Cfg().maxTicksPerStep + 1), "tick budget enforced");
@@ -155,9 +146,9 @@ int main()
     ca.cost = 50;
     cr.push_back(ca);
     Require(fc->Step(cr, 1), "create steps");
-    assert(fc->State().units.size() == 4);
-    assert(fc->State().SectorAt(0, 0)->energyPower == 150);
-    assert(fc->State().FindUnit(0x10003) != nullptr);
+    REQUIRE(fc->State().units.size() == 4);
+    REQUIRE(fc->State().SectorAt(0, 0)->energyPower == 150);
+    REQUIRE(fc->State().FindUnit(0x10003) != nullptr);
     ForkActionBatch poor = cr;
     poor[0].cost = 100000;
     Require(!fc->Step(poor, 1), "unaffordable create rejected");
@@ -172,22 +163,22 @@ int main()
         if (u.gid == 0x10000) sawOwn = true;
     }
     Require(sawOwn && sawNear && !sawFar, "observation is fog-filtered");
-    assert(obs.ownEnergyTotal >= 100);
+    REQUIRE(obs.ownEnergyTotal >= 100);
 
     // Restore returns to the captured hash.
     auto fr = Fork::Create(state, Cfg(), ForkId{7});
     const WorldState snap = fr->State();
     Require(fr->Step(move, 10), "pre-restore step");
     Require(fr->Restore(snap), "restore accepted");
-    assert(fr->Capture().hash == HashState(state));
-    assert(fr->ActionLog().empty());
+    REQUIRE(fr->Capture().hash == HashState(state));
+    REQUIRE(fr->ActionLog().empty());
 
     // Commit-by-replay: fresh destination accepts, stale destination rejects.
     auto src = Fork::Create(state, Cfg(), ForkId{8});
     Require(src->Step(move, 5), "source steps");
     auto dst = Fork::Create(state, Cfg(), ForkId{9});
     Require(src->TryCommit(*dst), "commit to fresh destination");
-    assert(dst->State().FindUnit(0x10000)->hasTarget);
+    REQUIRE(dst->State().FindUnit(0x10000)->hasTarget);
     auto stale = Fork::Create(state, Cfg(), ForkId{10});
     ForkActionBatch other;
     ForkAction om;
@@ -205,10 +196,10 @@ int main()
     reg.Track(r1.get());
     auto r2 = Fork::Create(state, Cfg(), reg.NextId());
     reg.Track(r2.get());
-    assert(reg.NextId().v == 0);
+    REQUIRE(reg.NextId().v == 0);
     r1->Discard();
     Require(!r1->Step(hold, 1), "discarded fork cannot step");
-    assert(reg.NextId().v != 0);
+    REQUIRE(reg.NextId().v != 0);
 
     // Agent fork protocol.
     using namespace Agent;
@@ -217,7 +208,7 @@ int main()
         return ParseFork("1 " + sess + " 7 9999999999 " + ops + "\n", sess);
     };
     Require(mk("fork_create 6").valid, "fork_create parses");
-    assert(mk("fork_create 6").command.op == ForkOp::Create);
+    REQUIRE(mk("fork_create 6").command.op == ForkOp::Create);
     auto step = mk("fork_step 3 1 65536 0 100 200 0 0 10");
     Require(step.valid && step.command.ticks == 10, "fork_step parses");
     int kind = -1, proto = 0, cost = 0;

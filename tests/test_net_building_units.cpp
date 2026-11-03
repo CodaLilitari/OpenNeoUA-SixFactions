@@ -1,6 +1,6 @@
 #include "../src/world/net_building_units.h"
 #include <algorithm>
-#include <cassert>
+#include "require.h"
 #include <cstdint>
 #include <deque>
 #include <set>
@@ -55,7 +55,7 @@ void Apply(const Record *records,
         }
         else
         {
-            assert(commander);
+            REQUIRE(commander);
             Attach(*commander, unit);
         }
     }
@@ -77,21 +77,21 @@ int main()
         {83951642,108}, {83951643,108}, {83951644,108}, {83951645,108}
     };
     const auto plan = World::NetBuildingUnits::BuildPlan(packet);
-    assert(plan.size() == 4);
+    REQUIRE(plan.size() == 4);
     Unit host{83951636, false, nullptr, {}};
     std::deque<Unit> units;
     Apply(packet, plan, host, units);
-    assert(units.size() == 4 && host.children.size() == 1);
+    REQUIRE(units.size() == 4 && host.children.size() == 1);
     std::set<uint32_t> ids;
-    for (const Unit &unit : units) assert(ids.insert(unit.id).second);
+    for (const Unit &unit : units) REQUIRE(ids.insert(unit.id).second);
     Unit *commander = Find(host, packet[0].id);
     Unit *survivor = Find(host, packet[1].id);
-    assert(commander && survivor && commander->children.size() == 3);
+    REQUIRE(commander && survivor && commander->children.size() == 3);
     DieAndPromote(host, *commander, *survivor);
     // A later DESTROY must resolve the logically dead original, even though
     // promotion moved the survivor to the front of the station's children.
-    assert(Find(host, packet[0].id) == commander);
-    assert(Find(host, packet[0].id)->dead);
+    REQUIRE(Find(host, packet[0].id) == commander);
+    REQUIRE(Find(host, packet[0].id)->dead);
 
     // Reproduce the historical extra entry0 to show why this exact lifecycle
     // produces a live duplicate before the original dead commander.
@@ -103,8 +103,8 @@ int main()
     Apply(packet, legacy, oldHost, oldUnits);
     Unit *oldCommander = Find(oldHost, packet[0].id);
     DieAndPromote(oldHost, *oldCommander, *Find(oldHost, packet[1].id));
-    assert(Find(oldHost, packet[0].id) != oldCommander);
-    assert(!Find(oldHost, packet[0].id)->dead);
+    REQUIRE(Find(oldHost, packet[0].id) != oldCommander);
+    REQUIRE(!Find(oldHost, packet[0].id)->dead);
 
     // A full wire array is valid without an extra sentinel beyond its end.
     const Record full[8] = {
@@ -112,15 +112,15 @@ int main()
         {14,108},{15,108},{16,108},{17,108}
     };
     const auto fullPlan = World::NetBuildingUnits::BuildPlan(full);
-    assert(fullPlan.size() == 8);
+    REQUIRE(fullPlan.size() == 8);
     for (std::size_t i = 0; i < fullPlan.size(); ++i)
     {
-        assert(fullPlan[i].recordIndex == i);
-        assert(fullPlan[i].commander == (i == 0));
+        REQUIRE(fullPlan[i].recordIndex == i);
+        REQUIRE(fullPlan[i].commander == (i == 0));
     }
     const Record earlyEnd[8] = {{10,108},{0,0},{99,108}};
     const auto one = World::NetBuildingUnits::BuildPlan(earlyEnd);
-    assert(one.size() == 1 && one[0].commander && one[0].recordIndex == 0);
+    REQUIRE(one.size() == 1 && one[0].commander && one[0].recordIndex == 0);
     const Record empty[8] = {};
-    assert(World::NetBuildingUnits::BuildPlan(empty).empty());
+    REQUIRE(World::NetBuildingUnits::BuildPlan(empty).empty());
 }

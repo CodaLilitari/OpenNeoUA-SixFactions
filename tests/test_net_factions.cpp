@@ -1,6 +1,6 @@
 #include "../src/world/net_factions.h"
 #include "../src/world/net_faction_selection.h"
-#include <cassert>
+#include "require.h"
 #include <array>
 #include <cstdlib>
 #include <iostream>
@@ -8,15 +8,6 @@ using namespace World::NetFactions;
 static_assert(OwnerOf(32) == 5, "Black Sect is owner 5");
 static_assert(FirstAvailable(32) == 32, "Black-only maps select Black Sect");
 static_assert(HostVehicle(5, 62) == 62, "Use authored Black Sect station");
-
-static void Require(bool condition, const char *message)
-{
-    if (!condition)
-    {
-        std::cerr << "FAIL: " << message << '\n';
-        std::exit(1);
-    }
-}
 
 static void TestRosterTransitions()
 {
@@ -98,11 +89,11 @@ int main()
     for (unsigned fraction = 0; fraction < 256; ++fraction)
     {
         const bool expected = fraction == 2 || fraction == 64 || fraction == 8 || fraction == 16 || fraction == 32 || fraction == 4;
-        assert((OwnerOf(fraction) >= 0) == expected);
+        REQUIRE((OwnerOf(fraction) >= 0) == expected);
         for (unsigned map = 0; map < 256; ++map)
         {
-            assert(IsAvailable(fraction, map) == (expected && (fraction & map)));
-            assert(!IsAvailable(fraction, map, fraction));
+            REQUIRE(IsAvailable(fraction, map) == (expected && (fraction & map)));
+            REQUIRE(!IsAvailable(fraction, map, fraction));
         }
     }
     // Preserve legacy order when owner 5 is absent; append Black Sect and Sulgogars.
@@ -111,20 +102,20 @@ int main()
     for (unsigned expected : ordered)
     {
         const unsigned bit = FirstAvailable(free);
-        assert(bit == expected);
-        assert(IsAvailable(bit, free));
+        REQUIRE(bit == expected);
+        REQUIRE(IsAvailable(bit, free));
         free &= ~bit;
     }
-    assert(FirstAvailable(free) == 0);
-    assert(FirstAvailable(1 | 128) == 0); // Neutral/unused owner are not exposed.
-    assert(HostVehicle(1, 999) == 56);
-    assert(HostVehicle(6, 999) == 57);
-    assert(HostVehicle(3, 999) == 58);
-    assert(HostVehicle(4, 999) == 60);
-    assert(HostVehicle(5, 900) == 900); // mod-defined host accepted for later type validation
-    assert(HostVehicle(5, 0) == 0);     // missing host rejected by engine
-    assert(HostVehicle(2, 61) == 61);   // original Sulgogar Queen
-    assert(HostVehicle(2, 0) == 0);
-    assert(MaxPlayers == 6);
+    REQUIRE(FirstAvailable(free) == 0);
+    REQUIRE(FirstAvailable(1 | 128) == 0); // Neutral/unused owner are not exposed.
+    REQUIRE(HostVehicle(1, 999) == 56);
+    REQUIRE(HostVehicle(6, 999) == 57);
+    REQUIRE(HostVehicle(3, 999) == 58);
+    REQUIRE(HostVehicle(4, 999) == 60);
+    REQUIRE(HostVehicle(5, 900) == 900); // mod-defined host accepted for later type validation
+    REQUIRE(HostVehicle(5, 0) == 0);     // missing host rejected by engine
+    REQUIRE(HostVehicle(2, 61) == 61);   // original Sulgogar Queen
+    REQUIRE(HostVehicle(2, 0) == 0);
+    REQUIRE(MaxPlayers == 6);
     std::cout << "65,536 availability combinations, roster/host, fresh-launch and WELCOME regressions passed\n";
 }

@@ -3,6 +3,19 @@ project(OpenNeoUAMultiplayerTests LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
+
+# Checks must not depend on the build type: the tests use REQUIRE/Require
+# (require.h), which keep checking under NDEBUG. The first test proves that by
+# compiling a deliberately failing check with NDEBUG; the second keeps the
+# standard assert macro, which NDEBUG removes, out of the test sources.
+add_executable(test_require_ndebug test_require_ndebug.cpp)
+target_compile_definitions(test_require_ndebug PRIVATE NDEBUG)
+add_test(NAME require_ndebug COMMAND test_require_ndebug)
+set_tests_properties(require_ndebug PROPERTIES
+    PASS_REGULAR_EXPRESSION "FAIL .*test_require_ndebug\\.cpp:[0-9]+: evaluated == 2")
+add_test(NAME tests_survive_ndebug COMMAND ${CMAKE_COMMAND}
+    -DTEST_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/check_no_assert.cmake)
+
 add_executable(test_agent_protocol test_agent_protocol.cpp)
 add_test(NAME agent_protocol COMMAND test_agent_protocol)
 

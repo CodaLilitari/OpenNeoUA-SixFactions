@@ -1,5 +1,5 @@
 #include "../src/world/net_bot.h"
-#include <cassert>
+#include "require.h"
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -9,15 +9,6 @@ using namespace World::NetBot;
 using World::Fork::ForkRng;
 using World::Fork::UnitState;
 using World::Fork::WorldState;
-
-static void Require(bool ok, const char *msg)
-{
-    if (!ok)
-    {
-        std::cerr << "FAIL: " << msg << '\n';
-        std::exit(1);
-    }
-}
 
 static WorldState MakeState(bool foeNear)
 {
@@ -61,7 +52,7 @@ int main()
     // Six distinct faction personalities.
     std::size_t count = 0;
     const BotProfile *all = AllProfiles(count);
-    assert(count == 6);
+    REQUIRE(count == 6);
     std::set<std::uint8_t> owners;
     for (std::size_t i = 0; i < count; ++i)
     {
@@ -69,17 +60,17 @@ int main()
         for (std::size_t j = i + 1; j < count; ++j)
             Require(WeightKey(all[i]) != WeightKey(all[j]), "faction personalities are distinct");
     }
-    assert(owners.size() == 6);
+    REQUIRE(owners.size() == 6);
     Require(!ProfileForOwner(2).canConstruct, "Sulgogars never get construction wishes");
-    assert(std::strcmp(ProfileForOwner(5).factionName, "Black Sect") == 0);
+    REQUIRE(std::strcmp(ProfileForOwner(5).factionName, "Black Sect") == 0);
 
     // Difficulty scaling stays inside legal observation limits.
     const DifficultyParams cadet = ParamsFor(Difficulty::Cadet);
     const DifficultyParams vet = ParamsFor(Difficulty::Veteran);
-    assert(cadet.reactionMs > vet.reactionMs);
-    assert(cadet.lookaheadDepth == 0 && vet.lookaheadDepth == 2);
-    assert(vet.sensorRange <= 2160.0f);
-    assert(cadet.noisePct > vet.noisePct);
+    REQUIRE(cadet.reactionMs > vet.reactionMs);
+    REQUIRE(cadet.lookaheadDepth == 0 && vet.lookaheadDepth == 2);
+    REQUIRE(vet.sensorRange <= 2160.0f);
+    REQUIRE(cadet.noisePct > vet.noisePct);
 
     // Station AI gate: only a bot-flagged station may take the native AI
     // path while marked as the player robo; humans and AI stations keep
@@ -99,7 +90,7 @@ int main()
     Require(!ParseBotSpec("Ghorkov").valid, "missing difficulty rejected");
     Require(!ParseBotSpec("Nobody:Normal").valid, "unknown faction rejected");
     Require(!ParseBotSpec("Ghorkov:Ultra").valid, "unknown difficulty rejected");
-    assert(BotDisplayName(gh) == "BOT Ghorkov (Veteran)");
+    REQUIRE(BotDisplayName(gh) == "BOT Ghorkov (Veteran)");
 
     // Roster fill: humans keep slots, bots fill the rest and can start.
     const World::NetFactions::RosterEntry humans[2] = {{0, 2, true}, {1, 64, true}};
@@ -107,8 +98,8 @@ int main()
     World::NetFactions::RosterEntry roster[6];
     std::size_t rosterCount = 0;
     Require(BuildRosterWithBots(126, humans, 2, bots, 2, roster, rosterCount), "bot roster builds");
-    assert(rosterCount == 4);
-    assert(World::NetFactions::CheckRoster(126, roster, rosterCount).CanStart());
+    REQUIRE(rosterCount == 4);
+    REQUIRE(World::NetFactions::CheckRoster(126, roster, rosterCount).CanStart());
     const BotSpec tooMany[5] = {gh, gh, gh, gh, gh};
     Require(!BuildRosterWithBots(126, humans, 2, tooMany, 5, roster, rosterCount),
             "seventh player rejected");
@@ -135,8 +126,8 @@ int main()
     ForkRng r1(99), r2(99);
     const BotOrder d1 = Decide(state, spec, r1, World::Fork::ForkId{1});
     const BotOrder d2 = Decide(state, spec, r2, World::Fork::ForkId{1});
-    assert(d1.kind == d2.kind && d1.gid == d2.gid && d1.targetGid == d2.targetGid);
-    assert(World::Fork::HashState(state) == hashBefore);
+    REQUIRE(d1.kind == d2.kind && d1.gid == d2.gid && d1.targetGid == d2.targetGid);
+    REQUIRE(World::Fork::HashState(state) == hashBefore);
     Require(d1.kind != OrderKind::None, "veteran decide returns an order");
 
     // Sulgogar bot never emits build orders.
@@ -150,7 +141,7 @@ int main()
     life.spec = ParseBotSpec("Ghorkov:Normal");
     Require(!life.OnGameLoaded(), "cannot load before ready");
     Require(life.OnRosterAccepted() && life.OnReadySent() && life.OnGameLoaded(), "join flow");
-    assert(life.phase == BotPhase::InGame);
+    REQUIRE(life.phase == BotPhase::InGame);
     BotLifecycle standby;
     standby.spec = ParseBotSpec("Ghorkov:Normal");
     Require(!standby.OnTakeoverOffer(3), "takeover with wrong owner rejected");
@@ -159,9 +150,9 @@ int main()
     adopted.spec = ParseBotSpec("Ghorkov:Normal");
     Require(adopted.OnTakeoverOffer(6) && adopted.OnGameLoaded(), "takeover resumes in game");
     Require(adopted.OnHumanReclaim() && adopted.OnReclaimComplete(), "human reclaim flow");
-    assert(adopted.phase == BotPhase::Gone);
+    REQUIRE(adopted.phase == BotPhase::Gone);
     Require(life.OnLeaveRequested() && life.OnDestroyed(), "leave flow");
-    assert(life.phase == BotPhase::Gone);
+    REQUIRE(life.phase == BotPhase::Gone);
 
     // Chat rules mirror the UAMSG_MESSAGE receiver (no leading digit).
     Require(ValidBotChatLine("Holding the line."), "plain taunt valid");
@@ -172,9 +163,9 @@ int main()
     for (int owner : World::NetFactions::Owners)
         Require(ValidBotChatLine(TauntFor(static_cast<std::uint8_t>(owner), 1)),
                 "every faction taunt is wire-safe");
-    assert(!TauntDue(1000, 5000));
-    assert(TauntDue(1000, 21000));
-    assert(TauntDue(-1, 0));
+    REQUIRE(!TauntDue(1000, 5000));
+    REQUIRE(TauntDue(1000, 21000));
+    REQUIRE(TauntDue(-1, 0));
 
     // Seating: the lobby decides the faction; the brain follows the seat.
     {
