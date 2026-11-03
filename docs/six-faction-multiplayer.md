@@ -61,8 +61,11 @@ session slot. Explicit leave/kick frees the slot immediately. This is a
 transport-level capability only: the host still reports the drop to the game,
 which destroys that player as before, and `windp::Reset` deletes the client
 object that holds the token, so no menu path presents it yet. In-game rejoin
-and resync remain unimplemented. Inbound data packets are token-bucket limited
-per source address (400 burst, 200/s sustained); system packets are exempt.
+and resync remain unimplemented. On ZNDNet the host limits inbound data packets
+with a token bucket per client address (400 burst, 200/s sustained, fractions
+of a token carried between packets); system packets are exempt. A client takes
+datagrams only from its host, which relays every peer's traffic, so a client
+keeps no bucket of its own.
 
 Modernization status: protocol versioning, resume tokens, and rate limiting
 above are on the wire today. The Phase 2 wire envelope (`src/game/yw_wire.h`)

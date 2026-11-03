@@ -116,6 +116,41 @@ static void Run()
     }, 10000), "not all 30 remote deliveries arrived");
     std::cout << "All 30 reliable multipart deliveries verified byte for byte\n";
 
+    // A client accepts datagrams only from its host, which relays every
+    // peer's traffic, so a client keeps no inbound budget of its own (the
+    // host still limits each client's address). 900 packets from the host at
+    // about 500/s exceed one source's budget (400 burst, 200/s); a bucket for
+    // the host address passed about 760 of them.
+    {
+        ZNDClient *listener = clients.front().get();
+        const uint64_t listenerId = listener->GetMyID();
+        constexpr int burst = 900;
+        std::vector<bool> seen(burst, false);
+        int arrived = 0;
+        const auto drain = [&] {
+            while (Event *event = listener->Events_Pop())
+            {
+                std::unique_ptr<Event> owned(event);
+                if (event->type != EVENT_DATA) continue;
+                auto *data = static_cast<EventData *>(event);
+                if (data->size != 4 || data->data[0] != 0xB5) continue;
+                const int index = data->data[1] | (data->data[2] << 8);
+                if (index < burst && !seen[index]) { seen[index] = true; ++arrived; }
+            }
+        };
+        drain();
+        for (int i = 0; i < burst; ++i)
+        {
+            uint8_t payload[4] = {0xB5, static_cast<uint8_t>(i & 0xFF), static_cast<uint8_t>(i >> 8), 0};
+            host.SendData(listenerId, payload, sizeof(payload), 0);
+            if (i % 2 == 1) SDL_Delay(4);
+            drain();
+        }
+        Check(Until([&] { drain(); return arrived == burst; }, 8000),
+              "a client throttled the relayed traffic from its host");
+        std::cout << "A client accepted a 900-packet stream from its host at about 500/s\n";
+    }
+
     {
         ZNDClient seventh(protocol);
         seventh.Start("seventh", address);

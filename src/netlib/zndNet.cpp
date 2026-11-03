@@ -640,8 +640,13 @@ bool ZNDNet::SessionCheckPswd(const std::string &pswd)
 void ZNDNet::Recv_PushInRaw(InRawPkt *inpkt)
 {
     // Inbound flood guard (recv thread only): system packets are exempt;
-    // data packets are token-bucket limited per source address.
-    if (inpkt && inpkt->data && inpkt->len > 0 && !(inpkt->data[0] & PKT_FLAG_SYSTEM))
+    // data packets are token-bucket limited per source address. A client
+    // takes datagrams only from its host (client_threads.cpp), and the host
+    // relays every peer's traffic, so one bucket for the host address would
+    // throttle the whole session: five peers' flushes, multipart VHCLDATA
+    // and UPDATE. Clients therefore keep no bucket; the host limits each
+    // client's address.
+    if (mode != MODE_CLIENT && inpkt && inpkt->data && inpkt->len > 0 && !(inpkt->data[0] & PKT_FLAG_SYSTEM))
     {
         const uint64_t key = ((uint64_t)inpkt->addr.host << 16) ^ (uint64_t)inpkt->addr.port;
         auto it = rateBuckets.find(key);
