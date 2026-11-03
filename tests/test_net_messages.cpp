@@ -1,5 +1,6 @@
 // Network message structs (src/game/yw_net_msgs.h). Including the header
-// also evaluates its wire-size static_asserts in this build. Every sender
+// also evaluates its wire-size and member-offset static_asserts in this
+// build. Every sender
 // prepares its message with NetMsgClear(), which must leave no byte of the
 // previous storage contents: padding goes onto the wire byte for byte.
 #include "../src/game/yw_net_msgs.h"

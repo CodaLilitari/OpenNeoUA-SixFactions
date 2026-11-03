@@ -1,10 +1,13 @@
 // Network message ids and wire structs of the multiplayer game.
 //
 // Every message travels as a raw copy of its struct, in host byte order with
-// the compiler's layout, padding included. Both supported targets (Linux GCC
-// and MSYS2 MinGW, x86-64) lay these structs out identically; the size checks
-// at the end of this file keep it that way. The header is self-contained so
-// the tests can include it.
+// the compiler's layout, padding included, so the layout is the wire format.
+// The checks at the end of this file pin the size of every message and
+// record and the offset of every member, as GCC lays them out for x86-64
+// Linux. MSYS2 MinGW should agree: every member is a fixed-width integer, a
+// char, a double or an aggregate of those (no long, no bit-field), with the
+// same size and alignment on both targets. Where a build disagrees, these
+// checks fail it. The header is self-contained so the tests can include it.
 #ifndef YWNET_MSGS_H_INCLUDED
 #define YWNET_MSGS_H_INCLUDED
 
@@ -424,10 +427,13 @@ struct uamessage_score : uamessage_base
     std::array<World::TPlayerStatus, World::CVFractionsCount> status;
 };
 
-// Wire sizes on x86-64 (Linux GCC and MSYS2 MinGW). The struct layout is the
-// wire format, so any change here breaks every peer that still uses the old
-// layout: it needs a protocol version bump (World::NetProtocol::ProtoVer and
-// ProtoVerMin together), not just a recompile.
+// Wire layout on x86-64: the size of every message and record, then the
+// offset of every member. A change here breaks every peer that still uses
+// the old layout, so it needs a protocol version bump (World::NetProtocol::
+// ProtoVer and ProtoVerMin together), not just a recompile. The checks catch
+// a member that moves, grows or shrinks, and padding that moves. They do not
+// catch a member that changes type at the same size and offset (int32_t to
+// float), which breaks the wire just as well.
 #define YWNET_WIRE_SIZE(type, bytes) static_assert(sizeof(type) == (bytes), #type " changed size on the wire")
 YWNET_WIRE_SIZE(uamessage_base, 16);
 YWNET_WIRE_SIZE(uamessage_load, 20);
@@ -477,6 +483,175 @@ YWNET_WIRE_SIZE(uamessage_endproblem, 20);
 YWNET_WIRE_SIZE(uamessage_cd, 20);
 YWNET_WIRE_SIZE(uamessage_score, 240);
 #undef YWNET_WIRE_SIZE
+
+// Offsets of the members each struct declares; inherited members are
+// pinned on the struct that declares them. A struct that extends
+// uamessage_base is not standard-layout, and offsetof on it is not portable
+// C++. GCC and Clang compute it as for any struct without virtual bases and
+// only warn about it, so that warning is off for these checks.
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+#define YWNET_WIRE_AT(type, member, bytes) \
+    static_assert(offsetof(type, member) == (bytes), #type "::" #member " moved on the wire")
+YWNET_WIRE_AT(uamessage_base, msgID, 0);
+YWNET_WIRE_AT(uamessage_base, tstamp, 4);
+YWNET_WIRE_AT(uamessage_base, msgCnt, 8);
+YWNET_WIRE_AT(uamessage_base, owner, 12);
+YWNET_WIRE_AT(uamessage_base, p, 13);
+YWNET_WIRE_AT(uamessage_load, level, 16);
+YWNET_WIRE_AT(uamessage_newVhcl, pos, 16);
+YWNET_WIRE_AT(uamessage_newVhcl, parent, 40);
+YWNET_WIRE_AT(uamessage_newVhcl, id, 44);
+YWNET_WIRE_AT(uamessage_newVhcl, commandID, 48);
+YWNET_WIRE_AT(uamessage_newVhcl, kind, 52);
+YWNET_WIRE_AT(uamessage_newVhcl, type, 53);
+YWNET_WIRE_AT(uamessage_newVhcl, np, 54);
+YWNET_WIRE_AT(uamessage_destroyVhcl, id, 16);
+YWNET_WIRE_AT(uamessage_destroyVhcl, type, 20);
+YWNET_WIRE_AT(uamessage_destroyVhcl, dp, 21);
+YWNET_WIRE_AT(uamessage_newLeader, id, 16);
+YWNET_WIRE_AT(uamessage_newLeader, newLeader, 20);
+YWNET_WIRE_AT(uamessage_newWeapon, pos, 16);
+YWNET_WIRE_AT(uamessage_newWeapon, id, 40);
+YWNET_WIRE_AT(uamessage_newWeapon, launcher, 44);
+YWNET_WIRE_AT(uamessage_newWeapon, dir, 48);
+YWNET_WIRE_AT(uamessage_newWeapon, target, 72);
+YWNET_WIRE_AT(uamessage_newWeapon, flags, 76);
+YWNET_WIRE_AT(uamessage_newWeapon, type, 77);
+YWNET_WIRE_AT(uamessage_newWeapon, targetType, 78);
+YWNET_WIRE_AT(uamessage_newWeapon, targetOwner, 79);
+YWNET_WIRE_AT(uamessage_newWeapon, targetPos, 80);
+YWNET_WIRE_AT(uamessage_setState, id, 16);
+YWNET_WIRE_AT(uamessage_setState, setFlags, 20);
+YWNET_WIRE_AT(uamessage_setState, unsetFlags, 24);
+YWNET_WIRE_AT(uamessage_setState, newStatus, 28);
+YWNET_WIRE_AT(uamessage_setState, classID, 29);
+YWNET_WIRE_AT(uamessage_setState, sp, 30);
+YWNET_WIRE_AT(vhcldata, pos_x, 0);
+YWNET_WIRE_AT(vhcldata, pos_y, 2);
+YWNET_WIRE_AT(vhcldata, pos_z, 4);
+YWNET_WIRE_AT(vhcldata, vp, 6);
+YWNET_WIRE_AT(vhcldata, roll, 8);
+YWNET_WIRE_AT(vhcldata, pitch, 9);
+YWNET_WIRE_AT(vhcldata, yaw, 10);
+YWNET_WIRE_AT(vhcldata, specialinfo, 11);
+YWNET_WIRE_AT(vhcldata, ident, 12);
+YWNET_WIRE_AT(vhcldata, energy, 16);
+YWNET_WIRE_AT(vhcldataE, speed, 24);
+YWNET_WIRE_AT(vhcldatahdr, number, 0);
+YWNET_WIRE_AT(vhcldatahdr, size, 2);
+YWNET_WIRE_AT(vhcldatahdr, diffTime, 4);
+YWNET_WIRE_AT(uamessage_vhclData, hdr, 16);
+YWNET_WIRE_AT(uamessage_vhclDataI, data, 24);
+YWNET_WIRE_AT(uamessage_vhclDataE, data, 24);
+YWNET_WIRE_AT(uamessage_dead, id, 16);
+YWNET_WIRE_AT(uamessage_dead, newParent, 20);
+YWNET_WIRE_AT(uamessage_dead, killer, 24);
+YWNET_WIRE_AT(uamessage_dead, landed, 28);
+YWNET_WIRE_AT(uamessage_dead, classID, 29);
+YWNET_WIRE_AT(uamessage_dead, killerOwner, 30);
+YWNET_WIRE_AT(uamessage_dead, dp, 31);
+YWNET_WIRE_AT(uamessage_vhclEnergy, id, 16);
+YWNET_WIRE_AT(uamessage_vhclEnergy, energy, 20);
+YWNET_WIRE_AT(uamessage_vhclEnergy, killer, 24);
+YWNET_WIRE_AT(uamessage_vhclEnergy, killerOwner, 28);
+YWNET_WIRE_AT(uamessage_vhclEnergy, ep, 29);
+YWNET_WIRE_AT(uamessage_sectorEnergy, pos, 16);
+YWNET_WIRE_AT(uamessage_sectorEnergy, energy, 40);
+YWNET_WIRE_AT(uamessage_sectorEnergy, whoHit, 44);
+YWNET_WIRE_AT(uamessage_sectorEnergy, sectOwner, 48);
+YWNET_WIRE_AT(uamessage_sectorEnergy, ep, 49);
+YWNET_WIRE_AT(uamessage_startBuild, bproto, 16);
+YWNET_WIRE_AT(uamessage_startBuild, sec_x, 20);
+YWNET_WIRE_AT(uamessage_startBuild, sec_y, 22);
+YWNET_WIRE_AT(uamessage_bldVhcl, vhcl, 16);
+YWNET_WIRE_AT(uamessage_bldVhcl::bldVhcl, id, 0);
+YWNET_WIRE_AT(uamessage_bldVhcl::bldVhcl, base, 8);
+YWNET_WIRE_AT(uamessage_bldVhcl::bldVhcl, pos, 32);
+YWNET_WIRE_AT(uamessage_bldVhcl::bldVhcl, protoID, 56);
+YWNET_WIRE_AT(uamessage_bldVhcl::bldVhcl, bldp, 58);
+YWNET_WIRE_AT(uamessage_viewer, id, 16);
+YWNET_WIRE_AT(uamessage_viewer, launcher, 20);
+YWNET_WIRE_AT(uamessage_viewer, classID, 24);
+YWNET_WIRE_AT(uamessage_viewer, view, 25);
+YWNET_WIRE_AT(uamessage_viewer, vp, 26);
+YWNET_WIRE_AT(uamessage_syncgame, hostID, 16);
+YWNET_WIRE_AT(uamessage_syncgame, gun, 20);
+YWNET_WIRE_AT(uamessage_hostDie, killer, 16);
+YWNET_WIRE_AT(uamessage_hostDie, killerOwner, 20);
+YWNET_WIRE_AT(uamessage_hostDie, hdp, 21);
+YWNET_WIRE_AT(uamessage_message, message, 16);
+YWNET_WIRE_AT(uamessage_kick, text, 16);
+YWNET_WIRE_AT(uamessage_upgrade, upgradeID, 16);
+YWNET_WIRE_AT(uamessage_upgrade, enable, 18);
+YWNET_WIRE_AT(uamessage_fraction, freefrac, 16);
+YWNET_WIRE_AT(uamessage_fraction, newfrac, 18);
+YWNET_WIRE_AT(uamessage_welcome, fraction, 16);
+YWNET_WIRE_AT(uamessage_welcome, rdy, 18);
+YWNET_WIRE_AT(uamessage_ready, rdy, 16);
+YWNET_WIRE_AT(uamessage_ready, rp, 17);
+YWNET_WIRE_AT(vhclUpdData, type, 0);
+YWNET_WIRE_AT(vhclUpdData, status, 1);
+YWNET_WIRE_AT(vhclUpdData, vhclID, 2);
+YWNET_WIRE_AT(vhclUpdData, rot_x, 3);
+YWNET_WIRE_AT(vhclUpdData, rot_y, 4);
+YWNET_WIRE_AT(vhclUpdData, rot_z, 5);
+YWNET_WIRE_AT(vhclUpdData, pp, 6);
+YWNET_WIRE_AT(vhclUpdData, status_flg, 8);
+YWNET_WIRE_AT(vhclUpdData, gid, 12);
+YWNET_WIRE_AT(vhclUpdData, engy, 16);
+YWNET_WIRE_AT(vhclUpdData, pos, 24);
+YWNET_WIRE_AT(uamessage_update, sz, 16);
+YWNET_WIRE_AT(uamessage_update, num, 20);
+YWNET_WIRE_AT(uamessage_update, data, 24);
+YWNET_WIRE_AT(uamessage_impulse, id, 16);
+YWNET_WIRE_AT(uamessage_impulse, pos, 24);
+YWNET_WIRE_AT(uamessage_impulse, impulse, 48);
+YWNET_WIRE_AT(uamessage_impulse, mass, 52);
+YWNET_WIRE_AT(uamessage_impulse, dir, 56);
+YWNET_WIRE_AT(uamessage_impulse, dir_len, 80);
+YWNET_WIRE_AT(uamessage_logmsg, sender, 16);
+YWNET_WIRE_AT(uamessage_logmsg, senderOwner, 20);
+YWNET_WIRE_AT(uamessage_logmsg, lgp, 21);
+YWNET_WIRE_AT(uamessage_logmsg, pri, 24);
+YWNET_WIRE_AT(uamessage_logmsg, id, 28);
+YWNET_WIRE_AT(uamessage_logmsg, pr1, 32);
+YWNET_WIRE_AT(uamessage_logmsg, pr2, 36);
+YWNET_WIRE_AT(uamessage_logmsg, pr3, 40);
+YWNET_WIRE_AT(uamessage_reorder, mode, 16);
+YWNET_WIRE_AT(uamessage_reorder, comm, 20);
+YWNET_WIRE_AT(uamessage_reorder, commID, 24);
+YWNET_WIRE_AT(uamessage_reorder, num, 28);
+YWNET_WIRE_AT(uamessage_reorder, sz, 32);
+YWNET_WIRE_AT(uamessage_reorder, units, 36);
+YWNET_WIRE_AT(uamessage_startPlasma, time, 16);
+YWNET_WIRE_AT(uamessage_startPlasma, scale, 20);
+YWNET_WIRE_AT(uamessage_startPlasma, id, 24);
+YWNET_WIRE_AT(uamessage_startPlasma, pos, 32);
+YWNET_WIRE_AT(uamessage_startPlasma, dir, 56);
+YWNET_WIRE_AT(uamessage_endPlasma, id, 16);
+YWNET_WIRE_AT(uamessage_startBeam, pos, 16);
+YWNET_WIRE_AT(uamessage_startBeam, id, 40);
+YWNET_WIRE_AT(uamessage_endBeam, id, 16);
+YWNET_WIRE_AT(uamessage_exit, norm, 16);
+YWNET_WIRE_AT(uamessage_exit, qp, 17);
+YWNET_WIRE_AT(uamessage_setLevel, hostName, 16);
+YWNET_WIRE_AT(uamessage_setLevel, lvlID, 80);
+YWNET_WIRE_AT(uamessage_setLevel, fractions, 84);
+YWNET_WIRE_AT(uamessage_crc, checksum, 16);
+YWNET_WIRE_AT(uamessage_ping, timestamp, 16);
+YWNET_WIRE_AT(uamessage_startproblem, problem, 16);
+YWNET_WIRE_AT(uamessage_endproblem, solved, 16);
+YWNET_WIRE_AT(uamessage_cd, cd, 16);
+YWNET_WIRE_AT(uamessage_cd, rdy, 17);
+YWNET_WIRE_AT(uamessage_cd, cd_p, 18);
+YWNET_WIRE_AT(uamessage_score, status, 16);
+#undef YWNET_WIRE_AT
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 // Outgoing messages go onto the wire byte for byte, padding included, and
 // default member values do not touch padding: IMPULSE, STARTPLASMA,
