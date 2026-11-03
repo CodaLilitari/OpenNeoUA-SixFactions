@@ -3,6 +3,7 @@
 
 #include "game/yw.h"
 #include "game/yw_bot.h"
+#include "game/yw_netauto.h"
 #include "platform/windp.h"
 #include "world/net_factions.h"
 
@@ -138,6 +139,13 @@ void Fill(NC_STACK_ypaworld *world, Agent::NetState &out)
         bot.phase = PhaseName(BotRuntime::Phase());
         bot.owner = world->_isNetGameStarted ? world->GetPlayerOwner() : 0;
         out.bots.push_back(bot);
+    }
+
+    if (NetAuto::Active())
+    {
+        out.hasAuto = true;
+        out.autoStep = NetAuto::StepName();
+        out.autoError = NetAuto::Error();
     }
 }
 

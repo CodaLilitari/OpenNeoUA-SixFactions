@@ -31,6 +31,7 @@
 #include "world/net_lobby.h"
 #include "game/yw_shell_menus.h"
 #include "game/model_preview.h"
+#include "game/yw_netauto.h"
 
 void LayoutSaveLoadActionButtons(UserData *usr, bool deleteVisible)
 {
@@ -3281,6 +3282,10 @@ void UserData::GameShellUiHandleInput()
     NetMsgClear(fracMsg);
 
     r = network_button->ProcessWidgetsEvents(Input);
+
+    // Unattended lobby flags (-net-*, yw_netauto.h) press the same widgets.
+    if ( !r && EnvMode == ENVMODE_NETPLAY )
+        r = NC_STACK_button::ResCode( NetAuto::TakeNetworkCode(network_button) );
 
     if ( r )
     {

@@ -169,6 +169,7 @@ set(SOURCES
     game/yw_net.cpp
     game/yw_fork.cpp
     game/yw_bot.cpp
+    game/yw_netauto.cpp
     game/yw_netobserve.cpp
     game/yw_save.cpp
     game/ypabact.cpp

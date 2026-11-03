@@ -55,6 +55,15 @@ int main() {
         "populated state layout changed");
     for (const char c : json)
         Require(c >= 0x20 && c <= 0x7e, "observation JSON is not printable ASCII");
+
+    // Unattended lobby flags add their step and, once failed, the reason.
+    Require(json.find("\"auto\"") == std::string::npos, "auto reported without -net-* flags");
+    s.hasAuto = true;
+    s.autoStep = "failed";
+    s.autoError = "-net-faction: Black Sect is not on level 200";
+    const std::string withAuto = Agent::NetStateJson(s);
+    const std::string tail = ",\"auto\":{\"step\":\"failed\",\"error\":\"-net-faction: Black Sect is not on level 200\"}}";
+    Require(withAuto == json.substr(0, json.size() - 1) + tail, "auto step and error not appended to the net object");
     std::cout << "PASS: net observation JSON layout and byte-safe escaping\n";
     return 0;
 }

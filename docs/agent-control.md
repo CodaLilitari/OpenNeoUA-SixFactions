@@ -70,6 +70,20 @@ Fork tools are advertised in `session.json` only when the engine has a fork
 session bound to the live world; they step the deterministic fork model, never
 the live simulation, and commit only by replaying an action log fork-to-fork.
 
+Observe after an action to establish its effect. A successful action receipt
+means input finished processing, not that the intended button or unit was hit.
+Mouse coordinates must fit the current screenshot. Text is paced across game
+frames because the game's text queue is small; slow rendering takes longer.
+Clicks emit an absolute motion event before the button press so legacy list
+selection sees the requested position. This motion has zero relative movement;
+use `game_mouse_move` with `dx`/`dy` when a camera turn is intended.
+
+The optional `OPENNEOUA_AGENT_MOUSE_TEST=ON` CMake test (together with
+`OPENNEOUA_AGENT_BRIDGE_TEST=ON`) checks this event order, release and bounds in
+a hidden native OpenGL window. It requires a working video driver; on Linux,
+run its CTest invocation under Xvfb. The ordinary file/queue tests do not require
+a display.
+
 ## Lobby and network state
 
 Since observation schema 2 (`observation_schema` in `session.json`), every
@@ -95,19 +109,47 @@ log scraping:
 Factions are owner ids: 1 Resistance, 2 Sulgogars, 3 Mykonian, 4 Taerkasten,
 5 Black Sect, 6 Ghorkov. Callsigns are escaped to plain ASCII JSON.
 
-Observe after an action to establish its effect. A successful action receipt
-means input finished processing, not that the intended button or unit was hit.
-Mouse coordinates must fit the current screenshot. Text is paced across game
-frames because the game's text queue is small; slow rendering takes longer.
-Clicks emit an absolute motion event before the button press so legacy list
-selection sees the requested position. This motion has zero relative movement;
-use `game_mouse_move` with `dx`/`dy` when a camera turn is intended.
+With unattended lobby flags (next section), `auto` adds their `step` and, once
+they failed, the `error`.
 
-The optional `OPENNEOUA_AGENT_MOUSE_TEST=ON` CMake test (together with
-`OPENNEOUA_AGENT_BRIDGE_TEST=ON`) checks this event order, release and bounds in
-a hidden native OpenGL window. It requires a working video driver; on Linux,
-run its CTest invocation under Xvfb. The ordinary file/queue tests do not require
-a display.
+## Unattended lobby flags
+
+Opt-in command-line flags, next to `-bot`, walk the multiplayer screens
+without clicks, so drills with three to six instances are scriptable. They
+work without the agent bridge; with it, `net.auto` reports their progress.
+
+| Flag | Effect |
+|---|---|
+| `-net-host <level>` | Choose Host, enter the callsign, pick the network level by id and open the lobby. |
+| `-net-join <address>` | Choose Join, enter the callsign and connect to the host name or IPv4 address (port 61234). Failed attempts are retried every 2 s for 120 s; an address that does not resolve or a version refusal stops at once. |
+| `-net-name <callsign>` | The callsign: no spaces, no `*`, at most 20 characters. Without it the profile's callsign is used and checked the same way. |
+| `-net-faction <faction>` | Owner number 1-6 or `resistance`, `sulgogars`, `mykonian`, `taerkasten`, `black-sect`, `ghorkov`. A client chooses only after every other player's WELCOME arrived. With `-bot` and no `-net-faction`, the bot's faction is chosen when it is on the level and free; otherwise the lobby's choice stays. |
+| `-net-ready` | Client: tick Ready once the faction has settled and the Ready box is enabled. |
+| `-net-start-when <n>` | Host: press Start once at least n players are in the lobby, all of them ready, and the roster check has passed for 2 s. With n = 1 the host starts alone. |
+
+```text
+OpenNeoUA -net-host 132 -net-name HOST1 -net-faction resistance -net-start-when 3
+OpenNeoUA -net-join 192.168.1.10 -net-name C1 -net-faction taerkasten -net-ready
+OpenNeoUA -bot Ghorkov:Veteran -net-join 192.168.1.10 -net-name BOT1 -net-ready
+```
+
+The flags press only what a player could press at that moment (enabled
+widgets) and go through the same handlers: the host/join choice, the name and
+address fields' OK, the level list and `AfterMapChoose`, `ConnectToServer`, the
+faction buttons, Ready (code 1208) and Start (code 1200). Each step is logged
+as `netauto: ...` in `Data/Env/ypa_log.txt`; `net.auto.step` is one of
+`wait_menu`, `provider`, `name`, `address`, `map`, `faction`, `ready`,
+`in_session`, `wait_start`, `in_game` or `failed`. Bad input stops them with a
+`netauto: ERROR:` line in the log and on stderr, and the game stays
+interactive: an unknown, repeated or value-less flag, a callsign with a space
+or more than 20 characters, an unknown faction or level, a faction that is not
+on the level or already taken, or a level with fewer starts than
+`-net-start-when`. They act once; after the match has started nothing more
+happens. Without a `-net-*` flag nothing changes.
+
+A failed connection attempt is logged with its reason in the netlog:
+`Connection to ... failed: no_answer`, `full`, `name`, `version`, `dropped`
+or `address`.
 
 ## Transport and failure handling
 

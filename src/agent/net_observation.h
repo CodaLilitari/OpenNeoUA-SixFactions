@@ -56,6 +56,9 @@ struct NetState {
     std::vector<LobbyRow> lobby;
     std::vector<Seat> seats;
     std::vector<BotInfo> bots;
+    bool hasAuto = false;             // unattended lobby flags (-net-*) were given
+    std::string autoStep;             // their step (world/net_lobby_flags.h StepName)
+    std::string autoError;            // why they stopped, once failed
 };
 
 // JSON string literal for arbitrary bytes. Callsigns come from other peers, so
@@ -109,7 +112,10 @@ inline std::string NetStateJson(const NetState &s) {
         out += "\"faction\":" + std::to_string(bot.faction) + ",\"difficulty\":" + JsonString(bot.difficulty) +
             ",\"phase\":" + JsonString(bot.phase) + ",\"owner\":" + std::to_string(bot.owner) + "}";
     }
-    return out + "]}";
+    out += "]";
+    if (s.hasAuto)
+        out += ",\"auto\":{\"step\":" + JsonString(s.autoStep) + ",\"error\":" + JsonString(s.autoError) + "}";
+    return out + "}";
 }
 } // namespace Agent
 #endif
