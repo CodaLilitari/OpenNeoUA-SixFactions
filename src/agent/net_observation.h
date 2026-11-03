@@ -26,8 +26,12 @@ struct Seat {
     int owner = 0;
     std::string name;        // callsign bound to the owner at level load
     bool ready = false;      // SYNCGM received (start barrier)
-    int destroyFlags = 0;    // non-zero once the owner's station was removed
-    int status = 0;          // 3 after an explicit quit (EXIT)
+    int destroyFlags = 0;    // non-zero once the owner's station was removed; can stay 0
+                             // for a seat that dropped (status 4)
+    int status = 0;          // TNetPlayerData::Status (yw_net.cpp): 0 until the level has
+                             // loaded, 1 playing, 2 waiting (silent for more than 7 s),
+                             // 3 quit (explicit EXIT), 4 gone (the transport reported the
+                             // player gone during the match, no EXIT before it: a drop)
     int latencyMs = 0;
     int silentMs = -1;       // game ms since the owner's last message; -1 before the
                              // start and for the own seat

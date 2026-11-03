@@ -108,7 +108,7 @@ log scraping:
 | `local_owner`, `player_index` | Owner seated for this process at level load (0 before), and own transport roster index (-1 outside a session). |
 | `can_start`, `problem` | Host: the roster check allows a launch. `netProblem` (0 = none). |
 | `lobby` | Lobby rows in roster order: `slot`, `name`, `faction`, `ready`, `me`, `welcomed`, `conflict`. |
-| `seats` | Per owner of a loaded level: `owner`, `name`, `ready`, `destroyed` (destroy flags), `status` (3 after an explicit quit), `latency_ms`, `silent_ms` (game time since the owner's last message; -1 for the own seat and before the start). |
+| `seats` | Per owner of a loaded level: `owner`, `name`, `ready`, `destroyed` (destroy flags), `status`, `latency_ms`, `silent_ms` (game time since the owner's last message; -1 for the own seat and before the start). `status` is 0 until the level has loaded, 1 playing, 2 waiting (no message for more than 7 s; back to 1 five seconds after messages resume), 3 quit (explicit EXIT), 4 gone (the transport reported the player gone during the match without an EXIT before it, as after a drop). A dropped seat can show status 4 with `destroyed` still 0, so drop drills check `status`. |
 | `bots` | Bots run by this process (`-bot`): requested `faction`, `difficulty`, lifecycle `phase` (`lobby`, `joining`, `ready`, `in_game`, `leaving`, `gone`, `takeover`, `reclaiming`) and the `owner` played (0 before the start). |
 
 Factions are owner ids: 1 Resistance, 2 Sulgogars, 3 Mykonian, 4 Taerkasten,
