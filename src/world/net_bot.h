@@ -239,11 +239,13 @@ inline float SectorCenterY(const Fork::WorldState &s, std::int32_t sectorId)
 }
 
 // Scores every legal order from fog-filtered observation only. Enemy state
-// enters exclusively through Fork::UnitVisibleTo / visible sectors, exactly
-// what a human client process could know. Deterministic for a given rng.
+// enters exclusively through Fork::UnitVisibleTo (as a SensorView) / visible
+// sectors, exactly what a human client process could know. Deterministic for
+// a given rng. Adds the fog check's range tests to *rangeTests when given.
 inline std::vector<BotOrder> CandidateOrders(const Fork::WorldState &state,
                                              const BotSpec &spec,
-                                             Fork::ForkRng &rng)
+                                             Fork::ForkRng &rng,
+                                             std::uint64_t *rangeTests = nullptr)
 {
     std::vector<BotOrder> orders;
     if (!spec.valid || state.mapW <= 0)
@@ -259,13 +261,16 @@ inline std::vector<BotOrder> CandidateOrders(const Fork::WorldState &state,
     };
     // Own combat units and visible enemies (legal observations only).
     std::vector<const Fork::UnitState *> own, foes;
+    const Fork::SensorView view(state, spec.owner, dp.sensorRange);
     for (const Fork::UnitState &u : state.units)
     {
         if (u.owner == spec.owner)
             own.push_back(&u);
-        else if (Fork::UnitVisibleTo(state, u, spec.owner, dp.sensorRange))
+        else if (view.Sees(u))
             foes.push_back(&u);
     }
+    if (rangeTests)
+        *rangeTests += view.RangeTests();
     if (own.empty())
         return orders;
     // Attack: strongest own unit vs weakest visible foe.
@@ -362,21 +367,25 @@ inline Fork::ForkAction ToForkAction(const BotOrder &o)
 }
 
 // Position evaluation from one owner's legal view: own energy/sectors minus
-// visible enemy energy. Used only to rank forked rollouts.
+// visible enemy energy. Used only to rank forked rollouts. Adds the fog
+// check's range tests to *rangeTests when given.
 inline double EvaluateFor(const Fork::WorldState &state, std::uint8_t owner,
-                          float sensorRange)
+                          float sensorRange, std::uint64_t *rangeTests = nullptr)
 {
     double score = 0.0;
     for (const Fork::SectorState &s : state.sectors)
         if (s.owner == owner)
             score += 25.0 + s.energyPower * 0.02;
+    const Fork::SensorView view(state, owner, sensorRange);
     for (const Fork::UnitState &u : state.units)
     {
         if (u.owner == owner)
             score += u.energy * 0.1;
-        else if (Fork::UnitVisibleTo(state, u, owner, sensorRange))
+        else if (view.Sees(u))
             score -= u.energy * 0.1;
     }
+    if (rangeTests)
+        *rangeTests += view.RangeTests();
     return score;
 }
 
@@ -387,7 +396,19 @@ struct DecideReport
     std::uint32_t forksCreated = 0;  // candidate and reply forks stepped
     std::uint32_t forkFailures = 0;  // forks Fork::Create refused (state above the caps)
     bool greedyFallback = false;     // lookahead was due but scored nothing
+    bool lookaheadCut = false;       // stopped at MaxLookaheadRangeTests
+    std::uint64_t rangeTests = 0;    // own-unit range tests of all fog checks
 };
+
+// Fog-check work one Decide may do before it forks another candidate. Decide
+// runs on the game's main loop, up to every 250 ms. A fog check costs about
+// one range test per enemy unit near the bot's own units: a few thousand per
+// Veteran think in a six-owner world at MaxWorldUnits. Only own units strung
+// just outside sensor range around a dense enemy cluster need millions. Past
+// this budget Decide forks no further candidate, keeps the best one scored so
+// far and reports the cut, so a think costs at most the budget plus the two
+// fog checks of the candidate that crossed it.
+constexpr std::uint64_t MaxLookaheadRangeTests = std::uint64_t(1) << 22;
 
 // Decision with agentic-fork lookahead where difficulty calls for it:
 // candidates are stepped in throwaway forks (same Fork::Step the local
@@ -401,7 +422,7 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
     DecideReport &out = report ? *report : local;
     out = DecideReport();
     BotOrder best;
-    std::vector<BotOrder> candidates = CandidateOrders(state, spec, rng);
+    std::vector<BotOrder> candidates = CandidateOrders(state, spec, rng, &out.rangeTests);
     if (candidates.empty())
         return best;
     const DifficultyParams dp = ParamsFor(spec.difficulty);
@@ -418,6 +439,11 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
     const std::size_t limit = std::min<std::size_t>(candidates.size(), 4);
     for (std::size_t i = 0; i < limit; ++i)
     {
+        if (out.rangeTests > MaxLookaheadRangeTests)
+        {
+            out.lookaheadCut = true;
+            break;
+        }
         std::unique_ptr<Fork::Fork> fork = Fork::Fork::Create(state, cfg, baseId);
         if (!fork)
         {
@@ -441,7 +467,8 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
                 foe.difficulty = Difficulty::Normal;
                 foe.valid = true;
                 Fork::ForkRng foeRng(rng.State() ^ u.owner);
-                std::vector<BotOrder> replies = CandidateOrders(fork->State(), foe, foeRng);
+                std::vector<BotOrder> replies =
+                    CandidateOrders(fork->State(), foe, foeRng, &out.rangeTests);
                 if (!replies.empty())
                 {
                     Fork::ForkConfig foeCfg = cfg;
@@ -457,7 +484,8 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
                         rb.push_back(ToForkAction(replies[0]));
                         replyFork->Step(rb, 25);
                         scored = true;
-                        const double s = EvaluateFor(replyFork->State(), spec.owner, dp.sensorRange);
+                        const double s = EvaluateFor(replyFork->State(), spec.owner,
+                                                     dp.sensorRange, &out.rangeTests);
                         if (s > bestScore) { bestScore = s; best = candidates[i]; }
                     }
                 }
@@ -466,14 +494,16 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
             if (bestScore == -1e100)
             {
                 scored = true;
-                const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange);
+                const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange,
+                                             &out.rangeTests);
                 if (s > bestScore) { bestScore = s; best = candidates[i]; }
             }
         }
         else
         {
             scored = true;
-            const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange);
+            const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange,
+                                         &out.rangeTests);
             if (s > bestScore) { bestScore = s; best = candidates[i]; }
         }
     }

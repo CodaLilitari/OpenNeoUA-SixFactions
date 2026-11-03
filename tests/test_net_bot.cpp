@@ -1,5 +1,6 @@
 #include "../src/world/net_bot.h"
 #include "require.h"
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
@@ -40,6 +41,59 @@ static WorldState MakeState(bool foeNear)
     foe.y = foeNear ? 100.0f : 3000.0f;
     s.units = {own, foe};
     s.nextGid = 0x10002;
+    return s;
+}
+
+// A six-owner match at the fork cap on a 54 x 32 map: each owner holds a
+// band of sectors and keeps its units there, the bands touching. With `ring`,
+// Resistance's units instead stand on a circle 2200 units around everyone
+// else, just beyond Veteran sensor range (2160): the costliest layout for the
+// fog checks, since every enemy is near own units and none is in range.
+static WorldState CapWorld(bool ring)
+{
+    WorldState s;
+    s.mapW = 54;
+    s.mapH = 32;
+    s.sectors.resize(54 * 32);
+    for (int i = 0; i < 54 * 32; ++i)
+    {
+        World::Fork::SectorState &sec = s.sectors[i];
+        const int x = i % 54, y = i / 54;
+        sec.id = i;
+        sec.energyPower = 200;
+        sec.border = x == 0 || y == 0 || x == 53 || y == 31;
+        sec.owner = sec.border ? 0 : static_cast<std::uint8_t>(1 + (x * 6) / 54);
+        sec.viewMask = ring ? 0u : 1u << sec.owner;
+    }
+    ForkRng rng(3);
+    const float len = World::CVSectorLength;
+    for (std::uint32_t i = 0; i < World::Fork::MaxWorldUnits; ++i)
+    {
+        UnitState u;
+        u.gid = 0x10000 + i;
+        u.protoId = 10;
+        u.owner = static_cast<std::uint8_t>(1 + i % 6);
+        u.energy = static_cast<std::int32_t>(100 + rng.Below(400));
+        if (!ring)
+        {
+            const float band = (u.owner - 1) * (52.0f / 6.0f) + 1.0f;
+            u.x = (band + rng.Below(1000) / 1000.0f * (52.0f / 6.0f)) * len;
+            u.y = (1.0f + rng.Below(30000) / 1000.0f) * len;
+        }
+        else if (u.owner == 1)
+        {
+            const float a = static_cast<float>(i) * 0.0123f;
+            u.x = 20.5f * len + 2200.0f * std::cos(a);
+            u.y = 16.5f * len + 2200.0f * std::sin(a);
+        }
+        else
+        {
+            u.x = 20.5f * len + static_cast<float>(rng.Below(20));
+            u.y = 16.5f * len + static_cast<float>(rng.Below(20));
+        }
+        s.units.push_back(u);
+    }
+    s.nextGid = 0x10000 + World::Fork::MaxWorldUnits;
     return s;
 }
 
@@ -186,6 +240,56 @@ int main()
         Decide(MakeState(true), ParseBotSpec("Resistance:Cadet"), rng3, World::Fork::ForkId{1}, &cadet);
         Require(cadet.forksCreated == 0 && cadet.forkFailures == 0 && !cadet.greedyFallback,
                 "a greedy difficulty is not a fallback");
+    }
+
+    // The cost of a think at the cap. Decide runs on the main loop, up to
+    // every 250 ms for a Veteran. Its nine fog checks used to scan the world
+    // once per enemy unit (9 x 3413 x 4096 unit visits per think here); they
+    // now test only own units near each enemy. Budget: a Veteran think in
+    // this match makes at most one range test per unit of the world.
+    {
+        const WorldState spread = CapWorld(false);
+        DecideReport report;
+        ForkRng rng(11);
+        const BotOrder order = Decide(spread, spec, rng, World::Fork::ForkId{1}, &report);
+        Require(order.kind != OrderKind::None, "a think at the cap decides");
+        Require(report.forksCreated == 8 && report.forkFailures == 0 && !report.greedyFallback &&
+                !report.lookaheadCut, "a think at the cap gets its whole lookahead");
+        Require(report.rangeTests > 0 && report.rangeTests <= World::Fork::MaxWorldUnits,
+                "a think at the cap stays within its fog-check budget");
+        // Both kinds of fog check go through the counted view.
+        std::uint64_t candidateTests = 0, evaluateTests = 0;
+        ForkRng crng(11);
+        CandidateOrders(spread, spec, crng, &candidateTests);
+        EvaluateFor(spread, spec.owner, ParamsFor(spec.difficulty).sensorRange, &evaluateTests);
+        Require(candidateTests > 0 && candidateTests <= spread.units.size() &&
+                evaluateTests > 0 && evaluateTests <= spread.units.size(),
+                "each fog check tests only own units near the enemies");
+
+        // Own units strung just beyond sensor range around every enemy: each
+        // fog check of Resistance tests about 683 own units per enemy. The
+        // think stops forking once MaxLookaheadRangeTests is spent, says so,
+        // and still plays the best order scored before the cut.
+        const WorldState ring = CapWorld(true);
+        DecideReport cut;
+        ForkRng rng3(11);
+        const BotOrder cutOrder = Decide(ring, spec, rng3, World::Fork::ForkId{1}, &cut);
+        Require(cutOrder.kind != OrderKind::None, "a cut think still decides");
+        Require(cut.lookaheadCut && cut.rangeTests > MaxLookaheadRangeTests,
+                "a lookahead past its budget is cut and reported");
+        Require(cut.forksCreated > 0 && cut.forksCreated < 8 && !cut.greedyFallback,
+                "the candidates scored before the cut count");
+        // At most the budget plus the two fog checks of the candidate that
+        // crossed it, each at most enemies x own units.
+        const std::uint64_t perCheck = std::uint64_t(World::Fork::MaxWorldUnits / 2) *
+                                       (World::Fork::MaxWorldUnits / 2);
+        Require(cut.rangeTests <= MaxLookaheadRangeTests + 2 * perCheck, "the cut bounds the think");
+        DecideReport again;
+        ForkRng rng4(11);
+        const BotOrder repeat = Decide(ring, spec, rng4, World::Fork::ForkId{1}, &again);
+        Require(repeat.kind == cutOrder.kind && repeat.gid == cutOrder.gid &&
+                repeat.targetGid == cutOrder.targetGid && again.rangeTests == cut.rangeTests,
+                "a cut think is deterministic");
     }
 
     // Sulgogar bot never emits build orders.

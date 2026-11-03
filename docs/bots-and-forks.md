@@ -117,6 +117,22 @@ Semantics:
   it: it logs that once and plays its faction profile until the world is
   back under the cap. Lookahead forks that fail are logged as well, instead
   of the bot quietly playing the greedy choice.
+- **Cost**: a bot thinks on the game's main loop, every 250 ms at Veteran.
+  Its fog checks (`CandidateOrders`, `EvaluateFor`, and `Observe`) go through
+  `SensorView`, which files the observer's units by sector once and keeps
+  their bounding box per sector; a check then tests only the own units near
+  each enemy and returns exactly what `UnitVisibleTo` returns. Measured at
+  the cap (4096 units, six owners on a 54 x 32 map, Release build, 2-vCPU
+  Linux box): a Veteran think takes about 3.4 ms, where it took about 71 ms
+  while each check scanned the whole world once per enemy; Normal 1.7 ms
+  (was 51 ms), Cadet 0.1 ms (was 4.4 ms). Own units massed just beyond
+  sensor range of the enemy cost the same. Most of what remains is copying
+  and hashing the eight lookahead forks. The costliest layout for the fog checks, own units strung on a ring
+  just beyond sensor range around a dense enemy cluster, makes each enemy
+  test hundreds of own units. Past `MaxLookaheadRangeTests` (about 4.2
+  million range tests) a think therefore forks no further candidate, keeps
+  the best order scored so far and reports `lookaheadCut`; the bot logs when
+  that starts and stops. With the cut, that ring layout costs 5.0 ms a think.
 
 Engine bridge: `ForkBridge::CaptureWorldState` / `ValidateActions`
 (`src/game/yw_fork.cpp`) translate the live `NC_STACK_ypaworld` (sectors via
@@ -138,10 +154,15 @@ ctest --test-dir <external-build-directory> --output-on-failure
 
 `world_fork` covers RNG/snapshot determinism, fork isolation, atomic illegal
 batches, tick/unit limits, fog observation, diff, commit/stale rejection and
-the agent fork protocol. `net_bot` covers pairwise-distinct faction
-personalities, spec parsing, bot roster fill against `CheckRoster`, the
-no-see-no-attack rule, deterministic decisions that never mutate the input
-state, lifecycle/takeover/reclaim transitions and wire-safe chat.
+the agent fork protocol. It also checks `SensorView` against `UnitVisibleTo`
+for every unit and owner of random worlds, on and off the map, at the edge
+of the range, for odd ranges and for positions that are not finite. `net_bot`
+covers pairwise-distinct faction personalities, spec parsing, bot roster
+fill against `CheckRoster`, the no-see-no-attack rule, deterministic
+decisions that never mutate the input state, lifecycle/takeover/reclaim
+transitions and wire-safe chat. It also pins the cost of a think at the cap:
+the whole lookahead within one range test per unit in a six-owner match,
+and the ring layout cut and reported.
 
 Runtime acceptance still required (same gap as the six-client matrix in
 [six-faction-multiplayer.md](six-faction-multiplayer.md)): a mixed

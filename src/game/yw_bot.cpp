@@ -24,6 +24,7 @@ std::int32_t g_lastTauntMs = -1;
 std::uint64_t g_forkSeq = 1;
 bool g_captureFailing = false;   // the last think could not capture the world
 bool g_lookaheadFailing = false; // the last think's lookahead forks failed
+bool g_lookaheadCut = false;     // the last think's lookahead hit its work budget
 
 NC_STACK_yparobo *LocalRobo(NC_STACK_ypaworld *world)
 {
@@ -51,6 +52,7 @@ void ResetMatch()
     g_lastTauntMs = -1;
     g_captureFailing = false;
     g_lookaheadFailing = false;
+    g_lookaheadCut = false;
     // Every match starts from the lobby, thinking as the requested faction
     // until the match seats the bot.
     g_lifecycle.spec = g_spec;
@@ -174,6 +176,18 @@ void Tick(NC_STACK_ypaworld *world)
         else
             log_netlog("bot: lookahead forks work again\n");
         g_lookaheadFailing = lookaheadFailing;
+    }
+    if (report.lookaheadCut != g_lookaheadCut)
+    {
+        if (report.lookaheadCut)
+            log_netlog("bot: lookahead cut after %llu fog range tests (budget %llu) with %zu units "
+                       "in the world; playing the best order scored before the cut\n",
+                       static_cast<unsigned long long>(report.rangeTests),
+                       static_cast<unsigned long long>(World::NetBot::MaxLookaheadRangeTests),
+                       state.units.size());
+        else
+            log_netlog("bot: lookahead runs in full again\n");
+        g_lookaheadCut = report.lookaheadCut;
     }
     // Steer the native station AI (AI_layer3 wishes) toward the fork-chosen
     // order. Direct state writes are never used; the robo setters are the

@@ -101,19 +101,43 @@ inline bool ValidateState(const WorldState &state, std::size_t maxUnits)
 }
 
 namespace detail {
-inline void PutU32(std::vector<std::uint8_t> &out, std::uint32_t v)
+// The encoding goes into a sink: the bytes themselves (EncodeState) or their
+// FNV-1a hash (HashState), so hashing a state never builds its encoding.
+struct ByteSink
 {
-    out.push_back(static_cast<std::uint8_t>(v));
-    out.push_back(static_cast<std::uint8_t>(v >> 8));
-    out.push_back(static_cast<std::uint8_t>(v >> 16));
-    out.push_back(static_cast<std::uint8_t>(v >> 24));
+    std::vector<std::uint8_t> &bytes;
+    void Put(std::uint8_t b) { bytes.push_back(b); }
+};
+struct HashSink
+{
+    std::uint64_t hash = 1469598103934665603ull;
+    void Put(std::uint8_t b)
+    {
+        hash ^= b;
+        hash *= 1099511628211ull;
+    }
+};
+template <typename Sink>
+inline void PutU8(Sink &out, std::uint8_t v)
+{
+    out.Put(v);
 }
-inline void PutU64(std::vector<std::uint8_t> &out, std::uint64_t v)
+template <typename Sink>
+inline void PutU32(Sink &out, std::uint32_t v)
+{
+    out.Put(static_cast<std::uint8_t>(v));
+    out.Put(static_cast<std::uint8_t>(v >> 8));
+    out.Put(static_cast<std::uint8_t>(v >> 16));
+    out.Put(static_cast<std::uint8_t>(v >> 24));
+}
+template <typename Sink>
+inline void PutU64(Sink &out, std::uint64_t v)
 {
     PutU32(out, static_cast<std::uint32_t>(v));
     PutU32(out, static_cast<std::uint32_t>(v >> 32));
 }
-inline void PutF32(std::vector<std::uint8_t> &out, float v)
+template <typename Sink>
+inline void PutF32(Sink &out, float v)
 {
     std::uint32_t bits;
     std::memcpy(&bits, &v, 4);
@@ -146,48 +170,67 @@ struct Reader
         return U32(bits) && (std::memcpy(&v, &bits, 4), true);
     }
 };
+
+// Bytes per part of the encoding below (EncodedStateSize).
+constexpr std::size_t HeaderBytes = 36;  // map, time, frames, rng, nextGid, both counts
+constexpr std::size_t SectorBytes = 19;
+constexpr std::size_t UnitBytes = 46;
+
+template <typename Sink>
+inline void Encode(const WorldState &state, Sink &out)
+{
+    PutU32(out, static_cast<std::uint32_t>(state.mapW));
+    PutU32(out, static_cast<std::uint32_t>(state.mapH));
+    PutU32(out, static_cast<std::uint32_t>(state.timeStampMs));
+    PutU32(out, state.framesElapsed);
+    PutU64(out, state.rngState);
+    PutU32(out, state.nextGid);
+    PutU32(out, static_cast<std::uint32_t>(state.sectors.size()));
+    for (const SectorState &s : state.sectors)
+    {
+        PutU32(out, static_cast<std::uint32_t>(s.id));
+        PutU8(out, s.owner);
+        PutU32(out, static_cast<std::uint32_t>(s.typeId));
+        PutU8(out, s.purpose);
+        PutU32(out, static_cast<std::uint32_t>(s.energyPower));
+        PutU32(out, s.viewMask);
+        PutU8(out, s.border ? 1 : 0);
+    }
+    PutU32(out, static_cast<std::uint32_t>(state.units.size()));
+    for (const UnitState &u : state.units)
+    {
+        PutU32(out, u.gid);
+        PutU32(out, u.parentGid);
+        PutU32(out, static_cast<std::uint32_t>(u.protoId));
+        PutU8(out, u.owner);
+        PutU32(out, static_cast<std::uint32_t>(u.energy));
+        PutF32(out, u.x);
+        PutF32(out, u.y);
+        PutF32(out, u.z);
+        PutF32(out, u.targetX);
+        PutF32(out, u.targetY);
+        PutU8(out, u.hasTarget ? 1 : 0);
+        PutU32(out, u.attackGid);
+        PutU32(out, static_cast<std::uint32_t>(u.cooldownMs));
+    }
+}
 } // namespace detail
+
+// Size of EncodeState(state) in bytes, without encoding it.
+inline std::size_t EncodedStateSize(const WorldState &state)
+{
+    return detail::HeaderBytes + state.sectors.size() * detail::SectorBytes +
+           state.units.size() * detail::UnitBytes;
+}
 
 // Deterministic binary encoding: fixed field order, little-endian scalars,
 // units in stored (gid-sorted) order. Same state => same bytes => same hash.
 inline std::vector<std::uint8_t> EncodeState(const WorldState &state)
 {
     std::vector<std::uint8_t> out;
-    out.reserve(32 + state.sectors.size() * 18 + state.units.size() * 44);
-    detail::PutU32(out, static_cast<std::uint32_t>(state.mapW));
-    detail::PutU32(out, static_cast<std::uint32_t>(state.mapH));
-    detail::PutU32(out, static_cast<std::uint32_t>(state.timeStampMs));
-    detail::PutU32(out, state.framesElapsed);
-    detail::PutU64(out, state.rngState);
-    detail::PutU32(out, state.nextGid);
-    detail::PutU32(out, static_cast<std::uint32_t>(state.sectors.size()));
-    for (const SectorState &s : state.sectors)
-    {
-        detail::PutU32(out, static_cast<std::uint32_t>(s.id));
-        out.push_back(s.owner);
-        detail::PutU32(out, static_cast<std::uint32_t>(s.typeId));
-        out.push_back(s.purpose);
-        detail::PutU32(out, static_cast<std::uint32_t>(s.energyPower));
-        detail::PutU32(out, s.viewMask);
-        out.push_back(s.border ? 1 : 0);
-    }
-    detail::PutU32(out, static_cast<std::uint32_t>(state.units.size()));
-    for (const UnitState &u : state.units)
-    {
-        detail::PutU32(out, u.gid);
-        detail::PutU32(out, u.parentGid);
-        detail::PutU32(out, static_cast<std::uint32_t>(u.protoId));
-        out.push_back(u.owner);
-        detail::PutU32(out, static_cast<std::uint32_t>(u.energy));
-        detail::PutF32(out, u.x);
-        detail::PutF32(out, u.y);
-        detail::PutF32(out, u.z);
-        detail::PutF32(out, u.targetX);
-        detail::PutF32(out, u.targetY);
-        out.push_back(u.hasTarget ? 1 : 0);
-        detail::PutU32(out, u.attackGid);
-        detail::PutU32(out, static_cast<std::uint32_t>(u.cooldownMs));
-    }
+    out.reserve(EncodedStateSize(state));
+    detail::ByteSink sink{out};
+    detail::Encode(state, sink);
     return out;
 }
 
@@ -251,14 +294,9 @@ inline bool DecodeState(const std::uint8_t *data, std::size_t size, std::size_t 
 // desync detection between fork/base/live worlds.
 inline std::uint64_t HashState(const WorldState &state)
 {
-    const std::vector<std::uint8_t> bytes = EncodeState(state);
-    std::uint64_t hash = 1469598103934665603ull;
-    for (std::uint8_t b : bytes)
-    {
-        hash ^= b;
-        hash *= 1099511628211ull;
-    }
-    return hash;
+    detail::HashSink sink;
+    detail::Encode(state, sink);
+    return sink.hash;
 }
 
 } }

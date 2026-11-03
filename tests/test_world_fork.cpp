@@ -1,10 +1,48 @@
 #include "../src/world/fork.h"
 #include "../src/agent/fork_protocol.h"
 #include "require.h"
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 
 using namespace World::Fork;
+
+// FNV-1a 64 over bytes: what HashState must equal over EncodeState.
+static std::uint64_t Fnv1a(const std::vector<std::uint8_t> &bytes)
+{
+    std::uint64_t hash = 1469598103934665603ull;
+    for (std::uint8_t b : bytes)
+    {
+        hash ^= b;
+        hash *= 1099511628211ull;
+    }
+    return hash;
+}
+
+// A coordinate for the fog checks on an axis of `cells` sectors: anywhere on
+// the map or a sector beyond it, on a cell edge, near one of four spots, or
+// one of the values a float cannot place on the map.
+static float FogCoordinate(ForkRng &rng, int cells, const float spots[4])
+{
+    const float len = World::CVSectorLength;
+    switch (rng.Below(10))
+    {
+    case 0:
+        return static_cast<float>(rng.Below(2 * (cells + 2) + 1)) * len / 2.0f - len;
+    case 1:
+    case 2:
+    case 3:
+        return spots[rng.Below(4)] + static_cast<float>(rng.Below(4001)) - 2000.0f;
+    case 4:
+    {
+        static const float odd[] = {0.0f, -0.0f, 1e30f, -1e30f, 3e38f, -3e38f,
+                                    HUGE_VALF, -HUGE_VALF, std::nanf(""), 1e-30f};
+        return rng.Below(3) == 0 ? odd[rng.Below(10)] : spots[rng.Below(4)];
+    }
+    default:
+        return (static_cast<float>(rng.Below(100000)) / 100000.0f * (cells + 2) - 1.0f) * len;
+    }
+}
 
 static WorldState MakeState()
 {
@@ -68,6 +106,12 @@ int main()
     WorldState back;
     Require(DecodeState(bytes.data(), bytes.size(), 1024, back), "snapshot round-trips");
     REQUIRE(HashState(back) == HashState(state));
+    // The hash streams the encoding instead of building it, and the size
+    // check of every fork computes the size instead of encoding the world.
+    REQUIRE(HashState(state) == Fnv1a(bytes));
+    REQUIRE(EncodedStateSize(state) == bytes.size());
+    REQUIRE(EncodedStateSize(WorldState()) == EncodeState(WorldState()).size());
+    REQUIRE(HashState(WorldState()) == Fnv1a(EncodeState(WorldState())));
     Require(!DecodeState(bytes.data(), bytes.size() - 1, 1024, back), "truncated snapshot rejected");
     Require(!DecodeState(nullptr, 0, 1024, back), "null snapshot rejected");
     Require(!ValidateState(back, 2), "unit cap enforced by validation");
@@ -284,8 +328,155 @@ int main()
         }
         Require(!ValidateState(big, MaxWorldUnits), "the cap is enforced");
         Require(!Fork::Create(big, Cfg(), ForkId{21}), "a world above the cap does not fork");
+        REQUIRE(EncodedStateSize(big) == EncodeState(big).size());
+        REQUIRE(HashState(big) == Fnv1a(EncodeState(big)));
     }
 
-    std::cout << "world fork, snapshot, registry and agent fork protocol tests passed\n";
+    // Sector lookup is defined for any float: positions that are not finite
+    // or lie beyond int are off the map.
+    {
+        const WorldState s = MakeState();
+        for (float v : {std::nanf(""), HUGE_VALF, -HUGE_VALF, 3e38f, -3e38f, 1e12f})
+        {
+            REQUIRE(SectorIndexOf(s, v, 100.0f) == -1);
+            REQUIRE(SectorIndexOf(s, 100.0f, v) == -1);
+        }
+        REQUIRE(SectorIndexOf(s, 0.0f, 0.0f) == 0);
+        REQUIRE(SectorIndexOf(s, 4 * World::CVSectorLength - 1.0f, 3 * World::CVSectorLength - 1.0f) == 11);
+        REQUIRE(SectorIndexOf(s, -0.5f, 100.0f) == -1);
+    }
+
+    // SensorView answers exactly what UnitVisibleTo answers, for every unit
+    // and owner: on and off the map, on cell edges, at the edge of the range,
+    // in clusters, with no map at all, for odd ranges and for positions that
+    // are not finite.
+    {
+        const float ranges[] = {1800.0f, 2000.0f, 2160.0f, 0.0f, -1800.0f, 1e-25f,
+                                50.0f, 7000.0f, 1e30f, HUGE_VALF, std::nanf("")};
+        ForkRng rng(2024);
+        std::size_t checked = 0;
+        for (int world = 0; world < 40; ++world)
+        {
+            WorldState s;
+            s.mapW = static_cast<int>(rng.Below(9));
+            s.mapH = s.mapW ? static_cast<int>(1 + rng.Below(8)) : 0;
+            s.sectors.resize(static_cast<std::size_t>(s.mapW) * s.mapH);
+            for (std::size_t i = 0; i < s.sectors.size(); ++i)
+            {
+                s.sectors[i].id = static_cast<std::int32_t>(i);
+                s.sectors[i].viewMask = rng.Below(3) == 0 ? (1u << rng.Below(7)) : 0u;
+            }
+            float spotsX[4], spotsY[4];
+            for (int k = 0; k < 4; ++k)
+            {
+                spotsX[k] = static_cast<float>(rng.Below(1 + 1200 * (s.mapW + 1)));
+                spotsY[k] = static_cast<float>(rng.Below(1 + 1200 * (s.mapH + 1)));
+            }
+            const std::uint32_t count = 1 + rng.Below(150);
+            for (std::uint32_t i = 0; i < count; ++i)
+            {
+                UnitState u;
+                u.gid = 0x10000 + i;
+                u.owner = static_cast<std::uint8_t>(rng.Below(7));
+                u.x = FogCoordinate(rng, s.mapW, spotsX);
+                u.y = FogCoordinate(rng, s.mapH, spotsY);
+                s.units.push_back(u);
+            }
+            // Units at the edge of the range of an own unit: straight, on a
+            // 3-4-5 diagonal, one float step beyond, and one step inside.
+            const UnitState anchor = s.units[0];
+            if (std::isfinite(anchor.x) && std::isfinite(anchor.y))
+                for (float r : {1800.0f, 2000.0f, 2160.0f})
+                {
+                    const float xs[] = {anchor.x + r, anchor.x, anchor.x + 0.6f * r,
+                                        std::nextafter(anchor.x + r, HUGE_VALF),
+                                        std::nextafter(anchor.x + r, -HUGE_VALF)};
+                    const float ys[] = {anchor.y, anchor.y - r, anchor.y + 0.8f * r,
+                                        anchor.y, anchor.y};
+                    for (int k = 0; k < 5; ++k)
+                    {
+                        UnitState u;
+                        u.gid = 0x10000 + static_cast<std::uint32_t>(s.units.size());
+                        u.owner = static_cast<std::uint8_t>((anchor.owner + 1) % 7);
+                        u.x = xs[k];
+                        u.y = ys[k];
+                        s.units.push_back(u);
+                    }
+                }
+            for (float range : ranges)
+                for (std::uint8_t owner = 0; owner < 7; ++owner)
+                {
+                    const SensorView view(s, owner, range);
+                    for (const UnitState &u : s.units)
+                    {
+                        ++checked;
+                        if (view.Sees(u) != UnitVisibleTo(s, u, owner, range))
+                        {
+                            std::cerr << "world " << world << " owner " << int(owner) << " range "
+                                      << range << " unit at " << u.x << "," << u.y << ": ";
+                            Require(false, "SensorView agrees with UnitVisibleTo");
+                        }
+                    }
+                }
+        }
+        REQUIRE(checked > 100000);
+
+        // An owner whose only unit has no finite position: with an infinite
+        // range, UnitVisibleTo still lets that unit see a finite one, since
+        // inf <= inf.
+        WorldState s = MakeState();
+        UnitState lost;
+        lost.gid = 0x20000;
+        lost.owner = 4;
+        lost.x = HUGE_VALF;
+        s.units.push_back(lost);
+        Require(UnitVisibleTo(s, s.units[0], 4, HUGE_VALF), "a unit at infinity sees with an infinite range");
+        for (float range : {HUGE_VALF, 1800.0f, std::nanf("")})
+        {
+            const SensorView view(s, 4, range);
+            for (const UnitState &u : s.units)
+                Require(view.Sees(u) == UnitVisibleTo(s, u, 4, range),
+                        "SensorView agrees for an owner without a finite position");
+        }
+    }
+
+    // The cost of a fog pass at the cap. Asking UnitVisibleTo about every unit
+    // scans the world per unit; the view tests only own units in cells whose
+    // box is in range. Six owners, owner 1 massed 2300-2700 units west of all
+    // the others: every enemy is in reach of the cells, none in sensor range.
+    {
+        WorldState s;
+        s.mapW = 54;
+        s.mapH = 32;
+        s.sectors.resize(54 * 32);
+        for (int i = 0; i < 54 * 32; ++i)
+            s.sectors[i].id = i;
+        const float len = World::CVSectorLength;
+        for (std::uint32_t i = 0; i < MaxWorldUnits; ++i)
+        {
+            UnitState u;
+            u.gid = 0x10000 + i;
+            u.owner = static_cast<std::uint8_t>(1 + i % 6);
+            u.x = 20.5f * len + static_cast<float>(i % 200) + (u.owner == 1 ? 0.0f : 2500.0f);
+            u.y = 16.5f * len + static_cast<float>((i / 6) % 200);
+            s.units.push_back(u);
+        }
+        const SensorView view(s, 1, 2160.0f);
+        std::size_t seen = 0;
+        for (const UnitState &u : s.units)
+            seen += view.Sees(u) ? 1 : 0;
+        REQUIRE(seen == (MaxWorldUnits + 5) / 6);  // its own units only
+        Require(view.RangeTests() == 0, "a cluster out of range costs no range test");
+        // Brought in range, each enemy costs its first test.
+        for (UnitState &u : s.units)
+            if (u.owner != 1)
+                u.x -= 600.0f;
+        const SensorView near(s, 1, 2160.0f);
+        for (const UnitState &u : s.units)
+            Require(near.Sees(u), "every enemy within range is seen");
+        Require(near.RangeTests() <= s.units.size(), "one range test per enemy in range");
+    }
+
+    std::cout << "world fork, snapshot, registry, fog view and agent fork protocol tests passed\n";
     return 0;
 }

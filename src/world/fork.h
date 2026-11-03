@@ -135,12 +135,25 @@ inline void EnginePositionToPlane(double engineX, double engineY, double engineZ
 
 inline int SectorIndexOf(const WorldState &s, float x, float y)
 {
-    const int sx = static_cast<int>(std::floor(x / World::CVSectorLength));
-    const int sy = static_cast<int>(std::floor(y / World::CVSectorLength));
-    if (sx < 0 || sy < 0 || sx >= s.mapW || sy >= s.mapH)
+    // Compared as floats first: converting NaN or a value beyond int to int
+    // is undefined.
+    const float fx = std::floor(x / World::CVSectorLength);
+    const float fy = std::floor(y / World::CVSectorLength);
+    if (!(fx >= 0.0f && fy >= 0.0f && fx < static_cast<float>(s.mapW) &&
+          fy < static_cast<float>(s.mapH)))
         return -1;
-    return sy * s.mapW + sx;
+    return static_cast<int>(fy) * s.mapW + static_cast<int>(fx);
 }
+// The sensor range test of every fog check: an own unit at (ownX, ownY)
+// sees a unit at (x, y). One definition, so all fog checks agree at the edge.
+inline bool InSensorRange(float ownX, float ownY, float x, float y, float rangeSquared)
+{
+    const float dx = ownX - x, dy = ownY - y;
+    return dx * dx + dy * dy <= rangeSquared;
+}
+// Whether `owner` may observe u: its own units, units in a sector it sees,
+// and units within sensor range of one of its units. Scans the whole world;
+// to ask about many units of one state, use SensorView.
 inline bool UnitVisibleTo(const WorldState &s, const UnitState &u, std::uint8_t owner,
                           float sensorRange)
 {
@@ -154,12 +167,158 @@ inline bool UnitVisibleTo(const WorldState &s, const UnitState &u, std::uint8_t 
     {
         if (own.owner != owner)
             continue;
-        const float dx = own.x - u.x, dy = own.y - u.y;
-        if (dx * dx + dy * dy <= r2)
+        if (InSensorRange(own.x, own.y, u.x, u.y, r2))
             return true;
     }
     return false;
 }
+
+// UnitVisibleTo for every unit of one state, as one owner sees it. Asking
+// UnitVisibleTo about each unit scans the world once per unit, so a fog pass
+// over n units costs n * n: at the 4096-unit cap one Veteran bot think made
+// nine such passes and stalled its frame by 70 ms or more. SensorView sorts
+// the owner's units into sector cells once and keeps their bounding box per
+// cell. A query then looks only at the cells around the unit it asks about,
+// skips a cell whose box is out of range, and tests the units of the rest.
+// Sees(u) returns exactly UnitVisibleTo(state, u, owner, sensorRange). The
+// view reads the state, which must outlive it unchanged.
+class SensorView
+{
+public:
+    SensorView(const WorldState &state, std::uint8_t owner, float sensorRange)
+        : state_(state), owner_(owner), rangeSquared_(sensorRange * sensorRange),
+          cols_(std::max(1, state.mapW)), rows_(std::max(1, state.mapH))
+    {
+        // An own unit within range lies at most floor(range / cell) + 1 cells
+        // from the queried unit's cell; one more cell absorbs float rounding.
+        // Off-map positions count in the nearest edge cell, which keeps every
+        // distance in cells at most the real one.
+        const double reach =
+            std::floor(std::fabs(static_cast<double>(sensorRange)) / World::CVSectorLength) + 2.0;
+        const int whole = std::max(cols_, rows_);
+        reach_ = reach < whole ? static_cast<int>(reach) : whole;
+        const std::size_t cells = static_cast<std::size_t>(cols_) * rows_;
+        start_.assign(cells + 1, 0);
+        for (const UnitState &u : state.units)
+            if (u.owner == owner && Placed(u))
+                ++start_[CellOf(u) + 1];
+        for (std::size_t c = 1; c < start_.size(); ++c)
+            start_[c] += start_[c - 1];
+        xs_.resize(start_.back());
+        ys_.resize(start_.back());
+        boxes_.assign(cells, Box());
+        std::vector<std::uint32_t> next(start_.begin(), start_.end() - 1);
+        for (const UnitState &u : state.units)
+        {
+            if (u.owner != owner)
+                continue;
+            if (!Placed(u))
+            {
+                unplaced_.push_back(&u); // no cell; tested on every query
+                continue;
+            }
+            const std::size_t c = CellOf(u);
+            const std::uint32_t i = next[c]++;
+            xs_[i] = u.x;
+            ys_[i] = u.y;
+            Box &b = boxes_[c];
+            b.x0 = std::min(b.x0, u.x);
+            b.x1 = std::max(b.x1, u.x);
+            b.y0 = std::min(b.y0, u.y);
+            b.y1 = std::max(b.y1, u.y);
+        }
+    }
+
+    bool Sees(const UnitState &u) const
+    {
+        if (u.owner == owner_)
+            return true;
+        const int idx = SectorIndexOf(state_, u.x, u.y);
+        if (idx >= 0 && (state_.sectors[idx].viewMask & (1u << owner_)))
+            return true;
+        for (const UnitState *own : unplaced_)
+            if (Test(own->x, own->y, u))
+                return true;
+        if (!Placed(u))
+        {
+            // No cell to start from: test every own unit.
+            for (std::uint32_t i = 0; i < start_.back(); ++i)
+                if (Test(xs_[i], ys_[i], u))
+                    return true;
+            return false;
+        }
+        const int cx = Column(u.x), cy = Row(u.y);
+        const int x0 = std::max(0, cx - reach_), x1 = std::min(cols_ - 1, cx + reach_);
+        const int y0 = std::max(0, cy - reach_), y1 = std::min(rows_ - 1, cy + reach_);
+        for (int y = y0; y <= y1; ++y)
+        {
+            const std::size_t row = static_cast<std::size_t>(y) * cols_;
+            if (start_[row + x0] == start_[row + x1 + 1])
+                continue; // no own unit in this row of the window
+            for (int x = x0; x <= x1; ++x)
+            {
+                const std::size_t c = row + x;
+                if (start_[c] == start_[c + 1] || OutOfRange(boxes_[c], u))
+                    continue;
+                for (std::uint32_t i = start_[c]; i < start_[c + 1]; ++i)
+                    if (Test(xs_[i], ys_[i], u))
+                        return true;
+            }
+        }
+        return false;
+    }
+
+    // Own-unit range tests made by Sees so far: the cost of the queries.
+    std::uint64_t RangeTests() const { return rangeTests_; }
+
+private:
+    struct Box
+    {
+        float x0 = HUGE_VALF, y0 = HUGE_VALF, x1 = -HUGE_VALF, y1 = -HUGE_VALF;
+    };
+
+    static bool Placed(const UnitState &u) { return std::isfinite(u.x) && std::isfinite(u.y); }
+    static int Clamp(float cell, int count)
+    {
+        if (cell <= 0.0f)
+            return 0;
+        if (cell >= static_cast<float>(count - 1))
+            return count - 1;
+        return static_cast<int>(cell);
+    }
+    int Column(float x) const { return Clamp(std::floor(x / World::CVSectorLength), cols_); }
+    int Row(float y) const { return Clamp(std::floor(y / World::CVSectorLength), rows_); }
+    std::size_t CellOf(const UnitState &u) const
+    {
+        return static_cast<std::size_t>(Row(u.y)) * cols_ + Column(u.x);
+    }
+    bool Test(float ownX, float ownY, const UnitState &u) const
+    {
+        ++rangeTests_;
+        return InSensorRange(ownX, ownY, u.x, u.y, rangeSquared_);
+    }
+    // Whether no unit in box b can pass InSensorRange for u. The distance to
+    // the box is computed in double and must exceed the range by more than
+    // the float test can round: its relative error stays below 1e-6, and
+    // 1e-30 covers squares that underflow near zero.
+    bool OutOfRange(const Box &b, const UnitState &u) const
+    {
+        const double x = u.x, y = u.y;
+        const double dx = std::max(0.0, std::max(b.x0 - x, x - b.x1));
+        const double dy = std::max(0.0, std::max(b.y0 - y, y - b.y1));
+        return (dx * dx + dy * dy) * (1.0 - 1e-6) > static_cast<double>(rangeSquared_) + 1e-30;
+    }
+
+    const WorldState &state_;
+    std::uint8_t owner_;
+    float rangeSquared_;
+    int cols_, rows_, reach_ = 0;
+    std::vector<std::uint32_t> start_;   // own units of cell c: [start_[c], start_[c + 1])
+    std::vector<float> xs_, ys_;         // their positions, grouped by cell
+    std::vector<Box> boxes_;             // their bounds per cell
+    std::vector<const UnitState *> unplaced_;
+    mutable std::uint64_t rangeTests_ = 0;
+};
 
 class Fork
 {
@@ -173,7 +332,7 @@ public:
             return nullptr;
         if (!ValidateState(src, cfg.maxUnits))
             return nullptr;
-        if (EncodeState(src).size() > cfg.maxSnapshotBytes)
+        if (EncodedStateSize(src) > cfg.maxSnapshotBytes)
             return nullptr;
         std::unique_ptr<Fork> fork(new Fork(cfg, id));
         fork->state_ = src;
@@ -206,7 +365,7 @@ public:
             return false;
         if (!ValidateState(snapshot, cfg_.maxUnits))
             return false;
-        if (EncodeState(snapshot).size() > cfg_.maxSnapshotBytes)
+        if (EncodedStateSize(snapshot) > cfg_.maxSnapshotBytes)
             return false;
         state_ = snapshot;
         rng_.SetState(state_.rngState);
@@ -254,9 +413,10 @@ public:
             if (visible)
                 obs.sectors.push_back({s.id, s.owner, s.energyPower, s.purpose});
         }
+        const SensorView view(state_, owner, sensorRange);
         for (const UnitState &u : state_.units)
         {
-            if (!UnitVisibleTo(state_, u, owner, sensorRange))
+            if (!view.Sees(u))
                 continue;
             ObservedUnit ou;
             ou.gid = u.gid;
