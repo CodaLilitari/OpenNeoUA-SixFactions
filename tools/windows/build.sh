@@ -13,17 +13,10 @@ export TMPDIR="$lab/tmp"
 export TEMP=$(cygpath -w "$lab/tmp")
 export TMP="$TEMP"
 
-# Name the source revision that the agent interface reports in session.json.
-# CI exports GITHUB_SHA, which src/CMakeLists.txt also uses as its default.
-# A local build names its git commit, marked -dirty when tracked files differ
-# from that commit, and "unknown" outside a git checkout.
-if [[ -n ${GITHUB_SHA:-} ]]; then
-  revision=$GITHUB_SHA
-elif revision=$(git -C "$source_root" rev-parse --short=12 HEAD 2>/dev/null); then
-  git -C "$source_root" diff --quiet HEAD -- 2>/dev/null || revision+=-dirty
-else
-  revision=unknown
-fi
+# Name the source revision that the agent interface reports in session.json:
+# GITHUB_SHA in CI, else this tree's own git commit (-dirty when tracked files
+# differ), else "unknown" (tools/source-revision.sh).
+revision=$(bash "$source_root/tools/source-revision.sh" "$source_root")
 
 cmake -S "$source_root/src" -B "$lab/engine" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release '-DCMAKE_CXX_FLAGS_RELEASE=-O2 -DNDEBUG' \
@@ -38,6 +31,7 @@ ctest --test-dir "$lab/tests" --output-on-failure 2>&1 | tee "$lab/logs/tests.lo
 python -B "$source_root/tests/test_six_faction_maps.py" -v 2>&1 | tee "$lab/logs/map-tests.log"
 python -B "$source_root/tests/test_agent_mcp.py" -v 2>&1 | tee "$lab/logs/agent-mcp-tests.log"
 python -B "$source_root/tests/test_faction_audio_manifest.py" -v 2>&1 | tee "$lab/logs/faction-audio-tests.log"
+python -B "$source_root/tests/test_source_revision.py" -v 2>&1 | tee "$lab/logs/source-revision-tests.log"
 python -B "$source_root/tests/test_windows_package.py" -v 2>&1 | tee "$lab/logs/package-tests.log"
 python -B "$source_root/tools/windows/package.py" --source "$source_root" \
   --binary "$lab/engine/OpenNeoUA.exe" --prefix "$MINGW_PREFIX" \

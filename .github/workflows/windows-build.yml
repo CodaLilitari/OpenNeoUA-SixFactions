@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [windows-build]
-    paths: ['.github/workflows/windows-build.yml', 'src/**', 'tests/**', 'tools/windows/**', 'tools/agent/**', 'Sounds/Speech/Voicepacks/**', 'docs/faction-audio-manifest.json']
+    paths: ['.github/workflows/windows-build.yml', 'src/**', 'tests/**', 'tools/windows/**', 'tools/agent/**', 'tools/source-revision.sh', 'Sounds/Speech/Voicepacks/**', 'docs/faction-audio-manifest.json']
 
 permissions:
   contents: read
