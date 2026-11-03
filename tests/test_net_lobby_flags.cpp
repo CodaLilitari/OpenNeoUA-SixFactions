@@ -588,8 +588,8 @@ static void TestHostProblems()
         for (const std::string &t : s.trace)
             starts += t == "start-alone" ? 1 : 0;
         Require(d.step() == Step::Failed && Contains(d.error(), "the match did not start") &&
-                starts == Driver::StartAttempts, "lost launches retried " + std::to_string(starts) +
-                " times: " + d.error());
+                starts == static_cast<int>(Driver::StartAttempts), "lost launches retried " +
+                std::to_string(starts) + " times: " + d.error());
         Require(d.queued().code == 0, "a press is left after giving up on the start");
     }
     {
@@ -599,7 +599,7 @@ static void TestHostProblems()
         Shell s;
         s.Run(d, 100, 50, [&] { return d.step() == Step::WaitStart; });
         s.v.players.push_back(Remote("C1", 3, true));
-        for (int round = 0; round < Driver::StartAttempts + 2; ++round)
+        for (int round = 0; round < static_cast<int>(Driver::StartAttempts) + 2; ++round)
         {
             s.deferNextLaunch = true;
             s.Run(d, 200, 50, [&] { return d.queued().code != 0; });

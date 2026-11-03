@@ -844,7 +844,7 @@ private:
     bool pending_ = false;
     std::uint32_t pendingSince_ = 0;
     int attempts_ = 0;
-    int failedStarts_ = 0; // Start presses in a row that did not start the match
+    std::uint32_t failedStarts_ = 0; // Start presses in a row that did not start the match
     std::uint32_t since_ = 0;
     std::uint32_t notBefore_ = 0;
     std::uint32_t holdSince_ = 0;
