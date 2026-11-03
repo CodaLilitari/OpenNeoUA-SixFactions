@@ -135,9 +135,13 @@ Python tests, map tests, package zip).
   profiles, three difficulties, join/leave/takeover lifecycle, `-bot
   Faction:Difficulty`. Fork/bot logic is covered by standalone tests; no
   live bot match has been run.
-* Fixed 20 Hz tick (`NetTick`) now drives world and shell net flushes at
-  the configured period. `yw_wire` envelope and `delta_wire` ForkDiff
-  codecs are unit-tested but not yet cut over.
+* `NetTick` now paces the world and shell broadcast flushes at the
+  configured period: every 200 ms in a match (1500 ms while a silent peer
+  slows the net) and every 100 ms in the lobby. Its 50 ms (20 Hz) default
+  step is not used, and unit positions are not tick-gated. (Corrected
+  2026-11-02: this entry first called it a fixed 20 Hz tick.) `yw_wire`
+  envelope and `delta_wire` ForkDiff codecs are unit-tested but not yet
+  cut over.
 * ENet 1.3.18 is vendored behind `INetTransport`/`EnetTransport` with the
   same handshake/resume/two-channel contract (loopback-verified without
   SDL), plus a `ZNDEnet` adapter preserving the windp session model

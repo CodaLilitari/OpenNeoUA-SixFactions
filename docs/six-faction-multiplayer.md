@@ -66,11 +66,17 @@ per source address (400 burst, 200/s sustained); system packets are exempt.
 
 Modernization status: protocol versioning, resume tokens, and rate limiting
 above are on the wire today. The Phase 2 wire envelope (`src/game/yw_wire.h`)
-and the Phase 3 fixed tick (`src/world/net_tick.h`, 20 Hz) and delta codec
-(`src/world/delta_wire.h`, ForkDiff wire format) are implemented and
-unit-tested but not yet cut over. The fixed tick is wired: world and shell
-net flushes run through `NetTick` at the configured flush period. The
-transport still runs ZNDNet struct
+and the Phase 3 delta codec (`src/world/delta_wire.h`, ForkDiff wire format)
+are implemented and unit-tested but not yet cut over. `NetTick`
+(`src/world/net_tick.h`) only paces the batched broadcast flushes, and no
+network traffic runs at its 50 ms (20 Hz) default step: a match flushes every
+`flush_time_norm` (200 ms), or every 1500 ms while a silent peer has slowed
+the net (`SPEED_DOWN_NET`, set after 7 s without a message from a player),
+and the lobby flushes every 100 ms. Unit positions (`VHCLDATA`) go out every
+`update_time_norm` (200 ms, 1400 ms while slowed) and are not tick-gated, and
+a directed send flushes the buffer at once. The 400 ms remote-mode periods in
+`yw_shell.cpp` never apply: `remoteMode` can only be set at startup, before
+any connection exists. The transport still runs ZNDNet struct
 packets until the ENet swap (Phase 1) is built and accepted on a toolchain
 machine. Phase 1 transport now exists beside it: vendored ENet 1.3.18
 (`src/third_party/enet`) behind `INetTransport`/`EnetTransport`
