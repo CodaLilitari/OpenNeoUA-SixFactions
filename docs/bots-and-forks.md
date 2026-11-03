@@ -100,8 +100,13 @@ Semantics:
   In a network match the agent bridge always observes as the local player's
   owner, whatever owner the request names.
 - **Limits**: fixed step (40 ms default), per-call tick budget, unit cap
-  (1024, matching the net snapshot caps), snapshot byte ceiling, and a live
-  fork budget (8 per registry; discarded forks free their slot).
+  (`MaxWorldUnits`, 4096 units in the whole world, the same cap as the
+  engine capture; the network's 1024-record snapshot caps apply per owner),
+  snapshot byte ceiling, and a live fork budget (8 per registry; discarded
+  forks free their slot). A bot whose world is above the cap cannot capture
+  it: it logs that once and plays its faction profile until the world is
+  back under the cap. Lookahead forks that fail are logged as well, instead
+  of the bot quietly playing the greedy choice.
 
 Engine bridge: `ForkBridge::CaptureWorldState` / `ValidateActions`
 (`src/game/yw_fork.cpp`) translate the live `NC_STACK_ypaworld` (sectors via

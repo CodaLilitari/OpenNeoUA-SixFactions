@@ -75,6 +75,12 @@ struct WorldState
     }
 };
 
+// Whole-world unit cap for fork states, shared by the engine capture
+// (yw_fork.cpp), every ForkConfig and the delta codec. The network's caps of
+// 1024 UPDATE records and 1023 VHCLDATA units apply per owner, so a match of
+// six owners can hold far more than 1024 units.
+constexpr std::uint32_t MaxWorldUnits = 4096;
+
 // Structural validity for states entering a fork (capture, decode, merge).
 inline bool ValidateState(const WorldState &state, std::size_t maxUnits)
 {

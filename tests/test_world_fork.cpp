@@ -254,6 +254,38 @@ int main()
         Require(UnitVisibleTo(s, near, 1, 1800.0f), "nearby enemy is within sensor range");
     }
 
+    // One whole-world unit cap for the engine capture and every ForkConfig.
+    // A six-player match passes the old fork cap of 1024 long before the
+    // capture cap, and every fork then failed.
+    {
+        REQUIRE(ForkConfig().maxUnits == MaxWorldUnits);
+        REQUIRE(MaxWorldUnits == 4096);
+        WorldState big = MakeState();
+        big.units.clear();
+        for (std::uint32_t i = 0; i < 1500; ++i)
+        {
+            UnitState u;
+            u.gid = 0x10000 + i;
+            u.protoId = 10;
+            u.owner = static_cast<std::uint8_t>(1 + i % 6);
+            u.energy = 100;
+            u.x = 100.0f + static_cast<float>(i % 40) * 110.0f;
+            u.y = 100.0f + static_cast<float>(i / 40) * 90.0f;
+            big.units.push_back(u);
+        }
+        big.nextGid = 0x10000 + 1500;
+        Require(ValidateState(big, MaxWorldUnits), "1500 units are a valid world");
+        Require(Fork::Create(big, Cfg(), ForkId{20}) != nullptr, "a 1500-unit world forks");
+        while (big.units.size() <= MaxWorldUnits)
+        {
+            UnitState u = big.units.back();
+            u.gid = big.nextGid++;
+            big.units.push_back(u);
+        }
+        Require(!ValidateState(big, MaxWorldUnits), "the cap is enforced");
+        Require(!Fork::Create(big, Cfg(), ForkId{21}), "a world above the cap does not fork");
+    }
+
     std::cout << "world fork, snapshot, registry and agent fork protocol tests passed\n";
     return 0;
 }

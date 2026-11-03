@@ -86,5 +86,8 @@ int main() {
     badKind[4 + 4] = 9; // first unit kind byte: count(4) + gid(4)
     const bool badKindOk = World::DeltaWire::DecodeDiff(badKind.data(), badKind.size(), back);
     REQUIRE(!badKindOk);
+
+    // A diff can name every unit a fork can hold.
+    REQUIRE(World::DeltaWire::MaxDiffUnits == MaxWorldUnits);
     return 0;
 }

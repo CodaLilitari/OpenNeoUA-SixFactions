@@ -12,7 +12,7 @@
 
 namespace World { namespace DeltaWire {
 
-constexpr std::size_t MaxDiffUnits = 4096;
+constexpr std::size_t MaxDiffUnits = Fork::MaxWorldUnits;
 constexpr std::size_t MaxDiffSectors = 65536;
 
 namespace detail {

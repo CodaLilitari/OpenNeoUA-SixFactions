@@ -130,6 +130,43 @@ int main()
     REQUIRE(World::Fork::HashState(state) == hashBefore);
     Require(d1.kind != OrderKind::None, "veteran decide returns an order");
 
+    // Lookahead reports what it could not do instead of silently playing the
+    // greedy choice: a large match forks (the old 1024-unit fork cap made
+    // every fork fail above it), a world above the cap is reported.
+    {
+        WorldState big = MakeState(true);
+        while (big.units.size() < 1500)
+        {
+            UnitState u = big.units[big.units.size() % 2];
+            u.gid = big.nextGid++;
+            u.x += static_cast<float>(big.units.size() % 37) * 30.0f;
+            big.units.push_back(u);
+        }
+        DecideReport report;
+        ForkRng rng(7);
+        const BotOrder order = Decide(big, spec, rng, World::Fork::ForkId{1}, &report);
+        Require(order.kind != OrderKind::None, "a large match still decides");
+        Require(report.forksCreated > 0 && report.forkFailures == 0 && !report.greedyFallback,
+                "a 1500-unit match gets its lookahead");
+        while (big.units.size() <= World::Fork::MaxWorldUnits)
+        {
+            UnitState u = big.units[0];
+            u.gid = big.nextGid++;
+            big.units.push_back(u);
+        }
+        DecideReport over;
+        ForkRng rng2(7);
+        const BotOrder fallback = Decide(big, spec, rng2, World::Fork::ForkId{1}, &over);
+        Require(fallback.kind != OrderKind::None, "above the cap a greedy order remains");
+        Require(over.forkFailures > 0 && over.greedyFallback && over.forksCreated == 0,
+                "a lookahead that cannot fork is reported");
+        DecideReport cadet;
+        ForkRng rng3(7);
+        Decide(MakeState(true), ParseBotSpec("Resistance:Cadet"), rng3, World::Fork::ForkId{1}, &cadet);
+        Require(cadet.forksCreated == 0 && cadet.forkFailures == 0 && !cadet.greedyFallback,
+                "a greedy difficulty is not a fallback");
+    }
+
     // Sulgogar bot never emits build orders.
     ForkRng r3(5);
     const BotSpec sulg = ParseBotSpec("Sulgogars:Veteran");

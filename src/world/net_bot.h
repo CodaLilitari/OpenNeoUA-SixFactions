@@ -370,13 +370,26 @@ inline double EvaluateFor(const Fork::WorldState &state, std::uint8_t owner,
     return score;
 }
 
+// What Decide did with its lookahead, so the caller can report a lookahead
+// that could not run instead of silently playing the greedy choice.
+struct DecideReport
+{
+    std::uint32_t forksCreated = 0;  // candidate and reply forks stepped
+    std::uint32_t forkFailures = 0;  // forks Fork::Create refused (state above the caps)
+    bool greedyFallback = false;     // lookahead was due but scored nothing
+};
+
 // Decision with agentic-fork lookahead where difficulty calls for it:
 // candidates are stepped in throwaway forks (same Fork::Step the local
 // what-if path uses), Veteran additionally steps an assumed enemy reply.
 // The live state is never mutated; only the winning order is returned.
 inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
-                       Fork::ForkRng &rng, Fork::ForkId baseId)
+                       Fork::ForkRng &rng, Fork::ForkId baseId,
+                       DecideReport *report = nullptr)
 {
+    DecideReport local;
+    DecideReport &out = report ? *report : local;
+    out = DecideReport();
     BotOrder best;
     std::vector<BotOrder> candidates = CandidateOrders(state, spec, rng);
     if (candidates.empty())
@@ -391,12 +404,17 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
     cfg.controllerOwner = spec.owner;
     cfg.seed = rng.State();
     double bestScore = -1e100;
+    bool scored = false;
     const std::size_t limit = std::min<std::size_t>(candidates.size(), 4);
     for (std::size_t i = 0; i < limit; ++i)
     {
         std::unique_ptr<Fork::Fork> fork = Fork::Fork::Create(state, cfg, baseId);
         if (!fork)
+        {
+            ++out.forkFailures;
             continue;
+        }
+        ++out.forksCreated;
         Fork::ForkActionBatch batch;
         batch.push_back(ToForkAction(candidates[i]));
         if (!fork->Step(batch, 25))
@@ -420,11 +438,15 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
                     foeCfg.controllerOwner = u.owner;
                     std::unique_ptr<Fork::Fork> replyFork =
                         Fork::Fork::Create(fork->State(), foeCfg, Fork::ForkId{baseId.v + 100 + i});
-                    if (replyFork)
+                    if (!replyFork)
+                        ++out.forkFailures;
+                    else
                     {
+                        ++out.forksCreated;
                         Fork::ForkActionBatch rb;
                         rb.push_back(ToForkAction(replies[0]));
                         replyFork->Step(rb, 25);
+                        scored = true;
                         const double s = EvaluateFor(replyFork->State(), spec.owner, dp.sensorRange);
                         if (s > bestScore) { bestScore = s; best = candidates[i]; }
                     }
@@ -433,18 +455,21 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
             }
             if (bestScore == -1e100)
             {
+                scored = true;
                 const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange);
                 if (s > bestScore) { bestScore = s; best = candidates[i]; }
             }
         }
         else
         {
+            scored = true;
             const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange);
             if (s > bestScore) { bestScore = s; best = candidates[i]; }
         }
     }
     if (best.kind == OrderKind::None)
         best = candidates[0];
+    out.greedyFallback = !scored;
     return best;
 }
 

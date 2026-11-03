@@ -74,7 +74,7 @@ bool CaptureWorldState(NC_STACK_ypaworld *world, World::Fork::WorldState &out)
                                     return a.gid == b.gid;
                                 }),
                     out.units.end());
-    return World::Fork::ValidateState(out, 4096);
+    return World::Fork::ValidateState(out, World::Fork::MaxWorldUnits);
 }
 
 bool ValidateActions(NC_STACK_ypaworld *world, std::uint8_t controllerOwner,

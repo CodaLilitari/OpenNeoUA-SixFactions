@@ -21,6 +21,8 @@ World::Fork::ForkRng g_rng(0xB07B07ull);
 std::int32_t g_lastThinkMs = -1;
 std::int32_t g_lastTauntMs = -1;
 std::uint64_t g_forkSeq = 1;
+bool g_captureFailing = false;   // the last think could not capture the world
+bool g_lookaheadFailing = false; // the last think's lookahead forks failed
 
 NC_STACK_yparobo *LocalRobo(NC_STACK_ypaworld *world)
 {
@@ -46,6 +48,8 @@ void ResetMatch()
     g_active = World::NetBot::BotSpec();
     g_lastThinkMs = -1;
     g_lastTauntMs = -1;
+    g_captureFailing = false;
+    g_lookaheadFailing = false;
 }
 
 void SendChat(NC_STACK_ypaworld *world, const char *line)
@@ -124,9 +128,35 @@ void Tick(NC_STACK_ypaworld *world)
 
     World::Fork::WorldState state;
     if (!ForkBridge::CaptureWorldState(world, state))
+    {
+        // More units than World::Fork::MaxWorldUnits: no order this think.
+        // Play the plain profile rather than keep the last order's lift for
+        // the rest of the match, and say so once.
+        if (!g_captureFailing)
+            log_netlog("bot: cannot capture the world (more than %u units?); playing the faction profile\n",
+                       World::Fork::MaxWorldUnits);
+        g_captureFailing = true;
+        ApplyWeights(robo, World::NetBot::BaseWeights(World::NetBot::ProfileForOwner(g_active.owner)));
         return;
+    }
+    if (g_captureFailing)
+        log_netlog("bot: world capture works again (%zu units)\n", state.units.size());
+    g_captureFailing = false;
+
+    World::NetBot::DecideReport report;
     const World::NetBot::BotOrder order =
-        World::NetBot::Decide(state, g_active, g_rng, World::Fork::ForkId{g_forkSeq++});
+        World::NetBot::Decide(state, g_active, g_rng, World::Fork::ForkId{g_forkSeq++}, &report);
+    const bool lookaheadFailing = report.forkFailures > 0;
+    if (lookaheadFailing != g_lookaheadFailing)
+    {
+        if (lookaheadFailing)
+            log_netlog("bot: %u lookahead forks failed with %zu units in the world%s\n",
+                       report.forkFailures, state.units.size(),
+                       report.greedyFallback ? "; playing the greedy choice" : "");
+        else
+            log_netlog("bot: lookahead forks work again\n");
+        g_lookaheadFailing = lookaheadFailing;
+    }
     // Steer the native station AI (AI_layer3 wishes) toward the fork-chosen
     // order. Direct state writes are never used; the robo setters are the
     // same wish interface the shell uses for a human station. Weights are

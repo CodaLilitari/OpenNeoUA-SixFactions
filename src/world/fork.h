@@ -33,7 +33,7 @@ struct ForkConfig
 {
     std::int32_t fixedDtMs = 40;              // matches forced screenshot step
     std::uint32_t maxTicksPerStep = 250;      // 10 s of sim per Step call
-    std::uint32_t maxUnits = 1024;            // net snapshot caps (yw_net.h)
+    std::uint32_t maxUnits = MaxWorldUnits;   // whole world, as captured
     std::size_t maxSnapshotBytes = 4u << 20;  // encoded snapshot ceiling
     std::uint32_t maxLiveForks = 8;           // per ForkRegistry
     std::uint8_t controllerOwner = 0;         // only owner this fork may order
