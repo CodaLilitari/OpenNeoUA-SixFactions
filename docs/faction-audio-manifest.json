@@ -2,7 +2,7 @@
  "version": 5,
  "pack": "Suno + REAPER candidate packs for four factions: Black Sect, Sulgogars, Ghorkov and Taerkasten",
  "collaboration": "Coda built the REAPER lab, the v02 cuts, the Black Sect and Sulgogar production plan and the reviewed cue contract. Red generated the remaining Black Sect and Sulgogar takes, wrote, generated and selected the Ghorkov and Taerkasten packs and the Black Sect message-19 lines, verified the cuts, rendered them natively in REAPER and integrated them.",
- "listening_status": "Andrei listened to the version 4 Black Sect and Sulgogar reels on 2026-11-02 and called them good. He asked for the message-19 fix that this version makes. He then heard the run v04 reels of the Ghorkov and Taerkasten packs and the two new Black Sect lines and called them great. After review, version 5 re-cut 53 of those cues (long pauses closed; silent tails, an inhale and low thumps at the cut edges trimmed; same takes and words). Nobody has heard the re-cut yet. The cues are ASR-verified; a language-ID cue gives only a weak hint of the accent. In-game acceptance remains with Andrei.",
+ "listening_status": "Andrei listened to the version 4 Black Sect and Sulgogar reels on 2026-11-02 and called them good. He asked for the message-19 fix that this version makes. The run v04 reels of the Ghorkov and Taerkasten packs and the two new Black Sect lines were then shared with him, and he called them great. After review, version 5 re-cut 53 of those cues (long pauses closed; the quiet decay after the last word, an inhale and low thumps trimmed; same takes and words, so the lines end sooner, by a median 0.14 s). Nobody has heard the re-cut yet. The cues are ASR-verified; a language-ID cue gives only a weak hint of the accent. In-game acceptance remains with Andrei.",
  "format": "PCM16 mono 22050 Hz",
  "level_policy": "-18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target). Ghorkov and Taerkasten use the -18 LUFS target. Their gains were set on the v04 windows; the v05 re-cut only trims sound outside the words and closes pauses, so the gains were kept.",
  "black_voice": "Suno v6 (Songs Advanced, spoken word, male) takes separated with Demucs htdemucs vocal stems; four lines are Coda v02 cuts of her own Suno vocal estimates. Message 19 lines: Black Sect Production 08 (Suno v6, Coda's Production 01 prompt), htdemucs vocal stem.",
@@ -10,7 +10,7 @@
  "ghorkov_voice": "Suno Speech (beta), male, background music off, variety off. Each script puts a short Russian radio phrase and an ellipsis paragraph before every English line; the Russian phrases are cut away and never ship. Six of the twelve takes carried a low drone bed despite music off; 20 of the 32 cues are htdemucs vocal stems of those takes (music_under_voice_db gives the bed level). One cue, enemy_unit_engaged_1 \"Enemy in retreat.\", comes from a dry-run pilot take (pilot_ru8c) with older tone wording whose exact text was not saved.",
  "taerkasten_voice": "Suno Speech (beta), male, background music off, variety off, with a short German phrase before every English line (cut away). Twenty-four of the 30 cues are htdemucs vocal stems of the s1-s4 takes, which carried a drone bed (music_under_voice_db gives its level); the six r1 cues used a plain dry tone and have no bed.",
  "accent_method": "Suno ignores accent wording in the tone, so the L1 priming phrase carries the accent. The check is Whisper small language ID. Calibrated on the GMU Speech Accent Archive (six speakers per group, 2 s chunks padded like the final files, per-speaker medians; calibrate_lid.py): native English speakers P(ru) 0.0001-0.0006 and P(de) 0.0002-0.0007, Russian second-language speakers P(ru) 0.0025-0.15, German second-language speakers P(de) 0.0012-0.011. Measured like the final files, a native-English control (the 32 Black Sect files and 25 retail English clips) reads P(ru) median 0.0012 (max 0.0061) and P(de) median 0.0011 (max 0.0064). Ghorkov reads about five times that median, with 15 of 32 lines above every control clip; Taerkasten about twice, with 6 of 30 above, which cannot confirm a German accent. It is a cue, not a measurement of how strong the accent sounds.",
- "selection": "Whisper word alignment locates each line; the cut sits at the silence around its vocal island. An edge audit transcribes and language-identifies every island in the cut (envelope above the cut peak - 30 dB, merged across 0.15 s, at least 0.05 s long) and trims away priming phrases and other islands that are not the line. Fainter or shorter sounds, such as soft breaths and low thumps, never form an island; the v05 re-cut trimmed those at the cut edges. A residue check rejects cuts with sound outside the line's words. A cut is eligible only if base.en, small.en and medium.en, transcribing it in isolation, hear exactly the planned line in at least two of three cases.",
+ "selection": "Whisper word alignment locates each line; the cut sits at the silence around its vocal island. An edge audit transcribes and language-identifies every island in the cut (envelope above the cut peak - 30 dB, merged across 0.15 s, at least 0.05 s long). It trims priming phrases and other non-line islands outside the first and last line island; noise islands between the words are kept, and a priming phrase between them rejects the cut. Fainter or shorter sounds, such as soft breaths and low thumps, never form an island. The v05 re-cut removes only sound more than 40 dB below the cut peak, so it keeps such sounds when they are louder; the inhales and thumps the audio review found were cut out with explicit windows. A residue check rejects cuts with sound outside the line's words. A cut is eligible only if base.en, small.en and medium.en, transcribing it in isolation, hear exactly the planned line in at least two of three cases.",
  "music_under_voice_db": "Demucs accompaniment (no_vocals) minus vocal-stem level over the shipped cut, pads included, for cues cut from htdemucs vocal stems. The version 4 Black Sect values were measured over the vocal island only.",
  "render": {
   "v03": {
@@ -21,8 +21,11 @@
   },
   "v04": {
    "run": "v04-faction-voices-2026-11-02",
+   "project_sha256": "64373b0bde923a307f17f9cf953a1eda801b854ddeb14a67564706bc43f8d31a",
+   "master_sha256": "115eb704271303432afc434dbab2f2af7851383087dbc29ffb03812adce4b9d2",
+   "method": "Native REAPER 7.79 render through the TwelveTake bridge; the bridge mailbox was driven by file transfer because the device shell was unavailable. Per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz.",
    "superseded_by": "v05-faction-voices-recut-2026-11-02",
-   "note": "First render of the Ghorkov, Taerkasten and Black Sect message-19 cues. An audio review then found mid-line pauses, a leading inhale, low thumps at three cut edges (htdemucs leakage of the drone bed) and long silent tails. One cue still ships from this run: ghorkov-mp/order_ack_enemy_2.wav (see its edit).",
+   "note": "First render of the Ghorkov, Taerkasten and Black Sect message-19 cues. An audio review then found mid-line pauses, a leading inhale, low thumps at three cut edges (htdemucs leakage of the drone bed) and long near-silent tails. One cue still ships from this run: ghorkov-mp/order_ack_enemy_2.wav (see its edit).",
    "still_shipped": [
     "ghorkov-mp/order_ack_enemy_2.wav"
    ]
@@ -34,7 +37,7 @@
    "method": "Native REAPER 7.79 render through the TwelveTake bridge; the bridge mailbox was driven by file transfer because the device shell was unavailable. Per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz. 54 cues were re-cut. The other 40 (all 32 Black Sect cues and 8 Ghorkov/Taerkasten cues) re-rendered byte-identical to v04, and the 30 carried Black Sect cues are byte-identical to v03. A second review reverted one re-cut (ghorkov-mp/order_ack_enemy_2.wav), which ships from v04."
   }
  },
- "previous": "Version 4 (Black Sect and Sulgogars only) is in this branch history up to 09f42e7; version 3 remains on red/review-fixes.",
+ "previous": "Version 4 (Black Sect and Sulgogars only) is in this branch history up to 09f42e7, and version 3 up to 08acec3.",
  "pending": [
   {
    "faction": "taerkasten-mp",
@@ -3348,7 +3351,7 @@
    },
    "origin": "Suno take 2f5fc8fb-552b-4ce3-b5be-e14a5ee89a18 (batch ghorkov_s3)",
    "render_run": "v05-faction-voices-recut-2026-11-02",
-   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly. The cut starts after a low thump at about 19.29 s, htdemucs leakage of the drone bed.",
+   "edit": "v05 re-cut after the audio review: the head set by an explicit window that starts after a low thump at about 19.29 s (htdemucs leakage of the drone bed), the tail trimmed to 40 dB below the cut peak plus 0.10 s; nothing inside a word removed; small.en hears the re-cut exactly.",
    "music_under_voice_db": -10.8,
    "accent_cue": {
     "language": "ru",
@@ -3550,7 +3553,7 @@
    },
    "origin": "Suno take 00d8ec23-ee3b-4f70-a6b0-ccd721c2fc44 (batch ghorkov_s3)",
    "render_run": "v05-faction-voices-recut-2026-11-02",
-   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly. The cut ends before a low thump at about 16.94 s, htdemucs leakage of the drone bed.",
+   "edit": "v05 re-cut after the audio review: the head trimmed to 40 dB below the cut peak plus 0.05 s, the tail set by an explicit window that ends before a low thump at about 16.94 s (htdemucs leakage of the drone bed); nothing inside a word removed; small.en hears the re-cut exactly.",
    "music_under_voice_db": -1.6,
    "accent_cue": {
     "language": "ru",
@@ -4630,7 +4633,7 @@
    },
    "origin": "Suno take ce8e4c65-2c71-48cb-9dc4-12fbb03ec54d (batch taerkasten_r1)",
    "render_run": "v05-faction-voices-recut-2026-11-02",
-   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), the pause inside the line closed to 0.25 s between two parts, nothing inside a word removed; small.en hears the re-cut exactly. The inhales before and after \"Brothers,\" are left out.",
+   "edit": "v05 re-cut after the audio review: two parts set by explicit windows that leave out the inhales before and after \"Brothers,\", with the pause between them closed to 0.25 s; nothing inside a word removed; small.en hears the re-cut exactly.",
    "accent_cue": {
     "language": "de",
     "p": 0.0002,
@@ -5142,7 +5145,7 @@
    },
    "origin": "Suno take 865789a6-03b3-4556-a6ef-27b3664f2033 (batch taerkasten_s1)",
    "render_run": "v05-faction-voices-recut-2026-11-02",
-   "edit": "v05 re-cut after the audio review: head and tail trimmed to 40 dB below the cut peak (pads 0.05 s / 0.10 s), nothing inside a word removed; small.en hears the re-cut exactly. The cut ends before low thumps at about 42.55 and 42.95 s, htdemucs leakage of the drone bed.",
+   "edit": "v05 re-cut after the audio review: the head trimmed to 40 dB below the cut peak plus 0.05 s, the tail set by an explicit window that ends before low thumps at about 42.55 and 42.95 s (htdemucs leakage of the drone bed); nothing inside a word removed; small.en hears the re-cut exactly.",
    "music_under_voice_db": -2.8,
    "accent_cue": {
     "language": "de",
