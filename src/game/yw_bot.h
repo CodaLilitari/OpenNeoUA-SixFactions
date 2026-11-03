@@ -17,7 +17,7 @@ bool Enabled();
 World::NetBot::BotSpec Spec();
 World::NetBot::BotPhase Phase();
 void Tick(NC_STACK_ypaworld *world); // call once per gameplay frame
-bool RequestLeave(NC_STACK_ypaworld *world); // UAMSG_EXIT like a human quit
+bool RequestLeave(NC_STACK_ypaworld *world); // quit like a human: abort + UAMSG_EXIT
 void Shutdown();
 
 } // namespace BotRuntime

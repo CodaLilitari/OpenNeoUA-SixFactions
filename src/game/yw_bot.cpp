@@ -1,6 +1,7 @@
 // Multiplayer bot runtime (see yw_bot.h and docs/bots-and-forks.md).
 #include "yw_bot.h"
 
+#include <cstdio>
 #include <cstring>
 
 #include "game/yw.h"
@@ -50,6 +51,10 @@ void ResetMatch()
     g_lastTauntMs = -1;
     g_captureFailing = false;
     g_lookaheadFailing = false;
+    // Every match starts from the lobby, thinking as the requested faction
+    // until the match seats the bot.
+    g_lifecycle.spec = g_spec;
+    g_lifecycle.ResetForNextMatch();
 }
 
 void SendChat(NC_STACK_ypaworld *world, const char *line)
@@ -73,11 +78,18 @@ bool InitFromCmdLine()
     if (idx < 0)
         return false;
     std::vector<std::string> &cmdl = System::GetCmdLineArray();
-    if (idx + 1 >= static_cast<int>(cmdl.size()))
-        return false;
-    g_spec = World::NetBot::ParseBotSpec(cmdl[idx + 1]);
+    const std::string text = idx + 1 < static_cast<int>(cmdl.size()) ? cmdl[idx + 1] : std::string();
+    g_spec = World::NetBot::ParseBotSpec(text);
     if (!g_spec.valid)
+    {
+        // Say why this process plays as a normal player instead of a bot.
+        const char *format = "bot: ignoring -bot \"%s\": expected Faction:Difficulty such as Ghorkov:Veteran "
+                             "(Resistance, Ghorkov, Mykonian, Taerkasten, BlackSect, Sulgogars or an owner id; "
+                             "Cadet, Normal, Veteran or 0-2); this process plays as a normal player\n";
+        ypa_log_out(format, text.c_str());
+        std::fprintf(stderr, format, text.c_str());
         return false;
+    }
     g_lifecycle.spec = g_spec;
     g_lifecycle.phase = World::NetBot::BotPhase::Lobby;
     return true;
@@ -93,13 +105,19 @@ void Tick(NC_STACK_ypaworld *world)
         return;
     if (!world->_isNetGame || !world->_isNetGameStarted)
     {
-        // Back in the shell: the next match may seat this bot elsewhere.
-        if (g_matchBound)
+        // Out of the match. A requested leave completes here: the level end
+        // ran yw_netcleanup, which closed this process's transport. The next
+        // match may seat this bot elsewhere and starts from the lobby.
+        if (g_lifecycle.phase == World::NetBot::BotPhase::Leaving && g_lifecycle.OnDestroyed())
+            log_netlog("bot: left the match\n");
+        if (g_matchBound || g_lifecycle.phase != World::NetBot::BotPhase::Lobby)
             ResetMatch();
         return;
     }
     if (g_lifecycle.phase == World::NetBot::BotPhase::Lobby)
         g_lifecycle.phase = World::NetBot::BotPhase::InGame;
+    if (g_lifecycle.phase != World::NetBot::BotPhase::InGame)
+        return; // leaving: the level is ending, so stop steering the station
     NC_STACK_yparobo *robo = LocalRobo(world);
     if (!robo)
         return;
@@ -178,14 +196,13 @@ bool RequestLeave(NC_STACK_ypaworld *world)
         return false;
     if (!g_lifecycle.OnLeaveRequested())
         return false;
-    uamessage_exit msg;
-    NetMsgClear(msg);
-    msg.msgID = UAMSG_EXIT;
-    msg.norm = 1;
-    msg.owner = static_cast<std::uint8_t>(world->GetPlayerOwner());
-    const bool sent = world->NetBroadcastMessage(&msg, sizeof(msg), true);
-    g_lifecycle.OnDestroyed();
-    return sent;
+    // Quit the way a human does from the exit menu (yw_game_ui.cpp): abort
+    // the level and announce the quit with EXIT norm=1. The level end then
+    // runs yw_netcleanup, which closes this process's transport, and Tick
+    // moves the lifecycle from Leaving to Gone.
+    world->_levelInfo.State = TLevelInfo::STATE_ABORTED;
+    world->NetSendExitMsg(1);
+    return true;
 }
 
 void Shutdown()

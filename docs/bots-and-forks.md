@@ -31,8 +31,12 @@ view, or none at all. The process then drives its station: every reaction
 interval the faction profile is re-applied through the normal robo wish
 setters (`setROBO_epConquer` and friends) and only the wish matching the
 fork-chosen order is lifted (`WeightsForOrder`), so the six personalities do
-not converge. Bots appear in the lobby as ordinary players (name them e.g.
-`BOT Ghorkov (Veteran)`); callsigns must be unique.
+not converge. Bots appear in the lobby as ordinary players. Give each a
+callsign without spaces of at most 20 characters, such as the ones
+`BotDisplayName` makes (`Bot-Ghorkov-Vet`, `Bot-BlackSect-Cdt`): the name
+screen refuses spaces, ZNDNet cuts names to 20 characters, and callsigns must
+be unique. An invalid spec is reported on stderr and in `env/ypa_log.txt`,
+and the process then plays as a normal player.
 
 Each faction plays differently (weights in `src/world/net_bot.h`):
 Resistance balanced; Ghorkov heavy conquest squads; Mykonian radar/recon and
@@ -44,14 +48,18 @@ never information access.
 
 ### Leave, takeover, reclaim (designed, not yet wired)
 
-`BotLifecycle` in `net_bot.h` models these transitions and is unit-tested,
-but no engine code drives it yet. `BotRuntime::RequestLeave` exists without a
-caller, a dropped human is still destroyed by the host as before, and no
-standby-bot or rejoin path exists in the shell. The intended design:
+`BotLifecycle` in `net_bot.h` models these transitions and is unit-tested.
+The engine drives only the start of a match, a requested leave and the reset
+for the next match; `BotRuntime::RequestLeave` exists without a caller, a
+dropped human is still destroyed by the host as before, and no standby-bot or
+rejoin path exists in the shell. The intended design:
 
-- Leave: `BotRuntime::RequestLeave` broadcasts `UAMSG_EXIT` (norm=1), the
-  same quit path as a human; the departing player's units follow the normal
-  `yw_cleanPlayer` fate.
+- Leave: `BotRuntime::RequestLeave` quits like a human from the exit menu:
+  it aborts the level and broadcasts `UAMSG_EXIT` (norm=1); the departing
+  player's units follow the normal `yw_cleanPlayer` fate. The lifecycle stays
+  Leaving, and the bot stops steering, until the level end has closed the
+  transport; then it is Gone, and the next match starts from the lobby again
+  (`ResetForNextMatch`).
 - Disconnect takeover: a standby bot with the same faction adopts that owner
   slot (`BotLifecycle::OnTakeoverOffer`), resyncs from the host snapshot
   (REQUPDATE/UPDATE) and resumes play.
@@ -60,8 +68,10 @@ standby-bot or rejoin path exists in the shell. The intended design:
 
 Bots may send rate-limited (≥20 s), faction-flavoured chat through
 `UAMSG_MESSAGE`. Lines are validated by `ValidBotChatLine`: at most 63 chars,
-printable, and never starting with a digit (the receiver diverts
-leading-digit text to a numeric command path).
+printable, and never starting with anything `strtoll` reads as a non-zero
+number. The receiver plays speech sample `9<n>` instead of showing a line
+when `strtol` finds a positive number there, which a leading space or `+`
+does not prevent.
 
 ## Agentic forks
 

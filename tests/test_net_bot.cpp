@@ -2,8 +2,10 @@
 #include "require.h"
 #include <cstdlib>
 #include <cstring>
+#include <initializer_list>
 #include <iostream>
 #include <set>
+#include <string>
 
 using namespace World::NetBot;
 using World::Fork::ForkRng;
@@ -90,7 +92,26 @@ int main()
     Require(!ParseBotSpec("Ghorkov").valid, "missing difficulty rejected");
     Require(!ParseBotSpec("Nobody:Normal").valid, "unknown faction rejected");
     Require(!ParseBotSpec("Ghorkov:Ultra").valid, "unknown difficulty rejected");
-    REQUIRE(BotDisplayName(gh) == "BOT Ghorkov (Veteran)");
+    // Callsigns: the name screen refuses spaces and '*', ZNDNet cuts names to
+    // 20 characters, and a session needs unique names.
+    REQUIRE(BotDisplayName(gh) == "Bot-Ghorkov-Vet");
+    {
+        std::set<std::string> callsigns;
+        for (int owner : World::NetFactions::Owners)
+            for (Difficulty d : {Difficulty::Cadet, Difficulty::Normal, Difficulty::Veteran})
+            {
+                BotSpec spec;
+                spec.owner = static_cast<std::uint8_t>(owner);
+                spec.difficulty = d;
+                spec.valid = true;
+                const std::string name = BotDisplayName(spec);
+                REQUIRE(!name.empty() && name.size() <= MaxCallsignLength);
+                for (char c : name)
+                    REQUIRE(c > ' ' && c < 127 && c != '*');
+                callsigns.insert(name);
+            }
+        REQUIRE(callsigns.size() == 18);
+    }
 
     // Roster fill: humans keep slots, bots fill the rest and can start.
     const World::NetFactions::RosterEntry humans[2] = {{0, 2, true}, {1, 64, true}};
@@ -188,12 +209,42 @@ int main()
     Require(adopted.OnTakeoverOffer(6) && adopted.OnGameLoaded(), "takeover resumes in game");
     Require(adopted.OnHumanReclaim() && adopted.OnReclaimComplete(), "human reclaim flow");
     REQUIRE(adopted.phase == BotPhase::Gone);
-    Require(life.OnLeaveRequested() && life.OnDestroyed(), "leave flow");
+    // A leave waits for the transport leave: Leaving until OnDestroyed.
+    Require(life.OnLeaveRequested() && life.phase == BotPhase::Leaving, "leave requested");
+    Require(!life.OnLeaveRequested() && life.phase == BotPhase::Leaving, "leave is requested once");
+    Require(life.OnDestroyed(), "leave flow");
     REQUIRE(life.phase == BotPhase::Gone);
 
-    // Chat rules mirror the UAMSG_MESSAGE receiver (no leading digit).
+    // Each match starts from the lobby: a bot left InGame by its last match
+    // refused every takeover offer.
+    BotLifecycle reused;
+    reused.spec = ParseBotSpec("Ghorkov:Normal");
+    Require(reused.OnRosterAccepted() && reused.OnReadySent() && reused.OnGameLoaded(), "first match");
+    Require(!reused.OnTakeoverOffer(6), "a bot in a match takes nothing over");
+    reused.ResetForNextMatch();
+    Require(reused.phase == BotPhase::Lobby && !reused.humanWasDisconnected, "reset to the lobby");
+    Require(reused.OnRosterAccepted() && reused.OnReadySent() && reused.OnGameLoaded(), "second match");
+    reused.ResetForNextMatch();
+    Require(reused.OnTakeoverOffer(6), "takeover offer accepted after a match");
+    reused.ResetForNextMatch();
+    Require(reused.phase == BotPhase::Lobby && !reused.humanWasDisconnected, "takeover state cleared");
+
+    // Chat rules mirror the UAMSG_MESSAGE receiver, which plays speech sample
+    // 9<n> instead of showing the text when int(strtol(text, 0, 0)) > 0.
     Require(ValidBotChatLine("Holding the line."), "plain taunt valid");
     Require(!ValidBotChatLine("9 lives left"), "leading digit rejected");
+    Require(!ValidBotChatLine(" 9 lives left"), "leading space before a number rejected");
+    Require(!ValidBotChatLine("+5 incoming"), "signed number rejected");
+    Require(!ValidBotChatLine("0x1F"), "hexadecimal number rejected");
+    Require(ValidBotChatLine("Zero hour."), "words are not numbers");
+    for (const char *line : {"9 lives left", " 9 lives left", "+5 incoming", "   12", "0x1F",
+                             "010 left", "-4294967295 down", "4294967297", "99999999999 more",
+                             "-3 down", "0 left", "-0", "+", " ", "x9", "Zero hour."})
+    {
+        const bool receiverPlaysSpeech = static_cast<int>(std::strtol(line, nullptr, 0)) > 0;
+        if (receiverPlaysSpeech)
+            Require(!ValidBotChatLine(line), "a line the receiver plays as speech is rejected");
+    }
     Require(!ValidBotChatLine(""), "empty line rejected");
     Require(!ValidBotChatLine(std::string(64, 'a')), "64-char line rejected");
     Require(ValidBotChatLine(std::string(63, 'a')), "63-char line valid");

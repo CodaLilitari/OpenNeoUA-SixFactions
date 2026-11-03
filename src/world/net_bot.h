@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -166,11 +167,20 @@ inline BotSpec BindSpecToOwner(const BotSpec &requested, std::uint8_t seatedOwne
     return bound;
 }
 
+// Callsign for a bot: "Bot-<Faction>-<Cdt|Nrm|Vet>", letters and dashes
+// only, at most MaxCallsignLength characters. The name screen refuses spaces
+// and '*', and ZNDNet cuts names to 20 characters (ZNDNET_USER_NAME_MAX).
+constexpr std::size_t MaxCallsignLength = 20;
+
 inline std::string BotDisplayName(const BotSpec &spec)
 {
-    const char *lvl = spec.difficulty == Difficulty::Cadet ? "Cadet" :
-                      spec.difficulty == Difficulty::Veteran ? "Veteran" : "Normal";
-    return std::string("BOT ") + ProfileForOwner(spec.owner).factionName + " (" + lvl + ")";
+    std::string name = "Bot-";
+    for (const char *c = ProfileForOwner(spec.owner).factionName; *c; ++c)
+        if (*c != ' ')
+            name += *c;
+    name += spec.difficulty == Difficulty::Cadet ? "-Cdt" :
+            spec.difficulty == Difficulty::Veteran ? "-Vet" : "-Nrm";
+    return name;
 }
 
 enum class OrderKind : std::uint8_t { None, Move, Attack, Build, Create, Hold };
@@ -540,6 +550,14 @@ struct BotLifecycle
         humanWasDisconnected = false;
         return true;
     }
+    // Back in the shell after a match, however it ended: the next match
+    // starts from the lobby. Without this a bot stayed InGame (or Gone)
+    // after its first match.
+    void ResetForNextMatch()
+    {
+        phase = BotPhase::Lobby;
+        humanWasDisconnected = false;
+    }
 };
 
 // Fills empty lobby slots with bots. Human entries keep their slots; each bot
@@ -585,19 +603,21 @@ inline bool BuildRosterWithBots(std::uint32_t mapMask,
     return NetFactions::CheckRoster(mapMask, out, outCount).Valid;
 }
 
-// Chat safety: UAMSG_MESSAGE payloads are char[64]; the receiver diverts
-// leading-digit text to a numeric command path, so bot lines must never
-// start with a digit, must be printable and at most 63 chars + NUL.
+// Chat safety: UAMSG_MESSAGE payloads are char[64], and the receiver plays
+// speech sample 9<n> instead of showing the text whenever
+// int(strtol(text, 0, 0)) > 0 (yw_net.cpp). strtol skips leading white space
+// and takes a sign and 0x or 0 prefixes, its long is 32 bits on Windows and
+// 64 on Linux, and the int conversion can turn a large negative value
+// positive. So a bot line must be printable, at most 63 chars + NUL, and must
+// not start with anything strtoll reads as a non-zero number.
 inline bool ValidBotChatLine(const std::string &line)
 {
     if (line.empty() || line.size() > 63)
         return false;
-    if (line[0] >= '0' && line[0] <= '9')
-        return false;
     for (char c : line)
         if (c < 32 || c > 126)
             return false;
-    return true;
+    return std::strtoll(line.c_str(), nullptr, 0) == 0;
 }
 
 inline const char *TauntFor(std::uint8_t owner, std::uint32_t pick)
