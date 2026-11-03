@@ -1257,18 +1257,15 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if (StriCmp(pl.Name, msg->senderName) == 0)
         {
             plr = &pl;
-
-            if (pl.UpdateCountDown)
-            {
-                pl.UpdateCountDown -= yw->_updateMessage.frameTime;
-
-                if (pl.UpdateCountDown)
-                    pl.UpdateCountDown = 0;
-            }
-
             break;
         }
     }
+
+    // While an UPDATE requested from this sender is pending, its unit events
+    // are ignored: the update replaces the tree they would apply to. The
+    // sender's own traffic never ends the hold (World::NetUpdate::PeerGate).
+    const uint32_t netNow = static_cast<uint32_t>(yw->_timeStamp);
+    const bool updatePending = plr && plr->Update.HoldsEvents(netNow);
 
     size_t szmsg = validatedSize;
 
@@ -1299,7 +1296,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
 
-        if ( plr && plr->UpdateCountDown )
+        if ( updatePending )
             break;
 
         ypaworld_arg146 newVhcl;
@@ -1376,7 +1373,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_destroyVhcl);
         uamessage_destroyVhcl *dvMsg = (uamessage_destroyVhcl *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(dvMsg->owner);
@@ -1443,7 +1440,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_newLeader);
         uamessage_newLeader *nlMsg = (uamessage_newLeader *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(nlMsg->owner);
@@ -1494,7 +1491,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_newWeapon);
         uamessage_newWeapon *nwMsg = (uamessage_newWeapon *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(nwMsg->owner);
@@ -1612,7 +1609,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_setState);
         uamessage_setState *ssMsg = (uamessage_setState *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(ssMsg->owner);
@@ -1642,7 +1639,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
     {
         uamessage_vhclData *vdMsg = (uamessage_vhclData *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || tv481 )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending || tv481 )
             break;
 
         if ( yw->_netInterpolate )
@@ -1665,7 +1662,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
     {
         uamessage_vhclData *vdMsg = (uamessage_vhclData *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || tv481 )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending || tv481 )
             break;
 
         if ( yw->_netInterpolate )
@@ -1689,7 +1686,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_dead);
         uamessage_dead *ddMsg = (uamessage_dead *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *host_node = yw->yw_getHostByOwner(ddMsg->owner);
@@ -1964,7 +1961,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         uamessage_bldVhcl *bvMsg = (uamessage_bldVhcl *)msg->data;
         szmsg = sizeof(uamessage_bldVhcl);
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) || !bvMsg->vhcl[0].protoID )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending || !bvMsg->vhcl[0].protoID )
             break;
 
         NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(bvMsg->owner);
@@ -2021,7 +2018,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_viewer);
         uamessage_viewer *vwMsg = (uamessage_viewer *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(vwMsg->owner);
@@ -2110,7 +2107,9 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         uamessage_hostDie *hdMsg = (uamessage_hostDie *)msg->data;
         szmsg = sizeof(uamessage_hostDie);
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        // Not held while an update is pending: the sector hand-over to the
+        // killer is not part of any UPDATE, and a dead station sends none.
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
 
         NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(hdMsg->owner);
@@ -2540,6 +2539,21 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
 
+        // An UPDATE is up to 49 176 bytes: answer each peer at most once per
+        // World::NetUpdate::AnswerIntervalMs, however often it asks.
+        if ( !plr )
+        {
+            log_netlog("\n+++ UPD: REQUPDATE from %s, who has no lobby row: ignored\n", msg->senderName.c_str());
+            break;
+        }
+        if ( !plr->Update.MayAnswer(netNow) )
+        {
+            log_netlog("\n+++ UPD: REQUPDATE from %s within %u ms of the last answer: ignored\n",
+                       msg->senderName.c_str(), World::NetUpdate::AnswerIntervalMs);
+            break;
+        }
+        plr->Update.Answered(netNow);
+
         yw_netSendUpdate(yw, yw->_GameShell->netPlayerOwner, msg->senderName.c_str());
     }
     break;
@@ -2549,11 +2563,13 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         uamessage_update *updMsg = (uamessage_update *)msg->data;
         szmsg = updMsg->sz;
 
+        // Whatever it holds, the update ends the hold on this sender's events.
+        if ( plr )
+            plr->Update.UpdateArrived();
+
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
         {
             log_netlog("\n+++UPD: got update from DEAD %s (%d)", msg->senderName.c_str(), yw->_timeStamp / 1000);
-            if ( plr )
-                plr->UpdateCountDown = 0;
         }
         else
         {
@@ -2574,10 +2590,9 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_impulse);
         uamessage_impulse *impMsg = (uamessage_impulse *)msg->data;
 
+        // Not held while an update is pending: the impulse pushes this
+        // process's own units, which the sender's UPDATE does not carry.
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
-            break;
-
-        if ( plr && plr->UpdateCountDown )
             break;
 
         yw_130arg secInfo;
@@ -2666,7 +2681,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         uamessage_reorder *ordMsg = (uamessage_reorder *)msg->data;
         szmsg = ordMsg->sz;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(ordMsg->owner);
@@ -2795,7 +2810,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_startPlasma);
         uamessage_startPlasma *plasmaMsg = (uamessage_startPlasma *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || updatePending )
             break;
 
         NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(plasmaMsg->owner);
@@ -2830,7 +2845,9 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_endPlasma);
         uamessage_endPlasma *endpMsg = (uamessage_endPlasma *)msg->data;
 
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags || (plr && plr->UpdateCountDown) )
+        // Not held while an update is pending: it ends plasma on this
+        // process's own unit, which the sender's UPDATE does not carry.
+        if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
             break;
 
         NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(endpMsg->owner);
@@ -3433,11 +3450,15 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
 
                 if ( !err_sender.empty() )
                 {
+                    // One REQUPDATE per peer while its update is pending and
+                    // per World::NetUpdate::RequestIntervalMs, however many
+                    // errors this frame's messages reported.
+                    const uint32_t netNow = static_cast<uint32_t>(yw->_timeStamp);
                     for (UserData::TNetPlayerLobbyData &pl : usr->lobbyPlayers)
                     {
                         if (StriCmp(pl.Name, err_sender) == 0)
                         {
-                            if ( pl.UpdateCountDown == 0 )
+                            if ( pl.Update.MayRequest(netNow) )
                             {
                                 log_netlog("Drastic Error: Request Update from %s\n", err_sender.c_str());
 
@@ -3448,7 +3469,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
 
                                 yw->NetSendMessage(&updMsg, sizeof(updMsg), err_sender, true);
 
-                                pl.UpdateCountDown = 2000;
+                                pl.Update.Requested(netNow);
                             }
                             break;
                         }
@@ -3722,7 +3743,7 @@ size_t NC_STACK_ypaworld::ypaworld_func179(yw_arg161 *arg)
     {
         pl.Msg.clear();
         pl.IsTrouble = false;
-        pl.UpdateCountDown = 0;
+        pl.Update = World::NetUpdate::PeerGate();
     }
 
     for (UserData::TNetPlayerData &pl : _GameShell->netPlayers)

@@ -39,6 +39,7 @@
 #include "world/parsers.h"
 #include "world/saveparsers.h"
 #include "world/net_tick.h"
+#include "world/net_update_gate.h"
 #include "world/nparticle.h"
 #include "world/grounddecal_smoke.h"
 #include "world/grounddecal_profile.h"
@@ -968,7 +969,7 @@ public:
         uint8_t  Owner       = 0;
         bool     Ready       = false;
         bool     Welcomed    = false;
-        int32_t  UpdateCountDown = 0;
+        World::NetUpdate::PeerGate Update; // REQUPDATE/UPDATE pacing with this peer
         uint32_t DataChecksum   = 0;
     };
 
