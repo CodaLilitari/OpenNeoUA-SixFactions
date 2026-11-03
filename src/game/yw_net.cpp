@@ -960,6 +960,25 @@ NC_STACK_ypabact * yw_netFindReorderUnit(NC_STACK_ypabact *bact_host, uint32_t I
     return nullptr;
 }
 
+// A network level is loaded from the moment ypaworld_func179 seats the local
+// station until DeleteLevel clears it; the start barrier counts as loaded.
+static bool yw_netLevelLoaded(const NC_STACK_ypaworld *yw)
+{
+    return yw->_userRobo != nullptr;
+}
+
+// Logs a message that is consumed without being applied. A client that joins
+// a running session receives every peer's traffic, so lines are written for
+// the 1st, 2nd, 4th, 8th... such message only.
+static void yw_netLogIgnored(uint32_t msgID, const std::string &sender, const char *why)
+{
+    static uint32_t ignored = 0;
+    ++ignored;
+    if ( (ignored & (ignored - 1)) == 0 )
+        log_netlog("Ignored message %u from %s: %s (%u ignored so far)\n",
+                   msgID, sender.c_str(), why, ignored);
+}
+
 static bool yw_netValidateNormMsg(NC_STACK_ypaworld *yw, const void *data, size_t remaining,
                                   size_t *messageSize, const char **validationError)
 {
@@ -1106,10 +1125,18 @@ static bool yw_netValidateNormMsg(NC_STACK_ypaworld *yw, const void *data, size_
     if ( required > remaining )
         return fail("truncated message payload");
 
+    // Checks against the loaded level run only while one is loaded. Without
+    // a level these messages are consumed unapplied (yw_handleNormMsg), so
+    // their framing is all that matters, and rejecting them here would drop
+    // the rest of the packet.
+    const bool levelLoaded = yw_netLevelLoaded(yw);
+
     switch ( baseMsg.msgID )
     {
     case UAMSG_STARTBUILD:
     {
+        if ( !levelLoaded )
+            break;
         const uamessage_startBuild *buildMsg = static_cast<const uamessage_startBuild *>(data);
         if ( buildMsg->bproto >= yw->GetBuildProtos().size() )
             return fail("invalid building prototype");
@@ -1119,8 +1146,23 @@ static bool yw_netValidateNormMsg(NC_STACK_ypaworld *yw, const void *data, size_
         break;
     }
 
+    case UAMSG_SECTORENERGY:
+    {
+        if ( !levelLoaded )
+            break;
+        // ypaworld_func129 indexes the sector grid with this position; a
+        // position off the map makes PlaneVector::At throw.
+        const uamessage_sectorEnergy *energyMsg = static_cast<const uamessage_sectorEnergy *>(data);
+        const Common::Point mapSize = yw->GetMapSize();
+        if ( !NetPositionOnMap(energyMsg->pos.x, energyMsg->pos.y, energyMsg->pos.z, mapSize.x, mapSize.y) )
+            return fail("sector energy position off the map");
+        break;
+    }
+
     case UAMSG_UPGRADE:
     {
+        if ( !levelLoaded )
+            break;
         const uamessage_upgrade *upgradeMsg = static_cast<const uamessage_upgrade *>(data);
         if ( upgradeMsg->upgradeID < 0 ||
                 (size_t)upgradeMsg->upgradeID >= yw->_techUpgrades.size() )
@@ -1266,6 +1308,25 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
     // sender's own traffic never ends the hold (World::NetUpdate::PeerGate).
     const uint32_t netNow = static_cast<uint32_t>(yw->_timeStamp);
     const bool updatePending = plr && plr->Update.HoldsEvents(netNow);
+
+    // Lobby messages mean nothing once the level is loaded (the stations are
+    // seated), and level messages cannot be applied without one: SECTORENERGY
+    // on an empty sector grid throws, and a null _userRobo crashes at power
+    // station cells. Either kind is consumed and logged, so the rest of the
+    // packet still runs. A client that joins a running session, or a resumed
+    // one whose peers welcome it again, gets both kinds.
+    const bool levelLoaded = yw_netLevelLoaded(yw);
+    const NetMsgScope scope = NetMsgScopeOf(msgID);
+    if ( scope == NetMsgScope::Lobby && levelLoaded )
+    {
+        yw_netLogIgnored(msgID, msg->senderName, "lobby message during the match");
+        return validatedSize;
+    }
+    if ( scope == NetMsgScope::Level && !levelLoaded )
+    {
+        yw_netLogIgnored(msgID, msg->senderName, "no level is loaded");
+        return validatedSize;
+    }
 
     size_t szmsg = validatedSize;
 
@@ -3266,6 +3327,17 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                 {
                 case RECVMSG_CREATEPLAYER:
                 {
+                    // The lobby welcome (WELCOME, CRC, LOBBYINIT and a lobby
+                    // row) is for players who join the lobby. During a match a
+                    // new transport user is a resumed player or an outsider;
+                    // running it would rewrite the lobby rows and make every
+                    // peer send its faction again.
+                    if ( yw_netLevelLoaded(yw) )
+                    {
+                        log_netlog("%s joined the session during the match: lobby welcome skipped\n",
+                                   recvMsg.senderName.c_str());
+                        break;
+                    }
 
                     if ( usr->isHost && usr->remoteMode && usr->netSelMode == UserData::NETSCREEN_INSESSION )
                     {

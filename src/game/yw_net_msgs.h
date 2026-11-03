@@ -9,6 +9,7 @@
 #define YWNET_MSGS_H_INCLUDED
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -491,6 +492,43 @@ inline void NetMsgClear(T &msg)
                   "network messages are raw byte copies");
     std::memset(static_cast<void *>(&msg), 0, sizeof(T));
     ::new (static_cast<void *>(&msg)) T;
+}
+
+// When a message can be applied. Lobby messages describe the lobby and mean
+// nothing once a level is loaded: the stations are seated by then. Level
+// messages act on the loaded world and cannot be applied without one.
+// Chat works in both. Unknown ids count as level messages.
+enum class NetMsgScope { Lobby, Level, Any };
+
+inline NetMsgScope NetMsgScopeOf(std::uint32_t msgID)
+{
+    switch (msgID)
+    {
+    case UAMSG_LOAD:
+    case UAMSG_FRACTION:
+    case UAMSG_WELCOME:
+    case UAMSG_READY:
+    case UAMSG_LOBBYINIT:
+    case UAMSG_SETLEVEL:
+    case UAMSG_CRC:
+        return NetMsgScope::Lobby;
+    case UAMSG_MESSAGE:
+        return NetMsgScope::Any;
+    default:
+        return NetMsgScope::Level;
+    }
+}
+
+// Whether a world position lies on a map of mapW x mapH sectors, read the
+// way World::PositionToSectorID reads it (x east, -z south). Non-finite
+// coordinates fail: converting them to a sector index is undefined.
+inline bool NetPositionOnMap(double x, double y, double z, int mapW, int mapH)
+{
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z))
+        return false;
+    const double east = x / World::CVSectorLength;
+    const double south = -z / World::CVSectorLength;
+    return east >= 0.0 && east < mapW && south >= 0.0 && south < mapH;
 }
 
 #endif

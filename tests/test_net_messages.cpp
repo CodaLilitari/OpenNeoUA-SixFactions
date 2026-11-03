@@ -111,6 +111,41 @@ int main()
     for (std::size_t i = 17; i < 24; ++i)
         REQUIRE(bytes[i] == 0);
 
-    std::cout << "every wire message clears to zero bytes, padding included\n";
+    // Scopes: the lobby set is ignored once a level is loaded, everything
+    // else except chat needs a loaded level.
+    for (std::uint32_t id : {UAMSG_LOAD, UAMSG_FRACTION, UAMSG_WELCOME, UAMSG_READY,
+                             UAMSG_LOBBYINIT, UAMSG_SETLEVEL, UAMSG_CRC})
+        REQUIRE(NetMsgScopeOf(id) == NetMsgScope::Lobby);
+    REQUIRE(NetMsgScopeOf(UAMSG_MESSAGE) == NetMsgScope::Any);
+    for (std::uint32_t id : {UAMSG_NEWVHCL, UAMSG_DESTROYVHCL, UAMSG_NEWWEAPON, UAMSG_SETSTATE,
+                             UAMSG_VHCLDATA_I, UAMSG_VHCLDATA_E, UAMSG_DEAD, UAMSG_VHCLENERGY,
+                             UAMSG_SECTORENERGY, UAMSG_STARTBUILD, UAMSG_BUILDINGVHCL, UAMSG_VIEWER,
+                             UAMSG_SYNCGM, UAMSG_HOSTDIE, UAMSG_KICK, UAMSG_UPGRADE, UAMSG_REQUPDATE,
+                             UAMSG_UPDATE, UAMSG_IMPULSE, UAMSG_LOGMSG, UAMSG_REORDER,
+                             UAMSG_STARTPLASMA, UAMSG_ENDPLASMA, UAMSG_STARTBEAM, UAMSG_ENDBEAM,
+                             UAMSG_EXIT, UAMSG_REQPING, UAMSG_PONG, UAMSG_STARTPROBLEM,
+                             UAMSG_ENDPROBLEM, UAMSG_SCORE})
+        REQUIRE(NetMsgScopeOf(id) == NetMsgScope::Level);
+    REQUIRE(NetMsgScopeOf(UAMSG_BASE + 99) == NetMsgScope::Level);
+
+    // SECTORENERGY positions: x east, -z south, on a 4 x 3 sector map.
+    const double len = World::CVSectorLength;
+    REQUIRE(NetPositionOnMap(0.0, 0.0, 0.0, 4, 3));
+    REQUIRE(NetPositionOnMap(4 * len - 0.5, -300.0, -(3 * len - 0.5), 4, 3));
+    REQUIRE(NetPositionOnMap(len * 1.5, 0.0, -0.0, 4, 3));
+    REQUIRE(!NetPositionOnMap(4 * len, 0.0, -len, 4, 3));     // one past the east edge
+    REQUIRE(!NetPositionOnMap(len, 0.0, -3 * len, 4, 3));     // one past the south edge
+    REQUIRE(!NetPositionOnMap(-0.5, 0.0, -len, 4, 3));        // west of the map
+    REQUIRE(!NetPositionOnMap(len, 0.0, 0.5, 4, 3));          // north of the map
+    REQUIRE(!NetPositionOnMap(len, 0.0, -len, 0, 0));         // no map loaded
+    const double nan = std::nan("");
+    const double inf = HUGE_VAL;
+    REQUIRE(!NetPositionOnMap(nan, 0.0, -len, 4, 3));
+    REQUIRE(!NetPositionOnMap(len, nan, -len, 4, 3));
+    REQUIRE(!NetPositionOnMap(len, 0.0, -inf, 4, 3));
+    REQUIRE(!NetPositionOnMap(1e300, 0.0, -len, 4, 3));
+
+    std::cout << "every wire message clears to zero bytes, padding included; "
+                 "scopes and map positions checked\n";
     return 0;
 }
