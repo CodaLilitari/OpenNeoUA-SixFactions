@@ -172,8 +172,14 @@ bool NC_STACK_windp::Connect(const std::string &connString)
 
     IPaddress server;
     if ( SDLNet_ResolveHost(&server, connString.c_str(), 61234) != 0)
+    {
+        _connectFailure = ZNDNet::CONNFAIL_ADDRESS;
+        log_netlog("Connection to %s failed: %s (the address does not resolve)\n",
+                   connString.c_str(), ZNDNet::ConnectFailureName(_connectFailure));
         return false;
+    }
 
+    _connectFailure = ZNDNet::CONNFAIL_NONE;
     if (zenet) zenet->Start(_myName, server); else zcli->Start(_myName, server);
 
     uint32_t deadTime = SDL_GetTicks() + CONF_CONN_WAIT;
@@ -186,6 +192,9 @@ bool NC_STACK_windp::Connect(const std::string &connString)
         if (SDL_GetTicks() > deadTime)
         {
             if (zenet) zenet->Stop(); else zcli->Stop();
+            _connectFailure = ZNDNet::CONNFAIL_NO_ANSWER;
+            log_netlog("Connection to %s failed: %s (nothing within %d ms)\n",
+                       connString.c_str(), ZNDNet::ConnectFailureName(_connectFailure), (int)CONF_CONN_WAIT);
             return false;
         }
 
@@ -217,6 +226,14 @@ bool NC_STACK_windp::Connect(const std::string &connString)
                 case ZNDNet::EVENT_DISCONNECT:
                 case ZNDNet::EVENT_CONNERR:
                     {
+                        // The refusal reason used to be dropped; the UI still
+                        // says "Time OUT", the netlog now says why.
+                        _connectFailure = evt->type == ZNDNet::EVENT_DISCONNECT
+                            ? ZNDNet::CONNFAIL_DROPPED : ZNDNet::ConnectFailureFromRefusal(evt->value);
+                        log_netlog("Connection to %s as %s failed: %s (transport code %u)\n",
+                                   connString.c_str(), _myName.c_str(),
+                                   ZNDNet::ConnectFailureName(_connectFailure), (unsigned)evt->value);
+                        delete evt;
                         if (zenet) zenet->Stop(); else zcli->Stop();
                         return false;
                     }
@@ -229,6 +246,7 @@ bool NC_STACK_windp::Connect(const std::string &connString)
         }
     }
 
+    log_netlog("Connected to %s as %s\n", connString.c_str(), _myName.c_str());
     ReloadUsersList();
     ReloadSessionsList();
 

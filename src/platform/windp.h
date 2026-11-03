@@ -8,6 +8,7 @@
 #include "gui/lstvw.h"
 #include "netlib/zndNet.h"
 #include "netlib/enet_znd.h"
+#include "netlib/connfail.h"
 
 
 struct ProviderStruct
@@ -248,6 +249,7 @@ public:
     uint32_t _nextSessionsGet;
     uint64_t _sesID;
     std::string _sesName;
+    int _connectFailure = ZNDNet::CONNFAIL_NONE; // why the last Connect() failed (netlib/connfail.h)
     std::string version_ident;
     int version_check;
     char *norm_block;

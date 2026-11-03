@@ -5,6 +5,7 @@
 // Also checks that a duplicate callsign is rejected instead of deadlocking
 // the name-addressed lobby. Requires SDL2/SDL2_net like test_enet_znd.
 #include "../src/netlib/enet_znd.h"
+#include "../src/netlib/connfail.h"
 #include "../src/world/net_protocol.h"
 #include <SDL.h>
 #include <chrono>
@@ -147,6 +148,7 @@ static void Run()
     Event *ev = nullptr;
     Check(WaitEvent(dup, true, EVENT_CONNERR, 10000, ev), "duplicate callsign was not refused");
     Check(ev->value == ERR_CONN_NAME, "duplicate callsign refused for the wrong reason");
+    Check(ConnectFailureFromRefusal(ev->value) == CONNFAIL_NAME, "windp would log the wrong refusal reason");
     delete ev; ev = nullptr;
     Check(dup.GetStatus() != NetUser::STATUS_CONNECTED, "duplicate callsign connected");
     Check(host.GetUsers(users) && users.size() == 3, "duplicate callsign entered the roster");
@@ -159,6 +161,7 @@ static void Run()
     late.Start("charlie", addr);
     Check(WaitEvent(late, true, EVENT_CONNERR, 10000, ev), "closed session accepted a newcomer");
     Check(ev->value == ERR_CONN_FULL, "closed session refused for the wrong reason");
+    Check(ConnectFailureFromRefusal(ev->value) == CONNFAIL_FULL, "windp would log the wrong refusal reason");
     delete ev; ev = nullptr;
     late.Stop();
     std::cout << "Closed session refuses newcomers\n";
