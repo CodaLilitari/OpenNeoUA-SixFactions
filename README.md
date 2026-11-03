@@ -14,12 +14,13 @@ Ghorkov and Taerkasten their own multiplayer unit voices. Each pack covers the
 16 unit events with two variants each, with provenance for every file.
 Resistance and Mykonians keep the original voices, which retail shared across
 all factions. On this branch the packs are the Suno + REAPER candidates (version 5).
-Andrei has listened to the version 4 Black Sect and Sulgogar reels. Three
-things are checked by speech recognition but not yet heard: the two new Black
-Sect message-19 lines, and the Ghorkov and Taerkasten packs, which were primed
-for Russian and German accents. Two Taerkasten idle lines are still pending,
-and that event falls back to the original voice. Version 3 remains on
-`red/review-fixes`.
+Andrei has listened to the version 4 Black Sect and Sulgogar reels, and to
+the first render of the new material: the Ghorkov and Taerkasten packs, which
+were primed for Russian and German accents, and the two new Black Sect
+message-19 lines. Version 5 re-cuts most of those new cues to close long
+pauses and trim silent tails; that re-cut is checked by speech recognition but
+not yet heard. Two Taerkasten idle lines are still pending, and that event
+falls back to the original voice. Version 3 remains on `red/review-fixes`.
 
 <img width="1280" height="800" alt="Screenshot 2026-10-26 213324" src="https://github.com/user-attachments/assets/aa3a519e-0982-4282-8e36-10b7fa56fcb4" />
 

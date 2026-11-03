@@ -12,10 +12,13 @@ window, gain, loudness, hash and review basis.
 
 **Listening status.** Andrei listened to the version 4 Black Sect and Sulgogar
 reels and called them good. He asked for one fix, made here: Black Sect
-message 19 now reports a fleeing enemy. Nobody has heard the new Ghorkov and
-Taerkasten files or the two new Black Sect lines yet. Speech recognition
-verifies the words. A language-ID cue gives only a weak hint of the accent.
-Auditory, accent and in-game acceptance remain with Andrei.
+message 19 now reports a fleeing enemy. He then heard the first render of the
+new material (run v04: the Ghorkov and Taerkasten reels and the two new Black
+Sect lines) and called it great. After review, version 5 re-cut 53 of those
+cues: long pauses closed; silent tails, an inhale and low thumps at the cut
+edges trimmed. The takes and words are the same. Nobody has heard the re-cut
+yet. Speech recognition verifies the words. A language-ID cue gives only a
+weak hint of the accent. In-game acceptance remains with Andrei.
 
 ## What version 5 changes
 
@@ -68,29 +71,41 @@ downloaded: the account was out of downloads until 2026-11-30. Until then, a
 Taerkasten unit's idle report plays the original vanilla voice. The Taerkasten
 reel ends with the two near-miss cuts, for listening only.
 
-## Known line mismatches
+## Lines checked against the engine
 
-A review of the engine's triggers found four lines that say more than the
-event guarantees. Each is a candidate for the next Suno batch:
+A review checked every new line against what its engine event guarantees. One
+line says more than that:
+
+- `unit_retreating`: "Energy low, pulling back." (Ghorkov). Message 9 is also
+  raised when the player recalls a healthy squad with Aggressiveness Level 1,
+  which the retail help recommends for bringing a squad home. Message 9 shows
+  no log text, so the voice is the only report, and on every second recall
+  this line would report low energy that the squad does not have. The retail
+  clip for this slot ("Tank squad pulling back.") names no cause. "Returning to
+  recharge." is a weaker case: it states a purpose that is false for a full
+  squad. Both are candidates for the next Suno batch.
+
+Four other lines were questioned and kept:
 
 - `unit_recovered`: "Recharged and ready." (Ghorkov) and "Restored by the
-  stone." (Taerkasten) claim a recharge.
-  - Message 10 fires when an escaping squad's energy ratio passes 0.2. The
-    decompiled engine required 0.5 for an escaping squad. An upstream
-    readability refactor (`7bc426f`) flattened that condition, and
-    `GetFightMotivation` has carried it since. Restoring the condition would
-    change gameplay and needs a playtest.
-  - The message also fires when the player lifts a squad out of
-    Aggressiveness Level 1, with no recharge at all.
-- `unit_retreating`: "Energy low, pulling back." (Ghorkov) is false when the
-  player recalls a healthy squad with Aggressiveness Level 1, which raises the
-  same message 9. "Returning to recharge." states a purpose that is also false
-  then.
-- `enemy_unit_spotted`: "The godless approach." (Taerkasten) implies motion.
-  Message 7 also covers static guns and parked squads that the Taerkasten squad
-  has moved up to.
-- `order_ack_enemy`: "Attacking the misguided." (Ghorkov) also plays on orders
-  into empty neutral sectors. Message 16 covers any cell the player does not own.
+  stone." (Taerkasten) make the same claim as the retail clip for this slot,
+  "Weapons and shields recharged." In this fork that claim is weaker than in
+  retail because of an engine regression, which affects every voice:
+  - In the decompiled engine, an escaping squad reported in only above half
+    energy. An upstream readability refactor (`7bc426f`, 2021) flattened the
+    condition in `GetFightMotivation`, so an escaping squad now resumes at a
+    0.2 energy ratio. Restoring it would change gameplay and needs a playtest;
+    it is a separate engine change.
+  - Two cases report in without a recharge in retail too: a squad raised
+    again after a Level 1 recall, and a squad whose weakest member dies.
+- `enemy_unit_spotted`: "The godless approach." (Taerkasten). Message 7 also
+  fires when the Taerkasten squad closes on a parked enemy. The distance still
+  shrinks, which is all a contact call means, and the retail clip ("Enemy
+  tangos engaged!") claims more.
+- `order_ack_enemy`: "Attacking the misguided." (Ghorkov) also acknowledges
+  orders into empty neutral sectors. The game calls every such order an attack
+  ("Attack: Acknowledged"), and "the misguided" is the faction's name for its
+  opponents.
 
 ## How the accented voices were made and checked
 
@@ -141,9 +156,12 @@ meanings and the faction lore.
   1. Whisper word alignment locates each line, and the cut sits at the silence
      around its vocal island. Where two lines run together, the cut falls at the
      quietest valley between phrases.
-  2. An edge audit transcribes and language-identifies each island inside a cut.
-     It trims away priming phrases, breaths and clicks, and rejects a cut with a
-     priming phrase between the words.
+  2. An edge audit transcribes and language-identifies each island inside a cut
+     (sound within 30 dB of the cut's peak, at least 0.05 s long). It trims away
+     priming phrases and other islands that are not the line, and rejects a cut
+     with a priming phrase between the words. Fainter or shorter sounds never
+     form an island, so the audit cannot see soft breaths or low thumps; the
+     re-cut below dealt with those.
   3. A residue check rejects cuts with sound outside the line's words.
   4. A cut is eligible only if base.en, small.en and medium.en, transcribing it
      in isolation, hear exactly the planned line in at least two of three cases.
@@ -157,9 +175,10 @@ meanings and the faction lore.
 
 **Re-cut after the audio review.** The first render (run v04) had problems in
 several cues: pauses of up to 1.3 s inside a line, a half-second inhale before
-"Brothers, they hold this ground.", clicks or thumps at four cut edges, and
-silent tails of up to 0.8 s. Each pause kept the engine's voice slot busy. So
-version 5 re-cut 54 of the 62 new cues (run v05):
+"Brothers, they hold this ground.", low thumps at three cut edges and silent
+tails of up to 0.8 s. The thumps are htdemucs leakage of the drone bed, too
+faint and short for the edge audit. Each pause and tail kept the engine's voice
+slot busy. So run v05 re-cut 54 of the 62 new cues:
 
 - Heads and tails were trimmed to 40 dB below each cut's peak, with 0.05 s and
   0.10 s pads.
@@ -167,12 +186,19 @@ version 5 re-cut 54 of the 62 new cues (run v05):
   two parts: "Orders, Commander?", "Recharged and ready.", "Moving as
   ordered.", "Welcome among us.", "Brothers, stand with us." and "Brothers,
   they hold this ground." The last also lost about half a second of low-level
-  sound before its first word, and another inside the pause, both probably
-  inhales.
-- The clicks were left outside the cuts.
+  sound before its first word, and another inside the pause, both inhales.
+- The thumps were left outside the cuts.
 
-No word was shortened. 16 lines (12 Ghorkov, 4 Taerkasten) still run
-longer than the plan's duration targets, by at most 0.73 s. The longest are
+A second review checked the re-cut. The first review had also counted a
+"click" at the end of "Attacking the misguided.". It is the release of the
+word's final /d/: a closure, a burst and aspiration. The re-cut had removed it,
+so that cue ships its v04 cut, and version 5 keeps 53 re-cut cues. A scan
+of everything else the re-cut removed finds nothing within 40 dB of a cut's
+peak except the inhales and the thumps; the next loudest removed frame is
+41.6 dB below its cut's peak.
+
+16 lines (12 Ghorkov, 4 Taerkasten) still run longer than the
+plan's duration targets, by at most 0.73 s. The longest are
 "Reactionary stronghold found." (2.58 s), "Stronghold destroyed, Commander!" (2.57 s) and
 "Welcome among us." (2.48 s).
 
@@ -261,7 +287,8 @@ There are three native REAPER 7.79 runs, all through the TwelveTake bridge:
 
 - `v03-full-candidate-2026-11-02` (version 4): Black Sect and Sulgogars.
 - `v04-faction-voices-2026-11-02`: the first render of Black Sect, Ghorkov and
-  Taerkasten (94 cues). It was superseded by v05 after the audio review.
+  Taerkasten (94 cues). It was superseded by v05 after the audio review,
+  except for "Attacking the misguided.", which still ships from v04.
 - `v05-faction-voices-recut-2026-11-02` (this version): the same 94 cues with
   54 re-cut. The other 40 came out byte-identical to v04.
 
@@ -278,6 +305,7 @@ the saved timeline and the master's length, and cut exact per-cue windows from
 the master. ffmpeg converted each cue to PCM16 mono 22050 Hz. As an independent
 check, every v05 cue master (48 kHz, before conversion) matches a separate rendering
 of its reviewed item from source exactly: correlation 1.0, level within 0.01 dB.
+The v04 master of the cue that ships from v04 matches in the same way.
 The runtime files correlate at least 0.9741 with a 22050 Hz reference rendering. The
 lowest values are two-part cues, whose second part sits half a sample off that
 reference's grid.
