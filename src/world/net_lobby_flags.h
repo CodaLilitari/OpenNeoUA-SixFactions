@@ -143,7 +143,7 @@ inline bool ValidAddress(const std::string &text)
 struct Options
 {
     bool any = false;          // at least one -net-* argument
-    std::string name;          // -net-name (empty: the profile's callsign)
+    std::string name;          // -net-name (empty: the name field's prefill)
     int hostLevel = 0;         // -net-host <level id>
     std::string joinAddress;   // -net-join <address>
     int faction = 0;           // -net-faction (owner id; 0: keep the lobby's choice)
@@ -308,7 +308,8 @@ struct LobbyView
     bool rosterCanStart = false;    // host: CheckNetLobbyRoster().CanStart()
     bool clientConnected = false;   // client transport connected
     int connectFailure = ZNDNet::CONNFAIL_NONE; // reason of the last failed Connect()
-    std::string profileCallsign;    // the name field's prefill
+    std::string profileCallsign;    // the name field's prefill: Unnamed unless a name was entered
+                                    // (the engine never reads callsign.def back)
     std::vector<Player> players;    // transport roster
     std::vector<Level> levels;      // network levels in map-list order
 };

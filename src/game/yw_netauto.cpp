@@ -161,7 +161,7 @@ void Execute(NC_STACK_ypaworld *world, const Flags::Action &a)
 std::string Plan(const Flags::Options &o, int faction)
 {
     std::string plan = o.Host() ? "host level " + std::to_string(o.hostLevel) : "join " + o.joinAddress;
-    plan += " as " + (o.name.empty() ? std::string("the profile callsign") : o.name);
+    plan += " as " + (o.name.empty() ? std::string("the name field's prefilled callsign") : o.name);
     plan += ", faction " + (faction ? std::string(Flags::FactionName(faction)) : std::string("as the lobby assigns"));
     if (faction && !o.faction)
         plan += " (from -bot)";

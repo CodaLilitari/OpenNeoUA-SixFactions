@@ -127,7 +127,7 @@ work without the agent bridge; with it, `net.auto` reports their progress.
 |---|---|
 | `-net-host <level>` | Choose Host, enter the callsign, pick the network level by id and open the lobby. |
 | `-net-join <address>` | Choose Join, enter the callsign and connect to the host name or IPv4 address (port 61234). Failed attempts are retried every 2 s for 120 s; an address that does not resolve or a version refusal stops at once. |
-| `-net-name <callsign>` | The callsign: no spaces, no `*`, at most 20 characters. Without it the profile's callsign is used and checked the same way. |
+| `-net-name <callsign>` | The callsign: no spaces, no `*`, at most 20 characters. It is entered in the name field like a typed one, and the game saves it to the profile's `callsign.def` like one; this engine never reads that file back, so it does not carry over to later runs. Without it the name field's prefill is used and checked the same way: `Unnamed` for every profile, so give each instance its own `-net-name`. |
 | `-net-faction <faction>` | Owner number 1-6 or `resistance`, `sulgogars`, `mykonian`, `taerkasten`, `black-sect`, `ghorkov`. A client chooses only after every other player's WELCOME arrived. With `-bot` and no `-net-faction`, the bot's faction is chosen when it is on the level and free; otherwise the lobby's choice stays. |
 | `-net-ready` | Client: tick Ready once the faction has settled and the Ready box is enabled. |
 | `-net-start-when <n>` | Host: press Start once at least n players are in the lobby, all of them ready, and the roster check has passed for 2 s. With n = 1 and nobody else in the lobby the host starts alone, without the "start alone?" confirmation a click opens. |
