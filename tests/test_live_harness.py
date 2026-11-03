@@ -1,6 +1,9 @@
 """Linux multi-instance harness (tools/linux/live): argument building, runtime
 assembly rules and the adapter plumbing. No engine, display or retail data."""
+import argparse
+import contextlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -77,6 +80,31 @@ class EngineArguments(unittest.TestCase):
     def test_adapter_plumbing_against_a_fake_engine(self):
         self.assertEqual(drive.selftest(), 0)
 
+    def test_generated_levels_join_the_runtime_level_directory(self):
+        with tempfile.TemporaryDirectory(prefix='live-levels-') as d:
+            root = Path(d)
+            rt = root / 'rt-H1'
+            multi = rt / 'Data/Levels/MULTI'          # retail casing, as assembled
+            multi.mkdir(parents=True)
+            (multi / 'l132132.ldf').write_text('retail 132')
+            (multi / 'L201201.LDF').write_text('older 201')
+            maps = root / 'maps'                       # as make_six_faction_map.py writes it
+            (maps / 'Levels/Multi').mkdir(parents=True)
+            (maps / 'Levels/Multi/l200200.ldf').write_text('six-start 200')
+            (maps / 'Levels/Multi/l201201.ldf').write_text('six-start 201')
+            (maps / 'receipts').mkdir()
+            (maps / 'receipts/level-200.json').write_text('{}')
+            added = drive.add_level_files(maps, rt)
+            self.assertEqual(sorted(p.name for p in added), ['l200200.ldf', 'l201201.ldf'])
+            # One level directory (the engine takes the first case-insensitive
+            # match), the other-case 201 replaced, receipts not copied.
+            self.assertEqual([p.name for p in (rt / 'Data/Levels').iterdir()], ['MULTI'])
+            self.assertEqual(sorted(p.name for p in multi.iterdir()), ['l132132.ldf', 'l200200.ldf', 'l201201.ldf'])
+            self.assertEqual((multi / 'l201201.ldf').read_text(), 'six-start 201')
+            self.assertFalse(any('receipt' in p.name for p in rt.rglob('*')))
+            self.assertEqual(drive.add_level_files(maps, rt), [])
+            self.assertEqual(drive.add_level_files(root / 'no-maps', rt), [])
+
     def test_shell_scripts_parse(self):
         for script in ('launch_instance.sh', 'ns_holder.sh', 'collect_logs.sh', 'sample.sh'):
             with self.subTest(script=script):
@@ -136,6 +164,33 @@ class RuntimeAssembly(unittest.TestCase):
         self.assertTrue(os.access(self.out / 'OpenNeoUA', os.X_OK))
         # Incomplete retail data is reported, not hidden.
         self.assertIn('WARNING', result.stdout)
+
+    def test_maps_generated_after_the_runtimes_reach_them(self):
+        # A lab first used with a retail level, then with a generated one (or
+        # with 200, then 201): rt-base and the instance copies exist already.
+        (self.retail / 'LOCALE').mkdir()
+        (self.retail / 'LOCALE/ENGLISH.DLL').write_text('dll')
+        (self.retail / 'DATA/FONTS').mkdir()
+        (self.retail / 'DATA/FONTS/x.fnt').write_text('font')
+        lab = Path(self.temp.name) / 'lab'
+        specs = [drive.Spec('host', 'H1'), drive.Spec('client', 'C1')]
+        args = argparse.Namespace(retail=str(self.retail), binary=str(self.binary), level=132, fresh=False)
+        saved, drive.REPO = drive.REPO, self.repo      # the small overlay, not this checkout
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                drive.prepare(args, lab, specs)
+                generated = lab / 'maps/Levels/Multi/l200200.ldf'   # what the generator writes
+                generated.parent.mkdir(parents=True)
+                generated.write_text('six-start 200')
+                args.level = 200
+                runtimes = drive.prepare(args, lab, specs)
+        finally:
+            drive.REPO = saved
+        for rt in (lab / 'rt-base', runtimes['H1'], runtimes['C1']):
+            with self.subTest(runtime=rt.name):
+                found = [p for p in (rt / 'Data').rglob('*') if p.name.lower() == 'l200200.ldf']
+                self.assertEqual([p.relative_to(rt).as_posix() for p in found], ['Data/Levels/Multi/l200200.ldf'])
+                self.assertEqual(found[0].read_text(), 'six-start 200')
 
     def test_movies_on_request_and_no_overwrite(self):
         self.assertEqual(self.assemble('--keep-movies').returncode, 0)

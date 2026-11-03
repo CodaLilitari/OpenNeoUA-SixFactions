@@ -145,9 +145,11 @@ one agent directory per instance and `collected-<stamp>/`, whose
 instance. Options: `--transport enet` (set for every instance), `--keep` to
 leave the match running for drills, `--sample 10` for a CPU/RSS log
 (`logs/resources.csv`), and `--fresh` to assemble the runtimes again (after a
-change of the retail package or the maps; the binary under test is copied
-into every runtime on each run). Levels 200 and 201 are the generated six-start
-maps; `match` generates them from the retail levels on first use.
+change of the retail package or the repository's data; the binary under test
+is copied into every runtime on each run). Levels 200 and 201 are the
+generated six-start maps; `match` generates them from the retail levels into
+`maps/` of the run directory on first use, and on every run copies the levels
+there into runtimes assembled before, so one run directory serves any level.
 `drive.py status --lab DIR` prints every instance's lobby, seat, bot and flag
 state; `drive.py stop --lab DIR` stops a kept match.
 

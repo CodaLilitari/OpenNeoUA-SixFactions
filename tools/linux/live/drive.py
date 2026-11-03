@@ -22,7 +22,8 @@ instance reached the game.
 
 LAB must be outside any Git checkout (the engine refuses agent directories inside
 one). Levels 200 and 201 are the generated six-start maps (tools/make_six_faction_map.py);
-`match` generates them from the retail levels when asked for. As a library
+`match` generates them from the retail levels into LAB/maps when asked for, and copies
+every level there into runtimes assembled before. As a library
 (`import drive`), Inst wraps the repo's MCP adapter for drills: status, observe,
 fork_view, netlog, key/click/type. Nothing here retries a mutation automatically.
 """
@@ -243,6 +244,32 @@ def ci(path, *parts):
     return path
 
 
+def add_level_files(maps, runtime):
+    """Copy the generated levels (maps/Levels/...) into runtime/Data/Levels the way
+    assemble_runtime.py merges them: into the directory that already exists under any
+    case (retail's Levels/MULTI, say), replacing a same-named file of another case.
+    A file that is already there unchanged is left alone. Returns the files copied."""
+    source = maps / 'Levels'
+    if not source.is_dir():
+        return []
+    copied = []
+    for path in sorted(source.rglob('*')):
+        if path.is_symlink() or not path.is_file():
+            continue
+        target = runtime / 'Data'
+        for part in ('Levels',) + path.relative_to(source).parts[:-1]:
+            target = ci(target, part) or target / part
+        old = ci(target, path.name)
+        if old is not None and old.is_file() and old.read_bytes() == path.read_bytes():
+            continue
+        target.mkdir(parents=True, exist_ok=True)
+        if old is not None:
+            old.unlink()
+        shutil.copyfile(path, target / path.name)
+        copied.append(target / path.name)
+    return copied
+
+
 def check_retail(retail):
     locale = ci(retail, 'LOCALE')
     missing = [] if locale and any(p.suffix.lower() == '.dll' for p in locale.iterdir()) else ['LOCALE/*.DLL']
@@ -275,6 +302,10 @@ def prepare(args, lab, specs):
         if maps.is_dir():
             cmd += ['--extra-levels', maps]
         run(cmd)
+    # Runtimes assembled before a map was generated (a lab first used with another
+    # level) get it now; otherwise the host would not list the level.
+    for added in add_level_files(maps, base):
+        print(f'added {added.relative_to(lab)}', flush=True)
     runtimes = {}
     for spec in specs:
         rt = lab / f'rt-{spec.name}'
@@ -282,6 +313,8 @@ def prepare(args, lab, specs):
             shutil.rmtree(rt)
         if not rt.exists():
             shutil.copytree(base, rt, symlinks=False)
+        for added in add_level_files(maps, rt):
+            print(f'added {added.relative_to(lab)}', flush=True)
         shutil.copy2(binary, rt / 'OpenNeoUA')   # always the binary under test
         runtimes[spec.name] = rt
     return runtimes
@@ -501,7 +534,8 @@ def main():
     m.add_argument('--poll', type=float, default=2.0)
     m.add_argument('--display-base', type=int, default=150)
     m.add_argument('--sample', type=int, default=0, help='sample CPU/RSS every N seconds into logs/resources.csv')
-    m.add_argument('--fresh', action='store_true', help='re-assemble the runtimes')
+    m.add_argument('--fresh', action='store_true',
+                   help='re-assemble the runtimes (after a change of the retail package or the repo data)')
     m.add_argument('--keep', action='store_true', help='leave the match running after it started')
     m.add_argument('--no-netns', action='store_true', help='use the host network (port 61234 must be free)')
     s = sub.add_parser('status', help="print every instance's status receipt")
