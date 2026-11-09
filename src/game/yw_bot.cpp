@@ -179,11 +179,15 @@ void Tick(NC_STACK_ypaworld *world)
     }
     if (report.lookaheadCut != g_lookaheadCut)
     {
+        // The budget counts only the work in the bot's picture; making the
+        // picture, which it does not count, is logged on its own.
         if (report.lookaheadCut)
-            log_netlog("bot: lookahead cut after %llu fog range tests (budget %llu) with %zu units "
-                       "in the world; playing the best order scored before the cut\n",
-                       static_cast<unsigned long long>(report.rangeTests),
+            log_netlog("bot: lookahead cut after %llu fog range tests in the bot's picture (budget %llu; "
+                       "making the picture took %llu more) with %zu units in the world; "
+                       "playing the best order scored before the cut\n",
+                       static_cast<unsigned long long>(report.rangeTests - report.pictureRangeTests),
                        static_cast<unsigned long long>(World::NetBot::MaxLookaheadRangeTests),
+                       static_cast<unsigned long long>(report.pictureRangeTests),
                        state.units.size());
         else
             log_netlog("bot: lookahead runs in full again\n");

@@ -320,6 +320,89 @@ private:
     mutable std::uint64_t rangeTests_ = 0;
 };
 
+// The world as one faction sees it, as a state a fork can start from, so a
+// planner can step what-ifs without reading anything that faction cannot see.
+// It holds what Observe reports, plus what stepping needs:
+//  - The owner's own units, in full.
+//  - Every other unit the owner sees (UnitVisibleTo, through a SensorView),
+//    with only what can be seen of it: gid, prototype, owner, energy and
+//    position. Its orders, cooldown and parent are cleared.
+//  - Every sector the owner owns or has its view bit on, with the view bits
+//    of all other owners cleared, since what an enemy sees is hidden too.
+//  - Every other sector blank: it keeps its id and its border flag, which
+//    the map size fixes, and has owner 0 and no energy, purpose, type or
+//    view bits.
+//  - nextGid one past the highest gid kept (at least the WorldState
+//    default): a captured counter is one past the highest gid of all units,
+//    the hidden ones included.
+//  - Map size, clock and RNG state as they are.
+// A blank sector reads as owner 0, nobody's, rather than as a marked
+// unknown, because nothing reads a sector that no faction owns or sees:
+// planned moves and builds target only sectors their faction sees
+// (NetBot::CandidateOrders), Fork::Step builds and creates only in the
+// controller's own sectors, evaluations count only the evaluator's own
+// sectors (NetBot::EvaluateFor), and no faction has a view bit there. A blank
+// sector was never the owner's own, since its own sectors are all kept. Only
+// an own unit whose earlier move goal lies in one captures it on arrival, as
+// it would an unowned sector, which is the owner's best guess. The owner
+// must be a faction (not 0), or blank sectors would read as its own.
+// Observing the picture as the owner with the same range returns what
+// observing the world does. Adds the fog check's range tests to *rangeTests
+// when given.
+inline WorldState VisibleWorld(const WorldState &state, std::uint8_t owner, float sensorRange,
+                               std::uint64_t *rangeTests = nullptr)
+{
+    WorldState seen;
+    seen.mapW = state.mapW;
+    seen.mapH = state.mapH;
+    seen.timeStampMs = state.timeStampMs;
+    seen.framesElapsed = state.framesElapsed;
+    seen.rngState = state.rngState;
+    const std::uint32_t ownBit = 1u << owner;
+    seen.sectors.reserve(state.sectors.size());
+    for (const SectorState &s : state.sectors)
+    {
+        SectorState v;
+        if (s.owner == owner || (s.viewMask & ownBit))
+        {
+            v = s;
+            v.viewMask = s.viewMask & ownBit;
+        }
+        else
+        {
+            v.id = s.id;
+            v.border = s.border;
+        }
+        seen.sectors.push_back(v);
+    }
+    const SensorView view(state, owner, sensorRange);
+    seen.units.reserve(state.units.size());
+    for (const UnitState &u : state.units)
+    {
+        if (!view.Sees(u))
+            continue;
+        if (u.owner == owner)
+        {
+            seen.units.push_back(u);
+        }
+        else
+        {
+            UnitState v;
+            v.gid = u.gid;
+            v.protoId = u.protoId;
+            v.owner = u.owner;
+            v.energy = u.energy;
+            v.x = u.x; v.y = u.y; v.z = u.z;
+            seen.units.push_back(v);
+        }
+        if (u.gid >= seen.nextGid)
+            seen.nextGid = u.gid + 1;
+    }
+    if (rangeTests)
+        *rangeTests += view.RangeTests();
+    return seen;
+}
+
 class Fork
 {
 public:

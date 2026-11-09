@@ -43,8 +43,11 @@ Resistance balanced; Ghorkov heavy conquest squads; Mykonian radar/recon and
 ranged pressure; Taerkasten fortified turtle-then-counter; Black Sect
 opportunistic sector theft; Sulgogars swarm with their biological roster and
 no construction wishes. Difficulty only scales reaction time (1500/750/250
-ms), sensor range (1800/2000/2160), lookahead depth (0/1/2) and order noise —
-never information access.
+ms), sensor range (1800/2000/2160), lookahead depth (0/1/2) and order noise.
+Every difficulty sees by the same fog rule, with its own sensor range, and
+reads nothing outside it: its candidate orders, their evaluation and its
+lookahead all work from what its station sees (see **Observe** and **Bot
+picture** below).
 
 ### Leave, takeover, reclaim (designed, not yet wired)
 
@@ -81,7 +84,7 @@ Headers (all SDL-free, covered by standalone tests):
 | --- | --- |
 | [fork_rng.h](../src/world/fork_rng.h) | Per-world splitmix64 RNG; state is one `uint64_t`, serialized with the snapshot |
 | [fork_snapshot.h](../src/world/fork_snapshot.h) | `WorldState` (sector grid + gid-sorted units), strict binary encode/decode, FNV-1a hash |
-| [fork.h](../src/world/fork.h) | `Fork::Create/ForkFrom/Capture/Restore/Step/Observe/Diff/TryCommit/Discard`, `ForkConfig` limits, `ForkRegistry` budget |
+| [fork.h](../src/world/fork.h) | `Fork::Create/ForkFrom/Capture/Restore/Step/Observe/Diff/TryCommit/Discard`, `ForkConfig` limits, `ForkRegistry` budget, fog checks (`UnitVisibleTo`, `SensorView`) and `VisibleWorld` |
 | [fork_protocol.h](../src/agent/fork_protocol.h) | `fork_create/step/observe/commit/discard` on the existing bounded agent line protocol |
 | [net_bot.h](../src/world/net_bot.h) | Faction profiles, difficulty, fog-filtered decisions, fork lookahead, roster fill, lifecycle, chat rules |
 
@@ -109,6 +112,27 @@ Semantics:
   test sensor range against altitude and leak units along a whole column.
   In a network match the agent bridge always observes as the local player's
   owner, whatever owner the request names.
+- **Bot picture**: `VisibleWorld(state, owner, sensorRange)` is the world as
+  one faction sees it, as a state a fork can start from. It keeps the
+  faction's own units in full; the other units it sees, with only what can
+  be seen of them (gid, prototype, owner, energy, position; their orders,
+  cooldown and parent are cleared); the sectors it owns or has in view, with
+  the other owners' view bits cleared, since what an enemy sees is hidden
+  too; and the map size, clock and RNG state. Every other sector is blank:
+  only its id and border flag remain (the map size fixes the border), with
+  owner 0, no energy, purpose, type or view bits. The gid counter is one
+  past the highest gid kept, since a captured counter also counts the units
+  out of sight. A blank sector reads as owner 0, nobody's, instead of a
+  marked unknown, because nothing reads a sector that no faction owns or
+  sees: planned moves and builds target only sectors their faction sees,
+  `Step` builds and creates only in the controller's own sectors,
+  evaluations count only the evaluator's own sectors, and no faction has a
+  view bit there. A faction's own sectors are always in its picture, so a
+  blank sector was never its own; only an own unit whose earlier move goal
+  lies in one captures it on arrival, as it would an unowned sector, which
+  is the faction's best guess. Observing the picture as that faction with
+  the same range returns what observing the world does, and the picture of
+  the picture is the picture.
 - **Limits**: fixed step (40 ms default), per-call tick budget, unit cap
   (`MaxWorldUnits`, 4096 units in the whole world, the same cap as the
   engine capture; the network's 1024-record snapshot caps apply per owner),
@@ -118,21 +142,32 @@ Semantics:
   back under the cap. Lookahead forks that fail are logged as well, instead
   of the bot quietly playing the greedy choice.
 - **Cost**: a bot thinks on the game's main loop, every 250 ms at Veteran.
-  Its fog checks (`CandidateOrders`, `EvaluateFor`, and `Observe`) go through
-  `SensorView`, which files the observer's units by sector once and keeps
-  their bounding box per sector; a check then tests only the own units near
-  each enemy and returns exactly what `UnitVisibleTo` returns. Measured at
-  the cap (4096 units, six owners on a 54 x 32 map, Release build, 2-vCPU
-  Linux box): a Veteran think takes about 3.4 ms, where it took about 71 ms
-  while each check scanned the whole world once per enemy; Normal 1.7 ms
-  (was 51 ms), Cadet 0.1 ms (was 4.4 ms). Own units massed just beyond
-  sensor range of the enemy cost the same. Most of what remains is copying
-  and hashing the eight lookahead forks. The costliest layout for the fog checks, own units strung on a ring
-  just beyond sensor range around a dense enemy cluster, makes each enemy
-  test hundreds of own units. Past `MaxLookaheadRangeTests` (about 4.2
-  million range tests) a think therefore forks no further candidate, keeps
-  the best order scored so far and reports `lookaheadCut`; the bot logs when
-  that starts and stops. With the cut, that ring layout costs 5.0 ms a think.
+  Its fog checks (`VisibleWorld`, `CandidateOrders`, `EvaluateFor`, and
+  `Observe`) go through `SensorView`, which files the observer's units by
+  sector once and keeps their bounding box per sector; a check then tests
+  only the own units near each enemy and returns exactly what
+  `UnitVisibleTo` returns. (While each check scanned the whole world once
+  per enemy, a Veteran think took about 71 ms.) Measured at the cap (4096
+  units, six owners on a 54 x 32 map, Release build, 2-vCPU Linux box),
+  back to back with the lookahead that forked the captured world: a Veteran
+  think takes about 1.5 ms (was 4.7 ms), Normal 0.7 ms (was 2.2 ms), Cadet
+  0.1 ms (unchanged). Most of the difference is copying, hashing and
+  stepping the eight lookahead forks, which now hold only the units the bot
+  sees: 825 of the 4096 here. Own units strung on a ring just beyond sensor
+  range around a dense enemy cluster make each enemy test hundreds of own
+  units; the lookahead pays that once, for its picture, where no enemy is
+  left, so that layout costs 2.7 ms a Veteran think (was 5.1 ms with the
+  lookahead cut). The costliest layout for the lookahead itself surrounds
+  the bot's massed units with enemies it sees, beyond the 2000 sensor range
+  of the faction that answers as a Normal bot: each answer then tests every
+  own unit against hundreds of enemies. Past `MaxLookaheadRangeTests` (about
+  4.2 million range tests in the picture; the picture's own check counts in
+  `rangeTests`, and alone in `pictureRangeTests`, but not against the
+  budget, since its cost depends on what the bot cannot see) a think forks
+  no further candidate, keeps the best order scored so far and reports
+  `lookaheadCut`; the bot logs when that starts and stops, giving the range
+  tests made in the picture and, apart, those of making it. With the cut,
+  that layout costs 6.3 ms a Veteran think (6.6 ms before).
 
 Engine bridge: `ForkBridge::CaptureWorldState` / `ValidateActions`
 (`src/game/yw_fork.cpp`) translate the live `NC_STACK_ypaworld` (sectors via
@@ -141,8 +176,19 @@ Engine bridge: `ForkBridge::CaptureWorldState` / `ValidateActions`
 sector energy), not the engine's physics or combat; forks rank options, they
 do not predict the live simulation. Discarded agent forks are retained in
 memory until the process exits (the registry frees the slot, not the state).
-Bot lookahead (`NetBot::Decide`) forks that state, steps candidates, and at
-Veteran depth also steps an assumed enemy reply before picking an order.
+Bot lookahead (`NetBot::Decide`) never forks that state: it forks the bot's
+picture of it (`VisibleWorld` with the difficulty's sensor range), and reads
+its candidate orders from the picture too, which yields the same candidates.
+Units the bot cannot see are not simulated, so they can neither block a
+capture nor enter a score, and the sectors it cannot see are blank. Cadet
+plays the best-scored candidate. Normal steps each of the best four in a
+fork and plays the one that leaves the best position (`EvaluateFor`).
+Veteran first lets the strongest enemy faction it sees (`StrongestFoe`: most
+energy in the units of that faction in the picture) answer each candidate
+with the order that faction would pick, as a Normal bot, from what it would
+see of the picture, and judges the position after the answer; a candidate
+that faction cannot answer is judged after its own step. So the order
+depends only on the picture, the difficulty and the bot's RNG.
 
 ## Tests
 
@@ -156,13 +202,33 @@ ctest --test-dir <external-build-directory> --output-on-failure
 batches, tick/unit limits, fog observation, diff, commit/stale rejection and
 the agent fork protocol. It also checks `SensorView` against `UnitVisibleTo`
 for every unit and owner of random worlds, on and off the map, at the edge
-of the range, for odd ranges and for positions that are not finite. `net_bot`
-covers pairwise-distinct faction personalities, spec parsing, bot roster
-fill against `CheckRoster`, the no-see-no-attack rule, deterministic
-decisions that never mutate the input state, lifecycle/takeover/reclaim
-transitions and wire-safe chat. It also pins the cost of a think at the cap:
-the whole lookahead within one range test per unit in a six-owner match,
-and the ring layout cut and reported.
+of the range, for odd ranges and for positions that are not finite, and
+checks `VisibleWorld` on such worlds for every faction: it keeps exactly the
+units `UnitVisibleTo` reports, with only what can be seen of the others,
+blanks every sector out of sight, counts its fog check, observes as the
+world does and is its own picture. `net_bot` covers pairwise-distinct
+faction personalities, spec parsing, bot roster fill against `CheckRoster`,
+the no-see-no-attack rule, deterministic decisions that never mutate the
+input state, lifecycle/takeover/reclaim transitions and wire-safe chat. For
+1500 random worlds it changes everything the bot cannot see (units moved,
+dropped and added out of sight, sectors out of sight rewritten, the other
+owners' view bits, the orders of the units it sees, the gid counter) and
+requires the same picture, candidates and order at every difficulty, with
+the real budget and with budgets small enough to cut the lookahead. The
+report must be the same too, but for the range tests that read the captured
+world, whose number depends on the units out of sight: making the picture at
+Normal and Veteran (`pictureRangeTests`), the candidates' fog check at
+Cadet. So the work in the picture, which the budget counts, is the same to
+the range test. Those checks are not vacuous: forks of the captured worlds
+tell the two worlds apart, and changing what the bot sees changes its order.
+It also checks that the strongest faction in sight answers a Veteran
+candidate; that a Veteran with no enemy in sight still judges every
+candidate, and keeps its order beside a faction out of sight that could
+answer or a unit out of sight that its move would bring into range; and the
+cost of a think at the cap: the whole lookahead within one range test per
+unit in a six-owner match, enemies out of sight paid for once and never
+against the budget, and the costliest layout for the lookahead cut and
+reported.
 
 Runtime acceptance still required (same gap as the six-client matrix in
 [six-faction-multiplayer.md](six-faction-multiplayer.md)): a mixed
