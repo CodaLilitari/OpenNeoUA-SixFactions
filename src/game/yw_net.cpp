@@ -2008,8 +2008,25 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         szmsg = sizeof(uamessage_startBuild);
         uamessage_startBuild *sbMsg = (uamessage_startBuild *)msg->data;
 
+        // One line per remote building, to compare with the builder's
+        // "STARTBUILD sent" line for the same owner, building and cell. A
+        // refused building is not retried, and no later message carries
+        // sector state: this peer keeps the cell as it is, and when the
+        // construction completes on the builder's process only the
+        // building's guns arrive here (UAMSG_BUILDINGVHCL).
+        const auto logBuild = [&](const char *refusal)
+        {
+            log_netlog("STARTBUILD from %s %s: owner %d proto %u cell %d,%d (t=%d ms)%s%s\n",
+                       msg->senderName.c_str(), refusal ? "refused" : "applied",
+                       sbMsg->owner, sbMsg->bproto, sbMsg->sec_x, sbMsg->sec_y,
+                       yw->_timeStamp, refusal ? ": " : "", refusal ? refusal : "");
+        };
+
         if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
+        {
+            logBuild("the sender has left the match");
             break;
+        }
 
         if ( yw->yw_getHostByOwner(sbMsg->owner) )
         {
@@ -2020,11 +2037,14 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             arg148.CellId = {sbMsg->sec_x, sbMsg->sec_y};
             arg148.field_18 = 0;
 
-            yw->ypaworld_func148(&arg148);
+            if ( yw->ypaworld_func148(&arg148) )
+                logBuild(nullptr);
+            else
+                logBuild(World::BuildStart::Describe(arg148.refusal));
         }
         else
         {
-            log_netlog("\n+++ SB: Havent found robo with owner %d (%ds)\n", sbMsg->owner, yw->_timeStamp / 1000);
+            logBuild("no host station of that owner here");
         }
     }
     break;

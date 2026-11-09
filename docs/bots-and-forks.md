@@ -186,6 +186,35 @@ dispatch and robo `AI_layer1`/`AI_layer3` honour it
 Human-controlled stations keep the exact original player path; the only
 behaviour change is inside `-bot` processes.
 
+## Station buildings in network games
+
+The native station AI builds radar, power and flak buildings (`buildRadar`,
+`buildPower`, `buildSafe` in `src/game/yparobo_ai.cpp`). Before bots it never
+ran in a network game, and these paths started a construction without
+telling the peers: they got the building's guns when it completed
+(`UAMSG_BUILDINGVHCL`) but never the building. Every building a station
+starts, by its AI or by the player's build command, now goes through
+`NC_STACK_yparobo::StartBuilding`: once the local `ypaworld_func148` has
+started the construction, a network game broadcasts `UAMSG_STARTBUILD`
+(owner, building, cell) reliably, and each peer starts the same construction
+with its own `ypaworld_func148`. Only the station's own process runs these
+paths; the world updates every other station with `NetUpdate()`, which runs
+neither the station AI nor player commands.
+
+A peer checks the building against its own copy of the world and can refuse
+what the owner started (`World::BuildStart::Check` in
+`src/world/build_start.h` lists the reasons; sector ownership is not one of
+them). A refusal is final: nothing retries it and no message carries sector
+state, so that peer keeps the cell as it was and later gets only the guns.
+Both sides log every building in `env/ypa_log.txt`, and `collect_logs.sh`
+copies the lines into `net-summary.txt`:
+
+```text
+netlog: STARTBUILD sent: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
+netlog: STARTBUILD from <sender> applied: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
+netlog: STARTBUILD from <sender> refused: owner <o> proto <b> cell <x>,<y> (t=<ms> ms): <reason>
+```
+
 ## Runtime acceptance status
 
 Live-proven on real builds (see `docs/validation-status.md`):

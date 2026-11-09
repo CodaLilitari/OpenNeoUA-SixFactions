@@ -320,7 +320,13 @@ bool NC_STACK_yparobo::StartBuilding(int buildingID, const Common::Point &cell)
     {
         uamessage_startBuild sbMsg;
         NetMsgFillStartBuild(sbMsg, _owner, buildingID, cell.x, cell.y);
-        _world->NetBroadcastMessage(&sbMsg, sizeof(sbMsg), true);
+        const bool sent = _world->NetBroadcastMessage(&sbMsg, sizeof(sbMsg), true);
+
+        // Each peer logs "STARTBUILD from <this player> applied" or
+        // "refused" with the same owner, building and cell (yw_net.cpp).
+        log_netlog("STARTBUILD sent%s: owner %d proto %d cell %d,%d (t=%d ms)\n",
+                   sent ? "" : " FAILED", _owner, buildingID, cell.x, cell.y,
+                   _world->_timeStamp);
     }
 
     return true;

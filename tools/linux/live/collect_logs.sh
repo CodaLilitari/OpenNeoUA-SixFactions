@@ -18,6 +18,6 @@ for a in "$lab"/agent/*; do
     mkdir -p "$out/agent/$(basename "$a")"
     cp -a "$a"/session.json "$a"/response.json "$out/agent/$(basename "$a")/" 2>/dev/null || true
 done
-grep -H -E "netauto:|Connection to|Connected to|READY TO PLAY|Waiting for player|destroy player|kicked off|RESTORE|UPD:|plays |is HOST|is CLIENT|bot:" \
+grep -H -E "netauto:|Connection to|Connected to|READY TO PLAY|Waiting for player|destroy player|kicked off|RESTORE|UPD:|plays |is HOST|is CLIENT|bot:|STARTBUILD" \
     "$out"/*/Env/ypa_log.txt > "$out/net-summary.txt" 2>/dev/null || true
 echo "$out"
