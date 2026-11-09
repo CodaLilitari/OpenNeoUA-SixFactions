@@ -142,7 +142,8 @@ The exit code is 0 only when every instance reached the game. The run
 directory (outside any Git checkout) keeps the runtimes, `logs/`, `pids/`,
 one agent directory per instance and `collected-<stamp>/`, whose
 `net-summary.txt` has the netauto, connection, roster, READY and STARTBUILD
-lines of every instance. Options: `--transport enet` (set for every instance), `--keep` to
+lines of every instance, and the lines of the network messages it dropped
+unapplied. Options: `--transport enet` (set for every instance), `--keep` to
 leave the match running for drills, `--sample 10` for a CPU/RSS log
 (`logs/resources.csv`), and `--fresh` to assemble the runtimes again (after a
 change of the retail package or the repository's data; the binary under test

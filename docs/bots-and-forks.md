@@ -214,14 +214,29 @@ builder's guns, which can reach it before its own copy of the construction
 completes. A peer that refused the building destroys none of its units
 there, so they stay alive on every process.
 
-Both sides log every building in `env/ypa_log.txt`, and `collect_logs.sh`
-copies the lines into `net-summary.txt`:
+The builder logs each broadcast, and every peer each STARTBUILD that reaches
+its message handler, applied or refused, in `env/ypa_log.txt`;
+`collect_logs.sh` copies the lines into `net-summary.txt`:
 
 ```text
 netlog: STARTBUILD sent: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
+netlog: STARTBUILD sent FAILED: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
 netlog: STARTBUILD from <sender> applied: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
 netlog: STARTBUILD from <sender> refused: owner <o> proto <b> cell <x>,<y> (t=<ms> ms): <reason>
 ```
+
+`sent FAILED` means the transport did not take the message (this process was
+kicked or has no connection), so no peer starts that building. A STARTBUILD
+dropped before the handler leaves no STARTBUILD line on that peer, only the
+line of the drop, which `net-summary.txt` keeps as well:
+`Rejected malformed network message from <sender>: invalid building
+prototype` (or `sector`, when the peers' game data differ), after which the
+rest of that packet is dropped too (`rejected message was number ...`);
+`Ignored message 1012 from <sender>: no level is loaded` (1012 is
+`UAMSG_STARTBUILD`; such lines are written for the 1st, 2nd, 4th, 8th...
+ignored message only); and the framing errors that drop the rest of a packet
+(`Strange Number of Messages`, `invalid message offset`, `truncated network
+message header`, `has strange size`).
 
 ## Runtime acceptance status
 
