@@ -1,5 +1,6 @@
 #include "../src/world/net_bot.h"
 #include "require.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -7,10 +8,15 @@
 #include <iostream>
 #include <set>
 #include <string>
+#include <vector>
 
 using namespace World::NetBot;
+using World::Fork::EncodeState;
 using World::Fork::ForkRng;
+using World::Fork::SectorState;
 using World::Fork::UnitState;
+using World::Fork::UnitVisibleTo;
+using World::Fork::VisibleWorld;
 using World::Fork::WorldState;
 
 static WorldState MakeState(bool foeNear)
@@ -95,6 +101,226 @@ static WorldState CapWorld(bool ring)
     }
     s.nextGid = 0x10000 + World::Fork::MaxWorldUnits;
     return s;
+}
+
+// CapWorld(true) with the roles turned around: Resistance massed in one spot
+// and half the cap Sulgogars on a circle 2100 around it. That is inside
+// Veteran sensor range (2160), so the bot sees every Sulgogar, but beyond the
+// 2000 of the Normal bot the strongest faction answers as. Every answer's fog
+// check then tests each Resistance unit against the hundreds of circle units
+// in cells within reach, none in range.
+static WorldState CircledWorld()
+{
+    WorldState s = CapWorld(true);
+    ForkRng rng(5);
+    const float len = World::CVSectorLength;
+    const float cx = 20.5f * len + 10.0f, cy = 16.5f * len + 10.0f;
+    const std::uint32_t circle = World::Fork::MaxWorldUnits / 2;
+    for (std::uint32_t i = 0; i < s.units.size(); ++i)
+    {
+        UnitState &u = s.units[i];
+        if (i < circle)
+        {
+            const float a = static_cast<float>(i) * (6.2831853f / static_cast<float>(circle));
+            u.owner = 2;
+            u.x = cx + 2100.0f * std::cos(a);
+            u.y = cy + 2100.0f * std::sin(a);
+        }
+        else
+        {
+            u.owner = 1;
+            u.x = 20.5f * len + static_cast<float>(rng.Below(20));
+            u.y = 16.5f * len + static_cast<float>(rng.Below(20));
+        }
+    }
+    return s;
+}
+
+// A small random world like the fog probe's: a 6 x 4 map whose sectors
+// belong to nobody, Resistance (1), the Sulgogars (2), the Mykonians (3) or
+// Ghorkov (6), each seen by its owner and now and then by the others, with
+// random energy, power stations and borders; one to three Resistance units,
+// up to three of each enemy faction and sometimes one of nobody's, anywhere
+// on the map, with gids in random owner order and with gaps.
+static WorldState FogWorld(ForkRng &rng)
+{
+    WorldState s;
+    s.mapW = 6;
+    s.mapH = 4;
+    s.sectors.resize(24);
+    const std::uint8_t sectorOwners[] = {0, 0, 1, 2, 3, 6};
+    for (int i = 0; i < 24; ++i)
+    {
+        SectorState &sec = s.sectors[i];
+        sec.id = i;
+        sec.owner = sectorOwners[rng.Below(6)];
+        sec.energyPower = 50 + static_cast<std::int32_t>(rng.Below(300));
+        sec.purpose = rng.Below(4) == 0 ? 2 : 0;
+        sec.typeId = static_cast<std::int32_t>(rng.Below(40));
+        sec.border = rng.Below(8) == 0;
+        sec.viewMask = sec.owner ? 1u << sec.owner : 0u;
+        for (unsigned o : {1u, 2u, 3u, 6u})
+            if (rng.Below(3) == 0)
+                sec.viewMask |= 1u << o;
+    }
+    std::vector<std::uint8_t> owners(1 + rng.Below(3), 1);
+    for (std::uint8_t o : {2, 3, 6})
+        owners.insert(owners.end(), rng.Below(4), o);
+    if (rng.Below(4) == 0)
+        owners.push_back(0);
+    for (std::size_t i = owners.size(); i > 1; --i)
+        std::swap(owners[i - 1], owners[rng.Below(static_cast<std::uint32_t>(i))]);
+    const float len = World::CVSectorLength;
+    std::uint32_t gid = 0x10000;
+    for (std::uint8_t o : owners)
+    {
+        UnitState u;
+        u.gid = gid;
+        gid += 1 + rng.Below(3);
+        u.owner = o;
+        u.protoId = 10 + static_cast<std::int32_t>(rng.Below(4));
+        u.energy = 20 + static_cast<std::int32_t>(rng.Below(400));
+        u.x = static_cast<float>(rng.Below(static_cast<std::uint32_t>(6 * len)));
+        u.y = static_cast<float>(rng.Below(static_cast<std::uint32_t>(4 * len)));
+        s.units.push_back(u);
+    }
+    s.nextGid = gid;
+    return s;
+}
+
+// FogWorld s with everything Resistance (owner 1) cannot see at `range`
+// changed: the units it cannot see moved (out of its sight), re-energized and
+// re-typed, some dropped, new ones added out of its sight with gids below,
+// between and above the others; every sector it cannot see given another
+// owner, energy, purpose, type and view bits; the other owners' view bits
+// changed on every sector; the parent, orders and cooldown of every unit of
+// another owner changed; the gid counter moved on. Own units, Resistance's
+// view bits and the border flags (the map fixes them) stay, so every position
+// is in or out of its sight in both worlds alike. Returns the hidden units
+// moved, dropped or added.
+static int HideChanges(const WorldState &s, float range, ForkRng &rng, WorldState &v)
+{
+    const float len = World::CVSectorLength;
+    const std::uint8_t others[] = {0, 2, 3, 6};
+    const auto hidden = [&](const UnitState &u) {
+        return u.owner != 1 && !UnitVisibleTo(s, u, 1, range);
+    };
+    const auto hide = [&](UnitState &u) {
+        for (int k = 0; k < 20; ++k)
+        {
+            UnitState t = u;
+            t.x = static_cast<float>(rng.Below(static_cast<std::uint32_t>(6 * len)));
+            t.y = static_cast<float>(rng.Below(static_cast<std::uint32_t>(4 * len)));
+            if (hidden(t))
+            {
+                u = t;
+                return true;
+            }
+        }
+        return false;
+    };
+    const auto anyGid = [&]() { return s.units[rng.Below(static_cast<std::uint32_t>(s.units.size()))].gid; };
+    int touched = 0;
+    v = s;
+    v.units.clear();
+    for (UnitState u : s.units)
+    {
+        if (hidden(u))
+        {
+            ++touched;
+            if (rng.Below(4) == 0)
+                continue;
+            hide(u);
+            u.energy = 20 + static_cast<std::int32_t>(rng.Below(400));
+            u.protoId = 10 + static_cast<std::int32_t>(rng.Below(4));
+        }
+        if (u.owner != 1)
+        {
+            u.parentGid = anyGid();
+            u.hasTarget = rng.Below(2) != 0;
+            u.targetX = static_cast<float>(rng.Below(static_cast<std::uint32_t>(6 * len)));
+            u.targetY = static_cast<float>(rng.Below(static_cast<std::uint32_t>(4 * len)));
+            u.attackGid = anyGid();
+            u.cooldownMs = static_cast<std::int32_t>(rng.Below(500));
+        }
+        v.units.push_back(u);
+    }
+    const std::uint32_t top = s.units.back().gid;
+    for (std::uint32_t n = rng.Below(4); n > 0; --n)
+    {
+        UnitState u;
+        u.gid = 0xFF00 + rng.Below(top - 0xFF00 + 0x100);
+        u.owner = others[rng.Below(4)];
+        u.protoId = 10 + static_cast<std::int32_t>(rng.Below(4));
+        u.energy = 20 + static_cast<std::int32_t>(rng.Below(400));
+        if (v.FindUnit(u.gid) || !hide(u))
+            continue;
+        ++touched;
+        v.units.insert(std::lower_bound(v.units.begin(), v.units.end(), u,
+                                        [](const UnitState &a, const UnitState &b) { return a.gid < b.gid; }),
+                       u);
+    }
+    for (SectorState &sec : v.sectors)
+    {
+        const bool seen = sec.owner == 1 || (sec.viewMask & 2u);
+        sec.viewMask = (sec.viewMask & 2u) | (rng.Below(128) & ~2u);
+        if (seen)
+            continue;
+        sec.owner = others[rng.Below(4)];
+        sec.energyPower = static_cast<std::int32_t>(rng.Below(400));
+        sec.purpose = static_cast<std::uint8_t>(rng.Below(3));
+        sec.typeId = static_cast<std::int32_t>(rng.Below(40));
+    }
+    v.nextGid = std::max(top, v.units.back().gid) + 1 + rng.Below(100);
+    return touched;
+}
+
+// FogWorld s with what Resistance sees at `range` changed: every unit of
+// another owner it sees re-energized, every sector of another owner it sees
+// given another owner and energy.
+static void SeenChanges(const WorldState &s, float range, ForkRng &rng, WorldState &w)
+{
+    const std::uint8_t others[] = {0, 2, 3, 6};
+    w = s;
+    for (UnitState &u : w.units)
+        if (u.owner != 1 && UnitVisibleTo(s, u, 1, range))
+            u.energy = 20 + static_cast<std::int32_t>(rng.Below(400));
+    for (SectorState &sec : w.sectors)
+        if (sec.owner != 1 && (sec.viewMask & 2u))
+        {
+            sec.owner = others[rng.Below(4)];
+            sec.energyPower = 50 + static_cast<std::int32_t>(rng.Below(300));
+        }
+}
+
+// Whether forks of the captured worlds, as the lookahead used to make them,
+// tell s and v apart: one of the bot's best four candidates, stepped as
+// Decide steps it, leaves it a position judged differently.
+static bool ForksOfTheWorldDiffer(const WorldState &s, const WorldState &v, const BotSpec &spec)
+{
+    ForkRng rng(777);
+    const std::vector<BotOrder> candidates = CandidateOrders(s, spec, rng);
+    World::Fork::ForkConfig cfg;
+    cfg.controllerOwner = spec.owner;
+    const float range = ParamsFor(spec.difficulty).sensorRange;
+    for (std::size_t i = 0; i < candidates.size() && i < 4; ++i)
+    {
+        std::unique_ptr<World::Fork::Fork> a = World::Fork::Fork::Create(s, cfg, World::Fork::ForkId{1});
+        std::unique_ptr<World::Fork::Fork> b = World::Fork::Fork::Create(v, cfg, World::Fork::ForkId{1});
+        REQUIRE(a && b);
+        const World::Fork::ForkActionBatch batch(1, ToForkAction(candidates[i]));
+        a->Step(batch, 25);
+        b->Step(batch, 25);
+        if (EvaluateFor(a->State(), spec.owner, range) != EvaluateFor(b->State(), spec.owner, range))
+            return true;
+    }
+    return false;
+}
+
+static bool SameOrder(const BotOrder &a, const BotOrder &b)
+{
+    return a.kind == b.kind && a.gid == b.gid && a.targetGid == b.targetGid && a.x == b.x &&
+           a.y == b.y && a.protoId == b.protoId && a.cost == b.cost && a.score == b.score;
 }
 
 static std::vector<int> WeightKey(const BotProfile &p)
@@ -243,12 +469,14 @@ int main()
     }
 
     // The cost of a think at the cap. Decide runs on the main loop, up to
-    // every 250 ms for a Veteran. Its nine fog checks used to scan the world
-    // once per enemy unit (9 x 3413 x 4096 unit visits per think here); they
-    // now test only own units near each enemy. Budget: a Veteran think in
-    // this match makes at most one range test per unit of the world.
+    // every 250 ms for a Veteran. Its fog checks (the picture, the
+    // candidates, and an answer and an evaluation per candidate) used to scan
+    // the world once per enemy unit (3413 x 4096 unit visits per check here);
+    // they now test only own units near each enemy. Budget: a Veteran think
+    // in this match makes at most one range test per unit of the world.
     {
         const WorldState spread = CapWorld(false);
+        const float range = ParamsFor(spec.difficulty).sensorRange;
         DecideReport report;
         ForkRng rng(11);
         const BotOrder order = Decide(spread, spec, rng, World::Fork::ForkId{1}, &report);
@@ -257,49 +485,216 @@ int main()
                 !report.lookaheadCut, "a think at the cap gets its whole lookahead");
         Require(report.rangeTests > 0 && report.rangeTests <= World::Fork::MaxWorldUnits,
                 "a think at the cap stays within its fog-check budget");
-        // Both kinds of fog check go through the counted view.
-        std::uint64_t candidateTests = 0, evaluateTests = 0;
+        // Every kind of fog check goes through the counted view.
+        std::uint64_t pictureTests = 0, candidateTests = 0, evaluateTests = 0;
+        VisibleWorld(spread, spec.owner, range, &pictureTests);
         ForkRng crng(11);
         CandidateOrders(spread, spec, crng, &candidateTests);
-        EvaluateFor(spread, spec.owner, ParamsFor(spec.difficulty).sensorRange, &evaluateTests);
-        Require(candidateTests > 0 && candidateTests <= spread.units.size() &&
+        EvaluateFor(spread, spec.owner, range, &evaluateTests);
+        Require(pictureTests > 0 && pictureTests <= spread.units.size() &&
+                candidateTests > 0 && candidateTests <= spread.units.size() &&
                 evaluateTests > 0 && evaluateTests <= spread.units.size(),
                 "each fog check tests only own units near the enemies");
 
-        // Own units strung just beyond sensor range around every enemy: each
+        // Own units strung just beyond sensor range around every enemy: the
         // fog check of Resistance tests about 683 own units per enemy. The
-        // think stops forking once MaxLookaheadRangeTests is spent, says so,
-        // and still plays the best order scored before the cut.
+        // lookahead pays that once, for its picture, where no enemy is left:
+        // nothing after it makes a range test, nothing is cut, and every
+        // candidate is scored.
         const WorldState ring = CapWorld(true);
+        DecideReport once;
+        ForkRng rng2(11);
+        const BotOrder ringOrder = Decide(ring, spec, rng2, World::Fork::ForkId{1}, &once);
+        std::uint64_t ringPicture = 0;
+        const WorldState ringSeen = VisibleWorld(ring, spec.owner, range, &ringPicture);
+        Require(ringSeen.units.size() == (World::Fork::MaxWorldUnits + 5) / 6,
+                "the bot sees its own units only");
+        Require(ringOrder.kind != OrderKind::None && ringPicture > MaxLookaheadRangeTests / 4 &&
+                once.rangeTests == ringPicture, "units out of sight cost the picture's check only");
+        Require(once.forksCreated == 4 && once.forkFailures == 0 && !once.greedyFallback &&
+                !once.lookaheadCut, "units out of sight do not cut the lookahead");
+
+        // The costly layout for the lookahead itself: every Sulgogar on a
+        // circle around the bot is in its sight, and the answer of the
+        // Sulgogars, the strongest faction it sees, tests each Resistance unit
+        // against hundreds of them. The think stops forking once
+        // MaxLookaheadRangeTests is spent in the picture, says so, and still
+        // plays the best order scored before the cut.
+        const WorldState circled = CircledWorld();
+        std::uint64_t picture = 0;
+        const WorldState circledSeen = VisibleWorld(circled, spec.owner, range, &picture);
+        Require(circledSeen.units.size() == circled.units.size() &&
+                StrongestFoe(circledSeen, spec.owner) == 2, "the bot sees the whole circle");
         DecideReport cut;
         ForkRng rng3(11);
-        const BotOrder cutOrder = Decide(ring, spec, rng3, World::Fork::ForkId{1}, &cut);
+        const BotOrder cutOrder = Decide(circled, spec, rng3, World::Fork::ForkId{1}, &cut);
         Require(cutOrder.kind != OrderKind::None, "a cut think still decides");
-        Require(cut.lookaheadCut && cut.rangeTests > MaxLookaheadRangeTests,
+        Require(cut.lookaheadCut && cut.rangeTests - picture > MaxLookaheadRangeTests,
                 "a lookahead past its budget is cut and reported");
         Require(cut.forksCreated > 0 && cut.forksCreated < 8 && !cut.greedyFallback,
                 "the candidates scored before the cut count");
-        // At most the budget plus the two fog checks of the candidate that
-        // crossed it, each at most enemies x own units.
+        // At most the picture's check, the budget and the two fog checks of
+        // the candidate that crossed it, each at most enemies x own units.
         const std::uint64_t perCheck = std::uint64_t(World::Fork::MaxWorldUnits / 2) *
                                        (World::Fork::MaxWorldUnits / 2);
-        Require(cut.rangeTests <= MaxLookaheadRangeTests + 2 * perCheck, "the cut bounds the think");
+        Require(picture <= perCheck && cut.rangeTests - picture <= MaxLookaheadRangeTests + 2 * perCheck &&
+                cut.rangeTests <= MaxLookaheadRangeTests + 2 * perCheck, "the cut bounds the think");
         DecideReport again;
         ForkRng rng4(11);
-        const BotOrder repeat = Decide(ring, spec, rng4, World::Fork::ForkId{1}, &again);
+        const BotOrder repeat = Decide(circled, spec, rng4, World::Fork::ForkId{1}, &again);
         Require(repeat.kind == cutOrder.kind && repeat.gid == cutOrder.gid &&
                 repeat.targetGid == cutOrder.targetGid && again.rangeTests == cut.rangeTests,
                 "a cut think is deterministic");
     }
 
-    // A Veteran that no enemy can answer still looks ahead at every
-    // candidate. It used to judge only the first one: with no unit of
-    // another faction, or none whose faction had an order, it scored the
-    // first candidate and skipped the rest. Here the best-scored candidate
-    // builds (Resistance scores that 30, the moves 12.5 and 15, apart even
-    // under Cadet noise), but the unit stands 30 units from the centre of the
-    // empty sector it is in, so moving there takes the sector within the
-    // step: a better position than a build that only spends sector energy.
+    // What the bot cannot see never reaches its order. For random worlds, a
+    // second world that differs only in what Resistance cannot see
+    // (HideChanges) gives the same picture and the same order and report at
+    // every difficulty: with the real budget and with budgets small enough to
+    // cut the lookahead, so units out of sight cannot move the cut either.
+    // Each world decides as its own picture does, and the picture yields the
+    // same candidates. Cadet still plays the best candidate of the world.
+    // The checks are not vacuous: the hidden changes reach forks of the
+    // captured worlds, which the lookahead used to step, and changing what
+    // the bot sees (SeenChanges) changes its order.
+    {
+        const std::uint64_t budgets[] = {MaxLookaheadRangeTests, 0, 3, 12};
+        const int worlds = 1500;
+        int touched = 0, felt = 0, cuts = 0, changed[3] = {};
+        ForkRng rng(20261109);
+        for (int world = 0; world < worlds; ++world)
+        {
+            const WorldState s = FogWorld(rng);
+            for (int d = 0; d < 3; ++d)
+            {
+                BotSpec spec1;
+                spec1.owner = 1;
+                spec1.difficulty = static_cast<Difficulty>(d);
+                spec1.valid = true;
+                const float range = ParamsFor(spec1.difficulty).sensorRange;
+                WorldState v;
+                touched += HideChanges(s, range, rng, v) > 0 ? 1 : 0;
+                const WorldState seen = VisibleWorld(s, 1, range);
+                Require(EncodeState(VisibleWorld(v, 1, range)) == EncodeState(seen),
+                        "a world changed out of sight gives the same picture");
+                ForkRng c1(777), c2(777);
+                std::uint64_t worldTests = 0;
+                const std::vector<BotOrder> fromWorld = CandidateOrders(s, spec1, c1, &worldTests);
+                const std::vector<BotOrder> fromPicture = CandidateOrders(seen, spec1, c2);
+                bool sameCandidates = fromWorld.size() == fromPicture.size();
+                for (std::size_t i = 0; sameCandidates && i < fromWorld.size(); ++i)
+                    sameCandidates = SameOrder(fromWorld[i], fromPicture[i]);
+                Require(sameCandidates && c1.State() == c2.State(), "the picture keeps every candidate");
+                BotOrder decided;
+                for (std::uint64_t budget : budgets)
+                {
+                    ForkRng r1(777), r2(777), r3(777);
+                    DecideReport a, b, p;
+                    const BotOrder x = Decide(s, spec1, r1, World::Fork::ForkId{1}, &a, budget);
+                    const BotOrder y = Decide(v, spec1, r2, World::Fork::ForkId{1}, &b, budget);
+                    const BotOrder z = Decide(seen, spec1, r3, World::Fork::ForkId{1}, &p, budget);
+                    const bool same = SameOrder(x, y) && SameOrder(x, z) && r1.State() == r2.State() &&
+                                      a.forksCreated == b.forksCreated && a.forkFailures == b.forkFailures &&
+                                      a.greedyFallback == b.greedyFallback && a.lookaheadCut == b.lookaheadCut &&
+                                      a.forksCreated == p.forksCreated && a.lookaheadCut == p.lookaheadCut;
+                    if (!same)
+                    {
+                        std::cerr << "world " << world << ", difficulty " << d << ", budget " << budget << ": ";
+                        Require(false, "what the bot cannot see never changes its order");
+                    }
+                    cuts += a.lookaheadCut ? 1 : 0;
+                    if (budget == MaxLookaheadRangeTests)
+                        decided = x;
+                    if (d == 0)
+                        Require(a.forksCreated == 0 && a.rangeTests == worldTests &&
+                                SameOrder(x, fromWorld.empty() ? BotOrder() : fromWorld[0]),
+                                "Cadet plays the best candidate of the world");
+                }
+                if (d == 1 && ForksOfTheWorldDiffer(s, v, spec1))
+                    ++felt;
+                WorldState w;
+                SeenChanges(s, range, rng, w);
+                ForkRng r4(777);
+                if (!SameOrder(decided, Decide(w, spec1, r4, World::Fork::ForkId{1})))
+                    ++changed[d];
+            }
+        }
+        Require(touched > 3 * worlds / 2, "most worlds change units out of sight");
+        Require(felt > worlds / 10, "forks of the captured world feel the hidden changes");
+        Require(cuts > worlds, "small budgets cut the lookahead");
+        for (int d = 0; d < 3; ++d)
+            Require(changed[d] > worlds / 10, "what the bot sees changes its order");
+    }
+
+    // The faction that answers a Veteran candidate is the strongest one the
+    // bot sees. A Mykonian unit out of sight with the lowest gid and the most
+    // energy used to answer; now the visible Ghorkov unit does, then on equal
+    // energy the visible Sulgogars (lower owner id), and nobody's units never.
+    {
+        WorldState s = MakeState(true);
+        UnitState hidden;
+        hidden.gid = 0xF000;
+        hidden.owner = 3;
+        hidden.energy = 400;
+        hidden.x = 4000.0f;
+        hidden.y = 3000.0f;
+        UnitState weak;
+        weak.gid = 0x10002;
+        weak.owner = 2;
+        weak.energy = 30;
+        weak.x = 300.0f;
+        weak.y = 200.0f;
+        s.units.insert(s.units.begin(), hidden);
+        s.units.push_back(weak);
+        s.nextGid = 0x10003;
+        const float range = ParamsFor(Difficulty::Veteran).sensorRange;
+        REQUIRE(StrongestFoe(s, 1) == 3);
+        REQUIRE(StrongestFoe(VisibleWorld(s, 1, range), 1) == 6);
+        s.units.back().energy = 80;
+        REQUIRE(StrongestFoe(VisibleWorld(s, 1, range), 1) == 2);
+        WorldState nobody = MakeState(true);
+        nobody.units[1].owner = 0;
+        REQUIRE(StrongestFoe(nobody, 1) == 0);
+
+        // In Decide: a weak Sulgogar unit next to the bot could answer every
+        // candidate with an attack, but the strong Ghorkov unit it sees at
+        // 2100 is the one that answers, and it sees nothing it could order
+        // (both other units are beyond its 2000 as a Normal bot, and it owns
+        // no sector the bot sees). So the candidates are judged after their
+        // own step.
+        WorldState two = MakeState(true);
+        two.units[1].owner = 2;
+        two.units[1].energy = 50;
+        two.units[1].x = 100.0f;
+        two.units[1].y = 250.0f;
+        UnitState strong;
+        strong.gid = 0x10002;
+        strong.owner = 6;
+        strong.energy = 400;
+        strong.x = 100.0f + 2100.0f;
+        strong.y = 100.0f;
+        two.units.push_back(strong);
+        two.nextGid = 0x10003;
+        two.sectors[1].owner = 1;
+        two.sectors[11].owner = 0;
+        DecideReport answered, alone;
+        ForkRng ra(5), rb(5);
+        Decide(two, spec, ra, World::Fork::ForkId{1}, &answered);
+        REQUIRE(StrongestFoe(VisibleWorld(two, 1, range), 1) == 6);
+        Require(answered.forksCreated == 4 && !answered.greedyFallback,
+                "the strongest faction in sight answers, not the first by gid");
+        two.units.pop_back();
+        Decide(two, spec, rb, World::Fork::ForkId{1}, &alone);
+        Require(alone.forksCreated == 8, "without it, the Sulgogars answer every candidate");
+    }
+
+    // A Veteran with no enemy in sight still looks ahead at every candidate.
+    // It used to judge only the first one unless some enemy unit, seen or
+    // not, could answer. Here the best-scored candidate builds (Resistance
+    // scores that 30, the moves 12.5 and 15, apart even under Cadet noise),
+    // but the unit stands 30 units from the centre of the empty sector it is
+    // in, so moving there takes the sector within the step: a better
+    // position than a build that only spends sector energy.
     {
         WorldState s;
         s.mapW = 4;
@@ -329,7 +724,19 @@ int main()
         Require(normal.kind == OrderKind::Move && normal.x == centreX && normal.y == centreY,
                 "Normal takes the empty sector");
         Require(veteran.kind == OrderKind::Move && veteran.x == centreX && veteran.y == centreY,
-                "a Veteran no enemy can answer takes it too");
+                "a Veteran with no enemy in sight takes it too");
+        // An enemy out of sight changes nothing.
+        UnitState far;
+        far.gid = 0x10001;
+        far.owner = 6;
+        far.energy = 100;
+        far.x = 3.5f * World::CVSectorLength;
+        far.y = 2.5f * World::CVSectorLength;
+        s.units.push_back(far);
+        s.nextGid = 0x10002;
+        ForkRng r3(1);
+        Require(SameOrder(Decide(s, spec, r3, World::Fork::ForkId{1}), veteran),
+                "an enemy out of sight changes nothing");
     }
 
     // Sulgogar bot never emits build orders.
