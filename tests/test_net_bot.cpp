@@ -513,6 +513,15 @@ int main()
                 once.rangeTests == ringPicture, "units out of sight cost the picture's check only");
         Require(once.forksCreated == 4 && once.forkFailures == 0 && !once.greedyFallback &&
                 !once.lookaheadCut, "units out of sight do not cut the lookahead");
+        // The picture's check costs less than the budget here, so cut it to
+        // half that cost: since the check does not count against the budget,
+        // the lookahead is still not cut and plays the same order.
+        DecideReport tight;
+        ForkRng rngTight(11);
+        const BotOrder tightOrder =
+            Decide(ring, spec, rngTight, World::Fork::ForkId{1}, &tight, ringPicture / 2);
+        Require(SameOrder(tightOrder, ringOrder) && tight.forksCreated == 4 && !tight.lookaheadCut &&
+                tight.rangeTests == ringPicture, "the picture's check does not count against the budget");
 
         // The costly layout for the lookahead itself: every Sulgogar on a
         // circle around the bot is in its sight, and the answer of the
