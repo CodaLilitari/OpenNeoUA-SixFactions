@@ -563,11 +563,15 @@ int main()
 
     // What the bot cannot see never reaches its order. For random worlds, a
     // second world that differs only in what Resistance cannot see
-    // (HideChanges) gives the same picture and the same order and report at
-    // every difficulty: with the real budget and with budgets small enough to
-    // cut the lookahead, so units out of sight cannot move the cut either.
-    // Each world decides as its own picture does, and the picture yields the
-    // same candidates. Cadet still plays the best candidate of the world.
+    // (HideChanges) gives the same picture, candidates and order at every
+    // difficulty, with the real budget and with budgets small enough to cut
+    // the lookahead, so units out of sight cannot move the cut either. The
+    // report is the same too, but for the range tests that read the captured
+    // world, whose number depends on the units out of sight: making the
+    // picture at Normal and Veteran, the candidates' fog check at Cadet. So
+    // the work in the picture is the same, to the range test. Each world
+    // decides as its own picture does, and the picture yields the same
+    // candidates. Cadet still plays the best candidate of the world.
     // The checks are not vacuous: the hidden changes reach forks of the
     // captured worlds, which the lookahead used to step, and changing what
     // the bot sees (SeenChanges) changes its order.
@@ -588,8 +592,9 @@ int main()
                 const float range = ParamsFor(spec1.difficulty).sensorRange;
                 WorldState v;
                 touched += HideChanges(s, range, rng, v) > 0 ? 1 : 0;
-                const WorldState seen = VisibleWorld(s, 1, range);
-                Require(EncodeState(VisibleWorld(v, 1, range)) == EncodeState(seen),
+                std::uint64_t sPicture = 0, vPicture = 0;
+                const WorldState seen = VisibleWorld(s, 1, range, &sPicture);
+                Require(EncodeState(VisibleWorld(v, 1, range, &vPicture)) == EncodeState(seen),
                         "a world changed out of sight gives the same picture");
                 ForkRng c1(777), c2(777);
                 std::uint64_t worldTests = 0;
@@ -607,10 +612,18 @@ int main()
                     const BotOrder x = Decide(s, spec1, r1, World::Fork::ForkId{1}, &a, budget);
                     const BotOrder y = Decide(v, spec1, r2, World::Fork::ForkId{1}, &b, budget);
                     const BotOrder z = Decide(seen, spec1, r3, World::Fork::ForkId{1}, &p, budget);
+                    // The same report but for the range tests that read the
+                    // captured world: making the picture, or Cadet's check.
+                    const auto sameReport = [d](const DecideReport &e, const DecideReport &f) {
+                        return e.forksCreated == f.forksCreated && e.forkFailures == f.forkFailures &&
+                               e.greedyFallback == f.greedyFallback && e.lookaheadCut == f.lookaheadCut &&
+                               (d == 0 || e.rangeTests - e.pictureRangeTests ==
+                                              f.rangeTests - f.pictureRangeTests);
+                    };
                     const bool same = SameOrder(x, y) && SameOrder(x, z) && r1.State() == r2.State() &&
-                                      a.forksCreated == b.forksCreated && a.forkFailures == b.forkFailures &&
-                                      a.greedyFallback == b.greedyFallback && a.lookaheadCut == b.lookaheadCut &&
-                                      a.forksCreated == p.forksCreated && a.lookaheadCut == p.lookaheadCut;
+                                      r1.State() == r3.State() && sameReport(a, b) && sameReport(a, p) &&
+                                      a.pictureRangeTests == (d ? sPicture : 0) &&
+                                      b.pictureRangeTests == (d ? vPicture : 0);
                     if (!same)
                     {
                         std::cerr << "world " << world << ", difficulty " << d << ", budget " << budget << ": ";

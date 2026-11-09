@@ -213,15 +213,22 @@ input state, lifecycle/takeover/reclaim transitions and wire-safe chat. For
 1500 random worlds it changes everything the bot cannot see (units moved,
 dropped and added out of sight, sectors out of sight rewritten, the other
 owners' view bits, the orders of the units it sees, the gid counter) and
-requires the same picture, candidates, order and report at every difficulty,
-with the real budget and with budgets small enough to cut the lookahead.
-Those checks are not vacuous: forks of the captured worlds tell the two
-worlds apart, and changing what the bot sees changes its order. It also
-checks that the strongest faction in sight answers a Veteran candidate, that
-a Veteran with no enemy in sight still judges every candidate, and the cost
-of a think at the cap: the whole lookahead within one range test per unit in
-a six-owner match, enemies out of sight paid for once, and the costliest
-layout for the lookahead cut and reported.
+requires the same picture, candidates and order at every difficulty, with
+the real budget and with budgets small enough to cut the lookahead. The
+report must be the same too, but for the range tests that read the captured
+world, whose number depends on the units out of sight: making the picture at
+Normal and Veteran (`pictureRangeTests`), the candidates' fog check at
+Cadet. So the work in the picture, which the budget counts, is the same to
+the range test. Those checks are not vacuous: forks of the captured worlds
+tell the two worlds apart, and changing what the bot sees changes its order.
+It also checks that the strongest faction in sight answers a Veteran
+candidate; that a Veteran with no enemy in sight still judges every
+candidate, and keeps its order beside a faction out of sight that could
+answer or a unit out of sight that its move would bring into range; and the
+cost of a think at the cap: the whole lookahead within one range test per
+unit in a six-owner match, enemies out of sight paid for once and never
+against the budget, and the costliest layout for the lookahead cut and
+reported.
 
 Runtime acceptance still required (same gap as the six-client matrix in
 [six-faction-multiplayer.md](six-faction-multiplayer.md)): a mixed
