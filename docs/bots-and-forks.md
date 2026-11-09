@@ -206,6 +206,14 @@ what the owner started (`World::BuildStart::Check` in
 `src/world/build_start.h` lists the reasons; sector ownership is not one of
 them). A refusal is final: nothing retries it and no message carries sector
 state, so that peer keeps the cell as it was and later gets only the guns.
+When a construction completes, each process that runs it destroys the units
+the new building covers, in a network game only its own
+(`World::BuildComplete` in `src/world/build_complete.h`): a unit's owner
+sends the `UAMSG_DEAD` the others apply, and a peer leaves alone the
+builder's guns, which can reach it before its own copy of the construction
+completes. A peer that refused the building destroys none of its units
+there, so they stay alive on every process.
+
 Both sides log every building in `env/ypa_log.txt`, and `collect_logs.sh`
 copies the lines into `net-summary.txt`:
 
