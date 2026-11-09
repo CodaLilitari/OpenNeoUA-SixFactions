@@ -102,13 +102,13 @@ Kept after review:
 
 - `unit_recovered`: "Recharged and ready." (Ghorkov) and "Restored by the
   stone." (Taerkasten) make the same claim as the retail clip for this slot,
-  "Weapons and shields recharged." In this fork that claim is weaker than in
-  retail because of an engine regression, which affects every voice:
-  - In the decompiled engine, an escaping squad below Level 5 reported in only
-    above half energy. An upstream readability refactor (`7bc426f`, 2021)
-    flattened the condition in `GetFightMotivation`, so such a squad now
-    resumes at a 0.2 energy ratio. Restoring it would change gameplay and
-    needs a playtest; it is a separate engine change.
+  "Weapons and shields recharged." The claim holds in this fork as well as in
+  retail, for every voice:
+  - An escaping squad below Level 5 reports in only above half energy, as in
+    the decompiled engine. An upstream readability refactor (`7bc426f`, 2021)
+    had flattened the condition in `GetFightMotivation`, so such a squad
+    resumed at a 0.2 energy ratio. The retail condition is restored (see
+    [validation status](validation-status.md)); it has not been playtested.
   - Several cases report in without a recharge in retail too: a squad raised
     again after a Level 1 recall, an escaping squad set to Level 5, a squad
     reinforced with a new unit, and a squad whose weakest member dies.
