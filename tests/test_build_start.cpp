@@ -31,29 +31,30 @@ struct Inputs
 };
 
 // ypaworld_func148 as it read before the refusals moved into
-// World::BuildStart::Check, up to its first change to the world: true when it
-// went on to start (or place) the building.
-bool LegacyStarts(const Inputs &in)
+// World::BuildStart::Check, up to its first change to the world, with each of
+// its refusals named: the first return it reaches gives the reason, and
+// Refusal::None means it went on to start (or place) the building.
+Refusal LegacyRefusal(const Inputs &in)
 {
     if ( !in.place && !in.multiBuild && in.ownerBuilding )
-        return false;
+        return Refusal::OwnerBusy;
     const bool UserInSec = in.occupied;
     if ( in.border )
-        return false;
+        return Refusal::BorderCell;
     if ( in.purpose == PT_CONSTRUCTING )
-        return false;
+        return Refusal::UnderConstruction;
     else if ( UserInSec && !in.place )
-        return false;
+        return Refusal::Occupied;
     else if ( in.purpose == PT_POWERSTATION )
     {
         // PowerStationErase, then the building
     }
     else if ( (in.purpose == PT_TECHUPGRADE || in.purpose == PT_GATECLOSED ||
                in.purpose == PT_GATEOPENED) && !in.place )
-        return false;
+        return Refusal::ProtectedCell;
     else if ( in.purpose == PT_TECHDEACTIVE && in.netGame )
-        return false;
-    return true;
+        return Refusal::DeactivatedTech;
+    return Refusal::None;
 }
 
 // The facts ypaworld_func148 now gathers for the same inputs.
@@ -129,10 +130,23 @@ int main()
     f.place = true;
     REQUIRE(Check(f) == Refusal::None);
 
+    // Occupancy comes after the border and a running construction: the
+    // reason a peer logs names the cell before what stands in it.
+    f = Construction();
+    f.occupied = true;
+    f.border = true;
+    REQUIRE(Check(f) == Refusal::BorderCell);
+    f.border = false;
+    f.underConstruction = true;
+    REQUIRE(Check(f) == Refusal::UnderConstruction);
+
     // Occupancy comes before the cell's purpose.
     f = Construction();
     f.occupied = true;
     f.protectedCell = true;
+    REQUIRE(Check(f) == Refusal::Occupied);
+    f.protectedCell = false;
+    f.deactivatedTech = true;
     REQUIRE(Check(f) == Refusal::Occupied);
 
     // Tech upgrades and gates take only a placement.
@@ -156,24 +170,39 @@ int main()
     // the cell lags behind still starts the building.
 
     // For every input, Check refuses exactly when the code it replaced in
-    // ypaworld_func148 refused.
+    // ypaworld_func148 refused, and for the reason of the return that code
+    // reached first: the order of the checks decides the reason a peer logs.
     int compared = 0;
+    int refused = 0;
+    std::set<Refusal> reasons;
     for (int bits = 0; bits < (1 << 6); ++bits)
     {
         for (int purpose = PT_NONE; purpose < PURPOSE_COUNT; ++purpose)
         {
             const Inputs in{(bits & 1) != 0, (bits & 2) != 0, (bits & 4) != 0,
                             (bits & 8) != 0, (bits & 16) != 0, (bits & 32) != 0, purpose};
-            const bool starts = Check(FactsOf(in)) == Refusal::None;
-            if (starts != LegacyStarts(in))
+            const Refusal expected = LegacyRefusal(in);
+            const Refusal got = Check(FactsOf(in));
+            if (got != expected)
             {
-                std::cerr << "inputs " << bits << " purpose " << purpose << ": ";
+                std::cerr << "inputs " << bits << " purpose " << purpose << ": Check gives \""
+                          << Describe(got) << "\", the replaced code \"" << Describe(expected)
+                          << "\"\n";
                 Require(false, "Check disagrees with the ypaworld_func148 it replaced");
             }
+            if (expected != Refusal::None)
+                ++refused;
+            reasons.insert(expected);
             ++compared;
         }
     }
     REQUIRE(compared == 64 * PURPOSE_COUNT);
+    // The inputs reach every reason Check gives (ConstructionListed comes
+    // from BuildingConstructBegin, after Check), and both outcomes.
+    REQUIRE(reasons == std::set<Refusal>({Refusal::None, Refusal::OwnerBusy, Refusal::BorderCell,
+                                          Refusal::UnderConstruction, Refusal::Occupied,
+                                          Refusal::ProtectedCell, Refusal::DeactivatedTech}));
+    REQUIRE(refused > 0 && refused < compared);
 
     // Every refusal reads as its own reason in the netlog.
     std::set<std::string> texts;
@@ -188,7 +217,7 @@ int main()
     REQUIRE(std::string(Describe(Refusal::None)) == "started");
     REQUIRE(texts.count("started") == 0);
 
-    std::cout << "build start refusals checked against the code they replaced ("
-              << compared << " inputs)\n";
+    std::cout << "build start refusals and their reasons checked against the code they replaced ("
+              << compared << " inputs, " << refused << " refused)\n";
     return 0;
 }
