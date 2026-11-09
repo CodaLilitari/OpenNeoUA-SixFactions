@@ -34,6 +34,7 @@
 #include "common/listnode.h"
 
 #include "world/consts.h"
+#include "world/build_start.h"
 #include "world/protos.h"
 #include "world/tools.h"
 #include "world/parsers.h"
@@ -2203,6 +2204,8 @@ struct ypaworld_arg148
     int x;
     int y;
     int field_18;
+    // Set by ypaworld_func148: why it did not start the building.
+    World::BuildStart::Refusal refusal = World::BuildStart::Refusal::None;
 };
 
 struct yw_arg129
