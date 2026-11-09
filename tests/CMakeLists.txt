@@ -62,6 +62,17 @@ add_test(NAME net_update_gate COMMAND test_net_update_gate)
 add_executable(test_net_messages test_net_messages.cpp)
 target_include_directories(test_net_messages PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 add_test(NAME net_messages COMMAND test_net_messages)
+# Exact production pre-dispatch prefix, with a deliberately minimal world fixture.
+# Configure-time extraction and the native C++ test require neither Python nor SDL.
+include(${CMAKE_CURRENT_SOURCE_DIR}/extract_net_ingress.cmake)
+add_executable(test_net_ingress_phase test_net_ingress_phase.cpp)
+target_include_directories(test_net_ingress_phase PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR} ${NET_INGRESS_GENERATED_DIR})
+target_compile_definitions(test_net_ingress_phase PRIVATE NDEBUG)
+add_test(NAME net_ingress_phase COMMAND test_net_ingress_phase)
+add_test(NAME net_ingress_phase_checks_active COMMAND test_net_ingress_phase --verify-failing-check)
+set_tests_properties(net_ingress_phase PROPERTIES TIMEOUT 10)
+set_tests_properties(net_ingress_phase_checks_active PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
 add_executable(test_net_factions test_net_factions.cpp)
 add_test(NAME net_factions COMMAND test_net_factions)
 add_executable(test_net_restore test_net_restore.cpp)

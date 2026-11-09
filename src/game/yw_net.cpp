@@ -1241,6 +1241,25 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
     uint32_t tstamp = bMsg->tstamp;
     uint32_t msgcnt = bMsg->msgCnt;
 
+    // Reject the wrong phase before refreshing a player's liveness or sequence
+    // accounting. The validated size still consumes this message, so a later
+    // valid message in the same packet can be processed.
+    // Lobby messages mean nothing once the stations are seated; level messages
+    // cannot be applied before a local station exists (including the start
+    // barrier). Chat is valid in both phases.
+    const bool levelLoaded = yw_netLevelLoaded(yw);
+    const NetMsgScope scope = NetMsgScopeOf(msgID);
+    if ( scope == NetMsgScope::Lobby && levelLoaded )
+    {
+        yw_netLogIgnored(msgID, msg->senderName, "lobby message during the match");
+        return validatedSize;
+    }
+    if ( scope == NetMsgScope::Level && !levelLoaded )
+    {
+        yw_netLogIgnored(msgID, msg->senderName, "no level is loaded");
+        return validatedSize;
+    }
+
     int tv481 = 0;
 
     if (owner > 0 && owner < 8)
@@ -1309,25 +1328,6 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
     // sender's own traffic never ends the hold (World::NetUpdate::PeerGate).
     const uint32_t netNow = static_cast<uint32_t>(yw->_timeStamp);
     const bool updatePending = plr && plr->Update.HoldsEvents(netNow);
-
-    // Lobby messages mean nothing once the level is loaded (the stations are
-    // seated), and level messages cannot be applied without one: SECTORENERGY
-    // on an empty sector grid throws, and a null _userRobo crashes at power
-    // station cells. Either kind is consumed and logged, so the rest of the
-    // packet still runs. A client that joins a running session, or a resumed
-    // one whose peers welcome it again, gets both kinds.
-    const bool levelLoaded = yw_netLevelLoaded(yw);
-    const NetMsgScope scope = NetMsgScopeOf(msgID);
-    if ( scope == NetMsgScope::Lobby && levelLoaded )
-    {
-        yw_netLogIgnored(msgID, msg->senderName, "lobby message during the match");
-        return validatedSize;
-    }
-    if ( scope == NetMsgScope::Level && !levelLoaded )
-    {
-        yw_netLogIgnored(msgID, msg->senderName, "no level is loaded");
-        return validatedSize;
-    }
 
     size_t szmsg = validatedSize;
 
