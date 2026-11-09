@@ -412,8 +412,10 @@ constexpr std::uint64_t MaxLookaheadRangeTests = std::uint64_t(1) << 22;
 
 // Decision with agentic-fork lookahead where difficulty calls for it:
 // candidates are stepped in throwaway forks (same Fork::Step the local
-// what-if path uses), Veteran additionally steps an assumed enemy reply.
-// The live state is never mutated; only the winning order is returned.
+// what-if path uses), Veteran additionally steps an assumed enemy reply and
+// judges the position after it; a candidate no enemy can answer is judged
+// after its own step. The live state is never mutated; only the winning
+// order is returned.
 inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
                        Fork::ForkRng &rng, Fork::ForkId baseId,
                        DecideReport *report = nullptr)
@@ -455,57 +457,50 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
         batch.push_back(ToForkAction(candidates[i]));
         if (!fork->Step(batch, 25))
             continue;
+        std::unique_ptr<Fork::Fork> replyFork;
         if (dp.lookaheadDepth >= 2)
         {
-            // Assumed reply: strongest visible enemy faction attacks back.
+            // Assumed reply: the faction of the first other unit by gid
+            // answers with the best order it would pick.
+            std::uint8_t foe = 0;
             for (const Fork::UnitState &u : fork->State().units)
+                if (u.owner != spec.owner && u.owner != 0)
+                {
+                    foe = u.owner;
+                    break;
+                }
+            if (foe)
             {
-                if (u.owner == spec.owner || u.owner == 0)
-                    continue;
-                BotSpec foe;
-                foe.owner = u.owner;
-                foe.difficulty = Difficulty::Normal;
-                foe.valid = true;
-                Fork::ForkRng foeRng(rng.State() ^ u.owner);
-                std::vector<BotOrder> replies =
-                    CandidateOrders(fork->State(), foe, foeRng, &out.rangeTests);
+                BotSpec foeSpec;
+                foeSpec.owner = foe;
+                foeSpec.difficulty = Difficulty::Normal;
+                foeSpec.valid = true;
+                Fork::ForkRng foeRng(rng.State() ^ foe);
+                const std::vector<BotOrder> replies =
+                    CandidateOrders(fork->State(), foeSpec, foeRng, &out.rangeTests);
                 if (!replies.empty())
                 {
                     Fork::ForkConfig foeCfg = cfg;
-                    foeCfg.controllerOwner = u.owner;
-                    std::unique_ptr<Fork::Fork> replyFork =
-                        Fork::Fork::Create(fork->State(), foeCfg, Fork::ForkId{baseId.v + 100 + i});
+                    foeCfg.controllerOwner = foe;
+                    replyFork = Fork::Fork::Create(fork->State(), foeCfg,
+                                                   Fork::ForkId{baseId.v + 100 + i});
                     if (!replyFork)
-                        ++out.forkFailures;
-                    else
                     {
-                        ++out.forksCreated;
-                        Fork::ForkActionBatch rb;
-                        rb.push_back(ToForkAction(replies[0]));
-                        replyFork->Step(rb, 25);
-                        scored = true;
-                        const double s = EvaluateFor(replyFork->State(), spec.owner,
-                                                     dp.sensorRange, &out.rangeTests);
-                        if (s > bestScore) { bestScore = s; best = candidates[i]; }
+                        ++out.forkFailures;
+                        continue;
                     }
+                    ++out.forksCreated;
+                    Fork::ForkActionBatch rb;
+                    rb.push_back(ToForkAction(replies[0]));
+                    if (!replyFork->Step(rb, 25))
+                        continue;
                 }
-                break;
-            }
-            if (bestScore == -1e100)
-            {
-                scored = true;
-                const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange,
-                                             &out.rangeTests);
-                if (s > bestScore) { bestScore = s; best = candidates[i]; }
             }
         }
-        else
-        {
-            scored = true;
-            const double s = EvaluateFor(fork->State(), spec.owner, dp.sensorRange,
-                                         &out.rangeTests);
-            if (s > bestScore) { bestScore = s; best = candidates[i]; }
-        }
+        scored = true;
+        const double s = EvaluateFor(replyFork ? replyFork->State() : fork->State(), spec.owner,
+                                     dp.sensorRange, &out.rangeTests);
+        if (s > bestScore) { bestScore = s; best = candidates[i]; }
     }
     if (best.kind == OrderKind::None)
         best = candidates[0];

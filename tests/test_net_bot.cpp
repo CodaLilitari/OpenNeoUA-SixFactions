@@ -292,6 +292,46 @@ int main()
                 "a cut think is deterministic");
     }
 
+    // A Veteran that no enemy can answer still looks ahead at every
+    // candidate. It used to judge only the first one: with no unit of
+    // another faction, or none whose faction had an order, it scored the
+    // first candidate and skipped the rest. Here the best-scored candidate
+    // builds (Resistance scores that 30, the moves 12.5 and 15, apart even
+    // under Cadet noise), but the unit stands 30 units from the centre of the
+    // empty sector it is in, so moving there takes the sector within the
+    // step: a better position than a build that only spends sector energy.
+    {
+        WorldState s;
+        s.mapW = 4;
+        s.mapH = 3;
+        s.sectors.resize(12);
+        for (int i = 0; i < 12; ++i)
+            s.sectors[i].id = i;
+        s.sectors[0].owner = 1;
+        s.sectors[0].energyPower = 200;
+        s.sectors[0].viewMask = 1u << 1;
+        s.sectors[1].energyPower = 100;
+        s.sectors[1].viewMask = 1u << 1;
+        UnitState own;
+        own.gid = 0x10000;
+        own.owner = 1;
+        own.energy = 100;
+        own.x = 1.5f * World::CVSectorLength - 30.0f;
+        own.y = 0.5f * World::CVSectorLength;
+        s.units = {own};
+        s.nextGid = 0x10001;
+        const float centreX = 1.5f * World::CVSectorLength, centreY = 0.5f * World::CVSectorLength;
+        ForkRng r0(1), r1(1), r2(1);
+        const BotOrder cadet = Decide(s, ParseBotSpec("Resistance:Cadet"), r0, World::Fork::ForkId{1});
+        Require(cadet.kind == OrderKind::Build, "the best-scored candidate builds");
+        const BotOrder normal = Decide(s, ParseBotSpec("Resistance:Normal"), r1, World::Fork::ForkId{1});
+        const BotOrder veteran = Decide(s, spec, r2, World::Fork::ForkId{1});
+        Require(normal.kind == OrderKind::Move && normal.x == centreX && normal.y == centreY,
+                "Normal takes the empty sector");
+        Require(veteran.kind == OrderKind::Move && veteran.x == centreX && veteran.y == centreY,
+                "a Veteran no enemy can answer takes it too");
+    }
+
     // Sulgogar bot never emits build orders.
     ForkRng r3(5);
     const BotSpec sulg = ParseBotSpec("Sulgogars:Veteran");
