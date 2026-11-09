@@ -110,7 +110,7 @@ public:
     void   Events_Clear();
     Event *Events_PopSystem(); // Without data events
 
-    void   Stop(); // Don't call it from internal threads!
+    virtual void Stop(); // Lifecycle calls belong to the owning external thread.
 
     virtual void ShowSession(bool show) = 0;
     virtual void CloseSession(uint32_t closeTime) = 0;
@@ -197,7 +197,7 @@ protected:
     UDPsocket   sock;
 
 
-    volatile bool threadsEnd; //Run threads
+    std::atomic_bool threadsEnd; // Shared shutdown signal for the owned workers.
     // In Raw packets
     SDL_Thread   *recvThread;
 

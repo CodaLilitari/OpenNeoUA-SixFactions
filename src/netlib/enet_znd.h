@@ -36,7 +36,7 @@ public:
                const std::string &sname, std::uint32_t max_players);
     // ZNDClient-compatible connect.
     void Start(const std::string &name, const IPaddress &addr);
-    void Stop();
+    void Stop() override;
 
     std::uint8_t GetStatus();
     bool GetSessions(SessionInfoVect &dst);

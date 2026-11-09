@@ -12,9 +12,11 @@ class ZNDClient: public ZNDNet
 {
 public:
     ZNDClient(const std::string &servstring);
+    ~ZNDClient() override;
 
     //Client methods
     void Start(const std::string &name, const IPaddress &addr);
+    void Stop() override;
     uint8_t GetStatus();
 
     bool GetSessions(SessionInfoVect &dst);
@@ -59,19 +61,19 @@ public:
 
 protected:
 
-    std::atomic_uint_fast32_t eStatus;
+    std::atomic_uint_fast32_t eStatus{0};
 
-    IPaddress   cServAddress;
-    bool        cServHasLobby;
+    IPaddress   cServAddress{};
+    bool        cServHasLobby = false;
     NetUser     cME;
-    bool        cLeader;
+    bool        cLeader = false;
     std::string cJoinedSessionName;
-    uint64_t    cTimeOut;
-    unsigned char cResumeToken[16];
+    uint64_t    cTimeOut = 0;
+    unsigned char cResumeToken[16]{};
 
     SessionInfoVect cSessions;
-    uint64_t        cSessionsReqTimeNext;
-    std::atomic_bool cSessionsMakeRequest;
+    uint64_t        cSessionsReqTimeNext = 0;
+    std::atomic_bool cSessionsMakeRequest{false};
 
     UserInfoVect    cUsers;
 };

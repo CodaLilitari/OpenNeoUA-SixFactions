@@ -24,6 +24,7 @@ const EventDefinition Events[EventCount] = {
     {10, "unit_recovered"}, {7, "enemy_unit_spotted"},
     {6, "enemy_host_found"}, {18, "request_support"},
     {9, "unit_retreating"}, {8, "unit_lost"},
+    // Message 19 reports an enemy fleeing; keep the legacy asset/API key.
     {19, "enemy_unit_engaged"}, {5, "enemy_unit_destroyed"},
     {11, "enemy_host_destroyed"}, {45, "powerstation_captured"}
 };

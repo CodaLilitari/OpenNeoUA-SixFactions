@@ -10,6 +10,7 @@ ZNDNet::ZNDNet(const std::string &servstring)
 {
     mode = MODE_UNKNOWN;
     servString = servstring;
+    sock = nullptr;
 
     threadsEnd = true;
 
@@ -762,7 +763,7 @@ void ZNDNet::Recv_Clear()
 {
     if (SDL_LockMutex(recvPktListMutex) == 0)
     {
-        if (!recvPktList.empty())
+        while (!recvPktList.empty())
         {
             delete recvPktList.front();
             recvPktList.pop_front();

@@ -7,10 +7,60 @@ namespace ZNDNet
 ZNDClient::ZNDClient(const std::string &servstring)
 : ZNDNet(servstring)
 {
-    cSessionsReqTimeNext = 0;
-    cME.status = NetUser::STATUS_DISCONNECTED;
-    for (int i = 0; i < 16; i++) cResumeToken[i] = 0;
+}
+
+ZNDClient::~ZNDClient()
+{
+    // The base destructor runs after our strings and vectors have been
+    // destroyed. Workers must stop while all client members still exist.
+    Stop();
+}
+
+void ZNDClient::Stop()
+{
+    // External-owner operation only. The update worker joins recv/send and
+    // closes its socket; joining it first also handles natural termination.
+    ZNDNet::Stop();
+    threadsEnd = true;
+    // A failed SDL_CreateThread may leave workers without an update worker.
+    if (recvThread)
+    {
+        SDL_WaitThread(recvThread, nullptr);
+        recvThread = nullptr;
+    }
+    if (sendThread)
+    {
+        SDL_WaitThread(sendThread, nullptr);
+        sendThread = nullptr;
+    }
+    if (sock)
+    {
+        SDLNet_UDP_Close(sock);
+        sock = nullptr;
+    }
+
+    // No owned workers remain. Discard packets queued after a natural stop,
+    // including retries and events from that run, before another Start.
+    Send_Clear();
+    Confirm_Clear();
+    Pending_Clear();
+    Recv_Clear();
+    eEventWaitLock = 0;
+    Events_Clear();
+    rateBuckets.clear();
     eStatus = 0;
+    cServAddress = IPaddress{};
+    cServHasLobby = false;
+    cLeader = false;
+    cME = NetUser();
+    cJoinedSessionName.clear();
+    cTimeOut = 0;
+    cSessions.clear();
+    cUsers.clear();
+    cSessionsReqTimeNext = 0;
+    cSessionsMakeRequest = false;
+    // cResumeToken intentionally survives. Admission/reclaim policy is not
+    // changed by transport lifecycle cleanup.
 }
 
 Pkt *ZNDClient::Recv_PreparePacket(InRawPkt *pkt)
@@ -325,12 +375,17 @@ void ZNDClient::ProcessRegularPkt(Pkt* pkt)
 
 void ZNDClient::Start(const std::string &name, const IPaddress &addr)
 {
-    if (cME.status != NetUser::STATUS_DISCONNECTED && !threadsEnd)
+    if (!threadsEnd)
         return;
 
+    // Do not overwrite handles or sock until the old update worker (which
+    // owns recv/send shutdown) has finished, even after timeout or refusal.
+    Stop();
     mode = MODE_CLIENT;
     // (restart after Stop without DISCONNECT presents the resume token)
     sock = SDLNet_UDP_Open(0);
+    if (!sock)
+        return;
 
     cServAddress = addr;
     cME.name = name;
@@ -347,8 +402,18 @@ void ZNDClient::Start(const std::string &name, const IPaddress &addr)
 
     recvThread = SDL_CreateThread(_RecvThread, "", this);
     sendThread = SDL_CreateThread(_SendThread, "", this);
+    if (!recvThread || !sendThread)
+    {
+        Stop();
+        return;
+    }
 
     updateThread = SDL_CreateThread(_UpdateThread, "", this);
+    if (!updateThread)
+    {
+        Stop();
+        return;
+    }
 
     SendConnect();
 }

@@ -108,8 +108,31 @@ static void Run()
     Check(host.GetUsers(users) && users.size() == 1, "host roster did not shrink");
     std::cout << "Adapter graceful leave verified\n";
 
-    client.Stop();
-    host.Stop();
+    // windp owns the adapter through a ZNDNet pointer. This must stop the
+    // actual pump and release its socket, including on repeated calls.
+    ::ZNDNet::ZNDNet *baseClient = &client;
+    ::ZNDNet::ZNDNet *baseHost = &host;
+    baseClient->Stop();
+    baseClient->Stop();
+    baseHost->Stop();
+    baseHost->Stop();
+    Check(host.GetStatus() == NetUser::STATUS_DISCONNECTED && host.BoundPort() == 0,
+          "polymorphic Stop did not stop the ENet host");
+    Check(client.GetStatus() == NetUser::STATUS_DISCONNECTED,
+          "polymorphic Stop did not stop the ENet client");
+    host.Start("restarted", port, "restarted-session", 6);
+    Check(host.BoundPort() == port, "stopped ENet socket could not be rebound");
+    client.Start("restarted-client", addr);
+    Check(WaitEvent(client, true, EVENT_CONNECTED, 10000, ev), "restarted ENet client did not connect");
+    delete ev; ev = nullptr;
+    client.SendData(1, (void *)ping, 4, PKT_FLAG_GARANT);
+    Check(WaitEvent(host, false, EVENT_DATA, 10000, ev), "restarted ENet data missing");
+    hd = static_cast<EventData *>(ev);
+    Check(hd->size == 4 && std::memcmp(hd->data, "ping", 4) == 0, "restarted ENet data corrupted");
+    delete ev; ev = nullptr;
+    baseClient->Stop();
+    baseHost->Stop();
+    std::cout << "Polymorphic repeated Stop and real ENet restart verified\n";
     SDLNet_Quit();
     SDL_Quit();
 }

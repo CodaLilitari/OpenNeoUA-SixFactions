@@ -360,3 +360,37 @@ Re-run after the fixes on the same Linux host: 17/17 CTest (now including
 tests, package and library check green. Windows was not rebuilt in this pass;
 `tools/windows/build.sh` now also builds the ENet suites.
 
+## Continuation and transport lifecycle (2026-11-08, Coda)
+
+The saved Red continuation at `e7b267a7a8b0302a9f6a1d40693203b274ed7e9c`
+was recovered and matched against both published mirrors. Its Windows CI run
+41657285168 passed the full engine/package workflow and 25 CTest cases. The
+downloaded archive digest and 1,677 payload hashes were independently checked.
+This establishes the recovered baseline, separately from the following patch.
+
+The endpoint lifecycle patch adds virtual Stop dispatch, joins old client workers
+before replacing their socket or destroying client members, initializes lifecycle
+state, and clears all previous packet/event/session queues. The opaque resume
+token intentionally survives. The shared worker shutdown flag is now atomic.
+
+Tests first reproduced failed ENet base-pointer shutdown, a retained closed
+socket, stale failure events after restart, and a Windows heap-corruption exit
+(`0xc0000374`) during timeout/restart. No debugger stack established the exact
+corrupting instruction. Independent review then found that the inherited raw
+receive cleanup removed only one packet. An eight-packet stale-disconnect
+regression failed before that helper was changed to drain its queue fully.
+
+The final local native MinGW standalone suite passed 29/29 tests in 96.16 seconds,
+including the existing six-endpoint ZNDNet transport, ENet relay, and the new
+orderly-stop/refusal/timeout/remote-disconnect/backlog cases. The restart cases
+require fresh real bidirectional traffic. Independent review checked the final
+source/test hashes against the tested snapshot and approved the scoped repair.
+Thread-creation failure rollback was source-reviewed, not fault-injected; these
+checks are not transport-wide race or sanitizer coverage.
+
+No wire version, roster policy, game seat recovery or automatic reconnect was
+enabled by this patch. The wider takeover/reclaim design still requires the
+state, authority and admission work described in
+[the rejoin design review](rejoin-design-review.md). A restarted transport is not
+a restored match.
+

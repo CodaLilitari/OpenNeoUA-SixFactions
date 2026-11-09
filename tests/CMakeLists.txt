@@ -151,4 +151,13 @@ if(OPENNEOUA_TRANSPORT_TEST)
     target_link_libraries(test_net_transport PRIVATE PkgConfig::NET_SDL)
     add_test(NAME net_transport COMMAND test_net_transport)
     set_tests_properties(net_transport PROPERTIES TIMEOUT 180)
+    add_executable(test_net_lifecycle test_net_lifecycle.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
+        ../src/netlib/single.cpp ../src/netlib/single_threads.cpp)
+    target_include_directories(test_net_lifecycle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    target_link_libraries(test_net_lifecycle PRIVATE PkgConfig::NET_SDL)
+    foreach(lifecycle_case orderly refusal timeout disconnect backlog)
+        add_test(NAME net_lifecycle_${lifecycle_case} COMMAND test_net_lifecycle ${lifecycle_case})
+        set_tests_properties(net_lifecycle_${lifecycle_case} PROPERTIES TIMEOUT 35)
+    endforeach()
 endif()
