@@ -186,6 +186,58 @@ dispatch and robo `AI_layer1`/`AI_layer3` honour it
 Human-controlled stations keep the exact original player path; the only
 behaviour change is inside `-bot` processes.
 
+## Station buildings in network games
+
+The native station AI builds radar, power and flak buildings (`buildRadar`,
+`buildPower`, `buildSafe` in `src/game/yparobo_ai.cpp`). Before bots it never
+ran in a network game, and these paths started a construction without
+telling the peers: they got the building's guns when it completed
+(`UAMSG_BUILDINGVHCL`) but never the building. Every building a station
+starts, by its AI or by the player's build command, now goes through
+`NC_STACK_yparobo::StartBuilding`: once the local `ypaworld_func148` has
+started the construction, a network game broadcasts `UAMSG_STARTBUILD`
+(owner, building, cell) reliably, and each peer starts the same construction
+with its own `ypaworld_func148`. Only the station's own process runs these
+paths; the world updates every other station with `NetUpdate()`, which runs
+neither the station AI nor player commands.
+
+A peer checks the building against its own copy of the world and can refuse
+what the owner started (`World::BuildStart::Check` in
+`src/world/build_start.h` lists the reasons; sector ownership is not one of
+them). A refusal is final: nothing retries it and no message carries sector
+state, so that peer keeps the cell as it was and later gets only the guns.
+When a construction completes, each process that runs it destroys the units
+the new building covers, in a network game only its own
+(`World::BuildComplete` in `src/world/build_complete.h`): a unit's owner
+sends the `UAMSG_DEAD` the others apply, and a peer leaves alone the
+builder's guns, which can reach it before its own copy of the construction
+completes. A peer that refused the building destroys none of its units
+there, so they stay alive on every process.
+
+The builder logs each broadcast, and every peer each STARTBUILD that reaches
+its message handler, applied or refused, in `env/ypa_log.txt`;
+`collect_logs.sh` copies the lines into `net-summary.txt`:
+
+```text
+netlog: STARTBUILD sent: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
+netlog: STARTBUILD sent FAILED: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
+netlog: STARTBUILD from <sender> applied: owner <o> proto <b> cell <x>,<y> (t=<ms> ms)
+netlog: STARTBUILD from <sender> refused: owner <o> proto <b> cell <x>,<y> (t=<ms> ms): <reason>
+```
+
+`sent FAILED` means the transport did not take the message (this process was
+kicked or has no connection), so no peer starts that building. A STARTBUILD
+dropped before the handler leaves no STARTBUILD line on that peer, only the
+line of the drop, which `net-summary.txt` keeps as well:
+`Rejected malformed network message from <sender>: invalid building
+prototype` (or `sector`, when the peers' game data differ), after which the
+rest of that packet is dropped too (`rejected message was number ...`);
+`Ignored message 1012 from <sender>: no level is loaded` (1012 is
+`UAMSG_STARTBUILD`; such lines are written for the 1st, 2nd, 4th, 8th...
+ignored message only); and the framing errors that drop the rest of a packet
+(`Strange Number of Messages`, `invalid message offset`, `truncated network
+message header`, `has strange size`).
+
 ## Runtime acceptance status
 
 Live-proven on real builds (see `docs/validation-status.md`):
