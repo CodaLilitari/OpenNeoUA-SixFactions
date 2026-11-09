@@ -3,6 +3,7 @@
 #include "require.h"
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 
 using namespace World::Fork;
@@ -438,6 +439,202 @@ int main()
                 Require(view.Sees(u) == UnitVisibleTo(s, u, 4, range),
                         "SensorView agrees for an owner without a finite position");
         }
+    }
+
+    // VisibleWorld: the world as one faction sees it. Own units stay whole,
+    // the units it sees keep only what can be seen of them, the sectors it
+    // sees lose the other owners' view bits, every other sector is blank and
+    // nothing it cannot see survives: not even the gid counter.
+    {
+        const WorldState s = MakeState();
+        std::uint64_t tests = 0;
+        const WorldState seen = VisibleWorld(s, 1, 1800.0f, &tests);
+        REQUIRE(seen.units.size() == 2);
+        REQUIRE(seen.units[0].gid == 0x10000 && seen.units[1].gid == 0x10001);
+        Require(seen.FindUnit(0x10002) == nullptr, "a unit out of sight is not in the picture");
+        REQUIRE(seen.nextGid == 0x10002 && s.nextGid == 0x10003);
+        REQUIRE(seen.sectors.size() == s.sectors.size());
+        REQUIRE(seen.sectors[0].owner == 1 && seen.sectors[0].energyPower == 200);
+        Require(seen.sectors[1].viewMask == (1u << 1), "the other owners' view bits are cleared");
+        const SectorState &blank = seen.sectors[11];
+        Require(blank.id == 11 && blank.owner == 0 && blank.energyPower == 0 && blank.purpose == 0 &&
+                blank.typeId == 0 && blank.viewMask == 0 && !blank.border,
+                "a sector out of sight is blank");
+        REQUIRE(seen.mapW == s.mapW && seen.mapH == s.mapH && seen.timeStampMs == s.timeStampMs &&
+                seen.framesElapsed == s.framesElapsed && seen.rngState == s.rngState);
+        // Orders, cooldown and parent of a unit in sight cannot be seen; the
+        // owner's own units keep theirs.
+        WorldState busy = s;
+        for (UnitState &u : busy.units)
+        {
+            u.parentGid = 0x10002;
+            u.hasTarget = true;
+            u.targetX = 500.0f;
+            u.targetY = 700.0f;
+            u.attackGid = 0x10002;
+            u.cooldownMs = 300;
+            u.z = 42.0f;
+        }
+        const WorldState busySeen = VisibleWorld(busy, 1, 1800.0f);
+        const UnitState &own = busySeen.units[0];
+        Require(own.parentGid == 0x10002 && own.hasTarget && own.targetX == 500.0f &&
+                own.attackGid == 0x10002 && own.cooldownMs == 300, "own units stay whole");
+        const UnitState &foe = busySeen.units[1];
+        Require(foe.gid == 0x10001 && foe.protoId == 11 && foe.owner == 6 && foe.energy == 100 &&
+                foe.x == 250.0f && foe.y == 100.0f && foe.z == 42.0f,
+                "what can be seen of a unit in sight stays");
+        Require(foe.parentGid == 0 && !foe.hasTarget && foe.targetX == 0.0f && foe.targetY == 0.0f &&
+                foe.attackGid == 0 && foe.cooldownMs == 0, "what cannot be seen of it is cleared");
+        // The border flag stays on a blank sector: the map size fixes it.
+        WorldState edged = s;
+        edged.sectors[11].border = true;
+        Require(VisibleWorld(edged, 1, 1800.0f).sectors[11].border, "a blank sector keeps its border flag");
+        // A sector the owner owns but has no view bit on is its own all the same.
+        WorldState unviewed = s;
+        unviewed.sectors[0].viewMask = 0;
+        Require(VisibleWorld(unviewed, 1, 1800.0f).sectors[0].owner == 1, "own sectors stay in the picture");
+    }
+
+    // Random worlds, every owner, odd ranges and odd positions: the picture
+    // keeps exactly what UnitVisibleTo reports and the visible sectors, costs
+    // one counted SensorView pass, observes as the world does, and is its own
+    // picture.
+    {
+        const float ranges[] = {1800.0f, 2000.0f, 2160.0f, 0.0f, 50.0f, 7000.0f, HUGE_VALF,
+                                std::nanf("")};
+        ForkRng rng(77);
+        std::size_t pictures = 0, hiddenUnits = 0, blankSectors = 0;
+        for (int world = 0; world < 40; ++world)
+        {
+            WorldState s;
+            s.mapW = static_cast<int>(rng.Below(9));
+            s.mapH = s.mapW ? static_cast<int>(1 + rng.Below(8)) : 0;
+            s.sectors.resize(static_cast<std::size_t>(s.mapW) * s.mapH);
+            for (std::size_t i = 0; i < s.sectors.size(); ++i)
+            {
+                SectorState &sec = s.sectors[i];
+                sec.id = static_cast<std::int32_t>(i);
+                sec.owner = static_cast<std::uint8_t>(rng.Below(7));
+                sec.typeId = static_cast<std::int32_t>(rng.Below(60));
+                sec.purpose = static_cast<std::uint8_t>(rng.Below(4));
+                sec.energyPower = static_cast<std::int32_t>(rng.Below(400));
+                sec.viewMask = rng.Below(128);
+                sec.border = rng.Below(5) == 0;
+            }
+            s.timeStampMs = static_cast<std::int32_t>(rng.Below(100000));
+            s.framesElapsed = rng.Below(5000);
+            s.rngState = rng.Next();
+            float spotsX[4], spotsY[4];
+            for (int k = 0; k < 4; ++k)
+            {
+                spotsX[k] = static_cast<float>(rng.Below(1 + 1200 * (s.mapW + 1)));
+                spotsY[k] = static_cast<float>(rng.Below(1 + 1200 * (s.mapH + 1)));
+            }
+            const std::uint32_t count = 1 + rng.Below(150);
+            for (std::uint32_t i = 0; i < count; ++i)
+            {
+                UnitState u;
+                u.gid = 0x10000 + i * (1 + rng.Below(3));
+                if (!s.units.empty() && u.gid <= s.units.back().gid)
+                    u.gid = s.units.back().gid + 1;
+                u.parentGid = rng.Below(2) ? 0 : 0x10000 + rng.Below(count);
+                u.protoId = static_cast<std::int32_t>(rng.Below(80));
+                u.owner = static_cast<std::uint8_t>(rng.Below(7));
+                u.energy = static_cast<std::int32_t>(rng.Below(500));
+                u.x = FogCoordinate(rng, s.mapW, spotsX);
+                u.y = FogCoordinate(rng, s.mapH, spotsY);
+                u.z = static_cast<float>(rng.Below(300));
+                u.hasTarget = rng.Below(2) != 0;
+                u.targetX = static_cast<float>(rng.Below(9000));
+                u.targetY = static_cast<float>(rng.Below(9000));
+                u.attackGid = rng.Below(2) ? 0 : 0x10000 + rng.Below(count);
+                u.cooldownMs = static_cast<std::int32_t>(rng.Below(500));
+                s.units.push_back(u);
+            }
+            s.nextGid = s.units.back().gid + 1 + rng.Below(50);
+            REQUIRE(ValidateState(s, MaxWorldUnits));
+            for (float range : ranges)
+                for (std::uint8_t owner = 1; owner < 7; ++owner)
+                {
+                    ++pictures;
+                    std::uint64_t tests = 0;
+                    const WorldState seen = VisibleWorld(s, owner, range, &tests);
+                    const SensorView view(s, owner, range);
+                    std::uint32_t nextGid = WorldState().nextGid;
+                    std::size_t k = 0;
+                    for (const UnitState &u : s.units)
+                    {
+                        if (!view.Sees(u))
+                        {
+                            REQUIRE(!UnitVisibleTo(s, u, owner, range));
+                            ++hiddenUnits;
+                            continue;
+                        }
+                        REQUIRE(k < seen.units.size());
+                        const UnitState &p = seen.units[k++];
+                        REQUIRE(p.gid == u.gid && p.protoId == u.protoId && p.owner == u.owner &&
+                                p.energy == u.energy);
+                        REQUIRE(std::memcmp(&p.x, &u.x, sizeof u.x) == 0 &&
+                                std::memcmp(&p.y, &u.y, sizeof u.y) == 0 && p.z == u.z);
+                        if (u.owner == owner)
+                            REQUIRE(p.parentGid == u.parentGid && p.hasTarget == u.hasTarget &&
+                                    p.targetX == u.targetX && p.targetY == u.targetY &&
+                                    p.attackGid == u.attackGid && p.cooldownMs == u.cooldownMs);
+                        else
+                            REQUIRE(p.parentGid == 0 && !p.hasTarget && p.targetX == 0.0f &&
+                                    p.targetY == 0.0f && p.attackGid == 0 && p.cooldownMs == 0);
+                        if (u.gid >= nextGid)
+                            nextGid = u.gid + 1;
+                    }
+                    REQUIRE(k == seen.units.size());
+                    Require(tests == view.RangeTests(), "the picture counts its fog check");
+                    REQUIRE(seen.nextGid == nextGid);
+                    REQUIRE(seen.sectors.size() == s.sectors.size());
+                    for (std::size_t i = 0; i < s.sectors.size(); ++i)
+                    {
+                        const SectorState &a = s.sectors[i];
+                        const SectorState &b = seen.sectors[i];
+                        REQUIRE(b.id == a.id && b.border == a.border);
+                        if (a.owner == owner || (a.viewMask & (1u << owner)))
+                            REQUIRE(b.owner == a.owner && b.energyPower == a.energyPower &&
+                                    b.purpose == a.purpose && b.typeId == a.typeId &&
+                                    b.viewMask == (a.viewMask & (1u << owner)));
+                        else
+                        {
+                            REQUIRE(b.owner == 0 && b.energyPower == 0 && b.purpose == 0 &&
+                                    b.typeId == 0 && b.viewMask == 0);
+                            ++blankSectors;
+                        }
+                    }
+                    REQUIRE(ValidateState(seen, MaxWorldUnits));
+                    REQUIRE(seen.mapW == s.mapW && seen.mapH == s.mapH &&
+                            seen.timeStampMs == s.timeStampMs &&
+                            seen.framesElapsed == s.framesElapsed && seen.rngState == s.rngState);
+                    // Everything kept is seen in the picture as well, so the
+                    // picture observes exactly as the world does.
+                    const SensorView again(seen, owner, range);
+                    for (const UnitState &u : seen.units)
+                        Require(again.Sees(u), "every unit in the picture is in sight there");
+                    const auto world = Fork::Create(s, Cfg(owner), ForkId{1});
+                    const auto picture = Fork::Create(seen, Cfg(owner), ForkId{2});
+                    Require(world && picture, "world and picture fork");
+                    const Observation a = world->Observe(owner, range);
+                    const Observation b = picture->Observe(owner, range);
+                    REQUIRE(a.units.size() == b.units.size() && a.sectors.size() == b.sectors.size() &&
+                            a.ownEnergyTotal == b.ownEnergyTotal);
+                    for (std::size_t i = 0; i < a.units.size(); ++i)
+                        REQUIRE(a.units[i].gid == b.units[i].gid && a.units[i].energy == b.units[i].energy &&
+                                a.units[i].owner == b.units[i].owner && a.units[i].own == b.units[i].own);
+                    for (std::size_t i = 0; i < a.sectors.size(); ++i)
+                        REQUIRE(a.sectors[i].id == b.sectors[i].id && a.sectors[i].owner == b.sectors[i].owner &&
+                                a.sectors[i].energyPower == b.sectors[i].energyPower &&
+                                a.sectors[i].purpose == b.sectors[i].purpose);
+                    Require(EncodeState(VisibleWorld(seen, owner, range)) == EncodeState(seen),
+                            "the picture is its own picture");
+                }
+        }
+        REQUIRE(pictures == 40 * 8 * 6);
+        Require(hiddenUnits > 1000 && blankSectors > 1000, "the random worlds hide units and sectors");
     }
 
     // The cost of a fog pass at the cap. Asking UnitVisibleTo about every unit

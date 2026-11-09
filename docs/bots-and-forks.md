@@ -81,7 +81,7 @@ Headers (all SDL-free, covered by standalone tests):
 | --- | --- |
 | [fork_rng.h](../src/world/fork_rng.h) | Per-world splitmix64 RNG; state is one `uint64_t`, serialized with the snapshot |
 | [fork_snapshot.h](../src/world/fork_snapshot.h) | `WorldState` (sector grid + gid-sorted units), strict binary encode/decode, FNV-1a hash |
-| [fork.h](../src/world/fork.h) | `Fork::Create/ForkFrom/Capture/Restore/Step/Observe/Diff/TryCommit/Discard`, `ForkConfig` limits, `ForkRegistry` budget |
+| [fork.h](../src/world/fork.h) | `Fork::Create/ForkFrom/Capture/Restore/Step/Observe/Diff/TryCommit/Discard`, `ForkConfig` limits, `ForkRegistry` budget, fog checks (`UnitVisibleTo`, `SensorView`) and `VisibleWorld` |
 | [fork_protocol.h](../src/agent/fork_protocol.h) | `fork_create/step/observe/commit/discard` on the existing bounded agent line protocol |
 | [net_bot.h](../src/world/net_bot.h) | Faction profiles, difficulty, fog-filtered decisions, fork lookahead, roster fill, lifecycle, chat rules |
 
@@ -109,6 +109,27 @@ Semantics:
   test sensor range against altitude and leak units along a whole column.
   In a network match the agent bridge always observes as the local player's
   owner, whatever owner the request names.
+- **Bot picture**: `VisibleWorld(state, owner, sensorRange)` is the world as
+  one faction sees it, as a state a fork can start from. It keeps the
+  faction's own units in full; the other units it sees, with only what can
+  be seen of them (gid, prototype, owner, energy, position; their orders,
+  cooldown and parent are cleared); the sectors it owns or has in view, with
+  the other owners' view bits cleared, since what an enemy sees is hidden
+  too; and the map size, clock and RNG state. Every other sector is blank:
+  only its id and border flag remain (the map size fixes the border), with
+  owner 0, no energy, purpose, type or view bits. The gid counter is one
+  past the highest gid kept, since a captured counter also counts the units
+  out of sight. A blank sector reads as owner 0, nobody's, instead of a
+  marked unknown, because nothing reads a sector that no faction owns or
+  sees: planned moves and builds target only sectors their faction sees,
+  `Step` builds and creates only in the controller's own sectors,
+  evaluations count only the evaluator's own sectors, and no faction has a
+  view bit there. A faction's own sectors are always in its picture, so a
+  blank sector was never its own; only an own unit whose earlier move goal
+  lies in one captures it on arrival, as it would an unowned sector, which
+  is the faction's best guess. Observing the picture as that faction with
+  the same range returns what observing the world does, and the picture of
+  the picture is the picture.
 - **Limits**: fixed step (40 ms default), per-call tick budget, unit cap
   (`MaxWorldUnits`, 4096 units in the whole world, the same cap as the
   engine capture; the network's 1024-record snapshot caps apply per owner),
@@ -156,13 +177,17 @@ ctest --test-dir <external-build-directory> --output-on-failure
 batches, tick/unit limits, fog observation, diff, commit/stale rejection and
 the agent fork protocol. It also checks `SensorView` against `UnitVisibleTo`
 for every unit and owner of random worlds, on and off the map, at the edge
-of the range, for odd ranges and for positions that are not finite. `net_bot`
-covers pairwise-distinct faction personalities, spec parsing, bot roster
-fill against `CheckRoster`, the no-see-no-attack rule, deterministic
-decisions that never mutate the input state, lifecycle/takeover/reclaim
-transitions and wire-safe chat. It also pins the cost of a think at the cap:
-the whole lookahead within one range test per unit in a six-owner match,
-and the ring layout cut and reported.
+of the range, for odd ranges and for positions that are not finite, and
+checks `VisibleWorld` on such worlds for every faction: it keeps exactly the
+units `UnitVisibleTo` reports, with only what can be seen of the others,
+blanks every sector out of sight, counts its fog check, observes as the
+world does and is its own picture. `net_bot` covers pairwise-distinct
+faction personalities, spec parsing, bot roster fill against `CheckRoster`,
+the no-see-no-attack rule, deterministic decisions that never mutate the
+input state, lifecycle/takeover/reclaim transitions and wire-safe chat. It
+also pins the cost of a think at the cap: the whole lookahead within one
+range test per unit in a six-owner match, and the ring layout cut and
+reported.
 
 Runtime acceptance still required (same gap as the six-client matrix in
 [six-faction-multiplayer.md](six-faction-multiplayer.md)): a mixed
