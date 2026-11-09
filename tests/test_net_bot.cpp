@@ -495,6 +495,8 @@ int main()
                 candidateTests > 0 && candidateTests <= spread.units.size() &&
                 evaluateTests > 0 && evaluateTests <= spread.units.size(),
                 "each fog check tests only own units near the enemies");
+        Require(report.pictureRangeTests == pictureTests && report.rangeTests > pictureTests,
+                "the report keeps the picture's check apart from the work in the picture");
 
         // Own units strung just beyond sensor range around every enemy: the
         // fog check of Resistance tests about 683 own units per enemy. The
@@ -510,7 +512,8 @@ int main()
         Require(ringSeen.units.size() == (World::Fork::MaxWorldUnits + 5) / 6,
                 "the bot sees its own units only");
         Require(ringOrder.kind != OrderKind::None && ringPicture > MaxLookaheadRangeTests / 4 &&
-                once.rangeTests == ringPicture, "units out of sight cost the picture's check only");
+                once.rangeTests == ringPicture && once.pictureRangeTests == ringPicture,
+                "units out of sight cost the picture's check only");
         Require(once.forksCreated == 4 && once.forkFailures == 0 && !once.greedyFallback &&
                 !once.lookaheadCut, "units out of sight do not cut the lookahead");
         // The picture's check costs less than the budget here, so cut it to
@@ -521,7 +524,8 @@ int main()
         const BotOrder tightOrder =
             Decide(ring, spec, rngTight, World::Fork::ForkId{1}, &tight, ringPicture / 2);
         Require(SameOrder(tightOrder, ringOrder) && tight.forksCreated == 4 && !tight.lookaheadCut &&
-                tight.rangeTests == ringPicture, "the picture's check does not count against the budget");
+                tight.rangeTests == ringPicture && tight.pictureRangeTests == ringPicture,
+                "the picture's check does not count against the budget");
 
         // The costly layout for the lookahead itself: every Sulgogar on a
         // circle around the bot is in its sight, and the answer of the
@@ -538,7 +542,8 @@ int main()
         ForkRng rng3(11);
         const BotOrder cutOrder = Decide(circled, spec, rng3, World::Fork::ForkId{1}, &cut);
         Require(cutOrder.kind != OrderKind::None, "a cut think still decides");
-        Require(cut.lookaheadCut && cut.rangeTests - picture > MaxLookaheadRangeTests,
+        Require(cut.lookaheadCut && cut.pictureRangeTests == picture &&
+                cut.rangeTests - cut.pictureRangeTests > MaxLookaheadRangeTests,
                 "a lookahead past its budget is cut and reported");
         Require(cut.forksCreated > 0 && cut.forksCreated < 8 && !cut.greedyFallback,
                 "the candidates scored before the cut count");
@@ -615,7 +620,8 @@ int main()
                     if (budget == MaxLookaheadRangeTests)
                         decided = x;
                     if (d == 0)
-                        Require(a.forksCreated == 0 && a.rangeTests == worldTests &&
+                        Require(a.forksCreated == 0 && a.pictureRangeTests == 0 &&
+                                a.rangeTests == worldTests &&
                                 SameOrder(x, fromWorld.empty() ? BotOrder() : fromWorld[0]),
                                 "Cadet plays the best candidate of the world");
                 }

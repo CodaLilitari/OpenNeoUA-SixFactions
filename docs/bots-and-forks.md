@@ -162,11 +162,12 @@ Semantics:
   of the faction that answers as a Normal bot: each answer then tests every
   own unit against hundreds of enemies. Past `MaxLookaheadRangeTests` (about
   4.2 million range tests in the picture; the picture's own check counts in
-  `rangeTests` but not against the budget, since its cost depends on what
-  the bot cannot see) a think forks no further candidate, keeps the best
-  order scored so far and reports `lookaheadCut`; the bot logs when that
-  starts and stops. With the cut, that layout costs 6.3 ms a Veteran think
-  (6.6 ms before).
+  `rangeTests`, and alone in `pictureRangeTests`, but not against the
+  budget, since its cost depends on what the bot cannot see) a think forks
+  no further candidate, keeps the best order scored so far and reports
+  `lookaheadCut`; the bot logs when that starts and stops, giving the range
+  tests made in the picture and, apart, those of making it. With the cut,
+  that layout costs 6.3 ms a Veteran think (6.6 ms before).
 
 Engine bridge: `ForkBridge::CaptureWorldState` / `ValidateActions`
 (`src/game/yw_fork.cpp`) translate the live `NC_STACK_ypaworld` (sectors via

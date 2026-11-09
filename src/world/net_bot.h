@@ -403,6 +403,10 @@ struct DecideReport
     bool greedyFallback = false;     // lookahead was due but scored nothing
     bool lookaheadCut = false;       // stopped at the budget (MaxLookaheadRangeTests)
     std::uint64_t rangeTests = 0;    // own-unit range tests of all fog checks, the picture's included
+    // Of rangeTests, those of making the picture, which the budget does not
+    // count: rangeTests - pictureRangeTests is the work it does count. 0 when
+    // no picture is made (Cadet, or no fork id).
+    std::uint64_t pictureRangeTests = 0;
 };
 
 // Fog-check work one Decide may do in the bot's picture before it forks
@@ -412,12 +416,13 @@ struct DecideReport
 // MaxWorldUnits. Only own units strung just outside sensor range around a
 // dense enemy cluster need millions. Making the picture (Fork::VisibleWorld)
 // is one fog check of the captured world, which Decide counts in rangeTests
-// but not against this budget: its cost depends on the units the bot cannot
-// see, and a cut they caused would let them change the order. Every later
-// check reads the picture, which holds no such unit. Past this budget Decide
-// forks no further candidate, keeps the best one scored so far and reports
-// the cut, so a think costs at most the picture's check, the budget and the
-// two fog checks of the candidate that crossed it.
+// (and alone in pictureRangeTests) but not against this budget: its cost
+// depends on the units the bot cannot see, and a cut they caused would let
+// them change the order. Every later check reads the picture, which holds no
+// such unit. Past this budget Decide forks no further candidate, keeps the
+// best one scored so far and reports the cut, so a think costs at most the
+// picture's check, the budget and the two fog checks of the candidate that
+// crossed it.
 constexpr std::uint64_t MaxLookaheadRangeTests = std::uint64_t(1) << 22;
 
 // The enemy faction that answers a candidate at depth 2: the one with the
@@ -484,7 +489,7 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
         return best;
     const Fork::WorldState seen =
         Fork::VisibleWorld(state, spec.owner, dp.sensorRange, &out.rangeTests);
-    const std::uint64_t pictureTests = out.rangeTests;
+    out.pictureRangeTests = out.rangeTests;
     const std::vector<BotOrder> candidates = CandidateOrders(seen, spec, rng, &out.rangeTests);
     if (candidates.empty())
         return best;
@@ -497,7 +502,7 @@ inline BotOrder Decide(const Fork::WorldState &state, const BotSpec &spec,
     const std::size_t limit = std::min<std::size_t>(candidates.size(), 4);
     for (std::size_t i = 0; i < limit; ++i)
     {
-        if (out.rangeTests - pictureTests > maxRangeTests)
+        if (out.rangeTests - out.pictureRangeTests > maxRangeTests)
         {
             out.lookaheadCut = true;
             break;
