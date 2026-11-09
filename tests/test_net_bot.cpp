@@ -725,18 +725,44 @@ int main()
                 "Normal takes the empty sector");
         Require(veteran.kind == OrderKind::Move && veteran.x == centreX && veteran.y == centreY,
                 "a Veteran with no enemy in sight takes it too");
-        // An enemy out of sight changes nothing.
+        // A faction out of sight changes nothing, even one that can answer:
+        // Ghorkov holds a rich sector in the far corner with a unit in it, so
+        // it would defend or build there. The Veteran used to look ahead only
+        // when some faction, seen or not, could answer, and built here.
+        const float vetRange = ParamsFor(Difficulty::Veteran).sensorRange;
+        WorldState answerer = s;
+        answerer.sectors[11].owner = 6;
+        answerer.sectors[11].energyPower = 200;
         UnitState far;
         far.gid = 0x10001;
         far.owner = 6;
         far.energy = 100;
         far.x = 3.5f * World::CVSectorLength;
         far.y = 2.5f * World::CVSectorLength;
-        s.units.push_back(far);
-        s.nextGid = 0x10002;
+        answerer.units.push_back(far);
+        answerer.nextGid = 0x10002;
+        REQUIRE(!UnitVisibleTo(answerer, far, 1, vetRange) && !(answerer.sectors[11].viewMask & 2u));
         ForkRng r3(1);
-        Require(SameOrder(Decide(s, spec, r3, World::Fork::ForkId{1}), veteran),
-                "an enemy out of sight changes nothing");
+        Require(SameOrder(Decide(answerer, spec, r3, World::Fork::ForkId{1}), veteran),
+                "a faction out of sight that can answer changes nothing");
+        // Nor does a strong unit just beyond sensor range that the move would
+        // bring into range (2175 from the unit, 2145 from the centre). Forks
+        // of the captured world counted its energy against the move, and the
+        // Veteran went back to its own sector instead.
+        WorldState edge = s;
+        UnitState strong;
+        strong.gid = 0x10001;
+        strong.owner = 6;
+        strong.energy = 400;
+        strong.x = own.x + 2175.0f;
+        strong.y = own.y;
+        edge.units.push_back(strong);
+        edge.nextGid = 0x10002;
+        REQUIRE(!UnitVisibleTo(edge, strong, 1, vetRange) &&
+                World::Fork::InSensorRange(centreX, centreY, strong.x, strong.y, vetRange * vetRange));
+        ForkRng r4(1);
+        Require(SameOrder(Decide(edge, spec, r4, World::Fork::ForkId{1}), veteran),
+                "a unit out of sight that the move would bring into range changes nothing");
     }
 
     // Sulgogar bot never emits build orders.
