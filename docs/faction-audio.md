@@ -102,8 +102,8 @@ Kept after review:
 
 - `unit_recovered`: "Recharged and ready." (Ghorkov) and "Restored by the
   stone." (Taerkasten) make the same claim as the retail clip for this slot,
-  "Weapons and shields recharged." The claim holds in this fork as well as in
-  retail, for every voice:
+  "Weapons and shields recharged." In this fork the claim is now as strong as
+  in retail, for every voice:
   - An escaping squad below Level 5 reports in only above half energy, as in
     the decompiled engine. An upstream readability refactor (`7bc426f`, 2021)
     had flattened the condition in `GetFightMotivation`, so such a squad
