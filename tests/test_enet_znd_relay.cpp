@@ -160,8 +160,8 @@ static void Run()
     ZNDEnet late(protocol);
     late.Start("charlie", addr);
     Check(WaitEvent(late, true, EVENT_CONNERR, 10000, ev), "closed session accepted a newcomer");
-    Check(ev->value == ERR_CONN_FULL, "closed session refused for the wrong reason");
-    Check(ConnectFailureFromRefusal(ev->value) == CONNFAIL_FULL, "windp would log the wrong refusal reason");
+    Check(ev->value == ERR_CONN_CLOSED, "closed session refused for the wrong reason");
+    Check(ConnectFailureFromRefusal(ev->value) == CONNFAIL_CLOSED, "windp would log the wrong refusal reason");
     delete ev; ev = nullptr;
     late.Stop();
     std::cout << "Closed session refuses newcomers\n";

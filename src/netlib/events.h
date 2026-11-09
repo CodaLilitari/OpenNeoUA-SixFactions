@@ -21,6 +21,7 @@ enum
     EVENT_USER_ADD,
     EVENT_USER_LEAVE,
     EVENT_DATA,
+    EVENT_SELF_RESUMED,
 };
 
 
@@ -47,12 +48,14 @@ class EventNameID: public Event
 public:
     std::string name;
     uint64_t id;
+    uint8_t slot;
 
-    EventNameID(uint32_t _type, uint32_t _value, const std::string &_name, uint64_t _id)
+    EventNameID(uint32_t _type, uint32_t _value, const std::string &_name, uint64_t _id, uint8_t _slot = 0xff)
     : Event(_type, _value)
     {
         name = _name;
         id = _id;
+        slot = _slot;
     };
 
     virtual ~EventNameID() {};

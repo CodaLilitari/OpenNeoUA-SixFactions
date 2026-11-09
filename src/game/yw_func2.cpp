@@ -923,7 +923,7 @@ World::NetFactions::RosterCheck UserData::CheckNetLobbyRoster() const
             return {};
         entries[i] = {static_cast<int>(player.Index),
                       player.IsItMe() ? SelectedFraction : lobbyPlayers[player.Index].NetFraction,
-                      player.IsItMe() || lobbyPlayers[player.Index].Ready};
+                      player.IsOnline() && (player.IsItMe() || lobbyPlayers[player.Index].Ready)};
     }
     return World::NetFactions::CheckRoster(
         p_YW->_globalMapRegions.MapRegions[netLevelID].FractionsBits, entries.data(), players.size());
@@ -4201,7 +4201,7 @@ void UserData::GameShellUiHandleInput()
         isWelcmd = true;
         for ( TDPPlayerData &p : p_YW->_netDriver->GetPlayersData() )
         {
-            if (static_cast<size_t>(p.Index) >= lobbyPlayers.size())
+            if (static_cast<size_t>(p.Index) >= lobbyPlayers.size() || !p.IsOnline())
             {
                 netGameCanStart = false;
                 isWelcmd = false;

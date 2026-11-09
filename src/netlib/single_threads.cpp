@@ -269,6 +269,7 @@ int ZNDSingle::_UpdateThread(void *data)
     _this->Recv_Clear();
 
     SDLNet_UDP_Close(_this->sock);
+    _this->sock=nullptr;
 
     return 0;
 }

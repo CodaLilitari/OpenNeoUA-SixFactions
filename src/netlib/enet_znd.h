@@ -37,6 +37,13 @@ public:
     // ZNDClient-compatible connect.
     void Start(const std::string &name, const IPaddress &addr);
     void Stop() override;
+    bool GetResumeToken(World::NetProtocol::ResumeToken&) override;
+    bool SetResumeToken(const World::NetProtocol::ResumeToken&) override;
+    void ClearResumeToken() override;
+    bool SetResumeOnly(bool) override;
+    bool SetResumeGraceMs(uint32_t) override;
+    uint32_t GetResumeGraceMs() override;
+
 
     std::uint8_t GetStatus();
     bool GetSessions(SessionInfoVect &dst);
@@ -89,6 +96,10 @@ private:
     SDL_mutex *usersMutex_ = nullptr;
     SDL_mutex *netMutex_ = nullptr; // guards transport_ (ENet is single-threaded)
     bool sessionOpen_ = true;
+    RosterState roster_;
+    std::map<std::uint64_t,std::uint64_t> acknowledgments_;
+    std::uint64_t controlNext_ = 0, connectDeadline_ = 0, retryNext_ = 0;
+
 };
 
 }

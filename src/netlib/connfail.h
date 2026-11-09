@@ -19,6 +19,9 @@ enum ConnectFailure
     CONNFAIL_FULL,      // the session has no free slot (or is closed to newcomers)
     CONNFAIL_NAME,      // the callsign is taken (ENet; ZNDNet renames instead)
     CONNFAIL_VERSION,   // another protocol version or service id
+    CONNFAIL_RANDOM,
+    CONNFAIL_RESUME,
+    CONNFAIL_CLOSED,
     CONNFAIL_DROPPED,   // the transport disconnected during the handshake
 };
 
@@ -29,6 +32,9 @@ inline ConnectFailure ConnectFailureFromRefusal(uint32_t code)
     case ERR_CONN_FULL:    return CONNFAIL_FULL;
     case ERR_CONN_NAME:    return CONNFAIL_NAME;
     case ERR_CONN_VERSION: return CONNFAIL_VERSION;
+    case ERR_CONN_RANDOM: return CONNFAIL_RANDOM;
+    case ERR_CONN_RESUME: return CONNFAIL_RESUME;
+    case ERR_CONN_CLOSED: return CONNFAIL_CLOSED;
     default:               return CONNFAIL_NO_ANSWER; // ERR_CONN_TIMEOUT
     }
 }
@@ -43,6 +49,9 @@ inline const char *ConnectFailureName(int failure)
     case CONNFAIL_FULL:      return "full";
     case CONNFAIL_NAME:      return "name";
     case CONNFAIL_VERSION:   return "version";
+    case CONNFAIL_RANDOM: return "random";
+    case CONNFAIL_RESUME: return "resume";
+    case CONNFAIL_CLOSED: return "closed";
     case CONNFAIL_DROPPED:   return "dropped";
     default:                 return "unknown";
     }
@@ -53,7 +62,7 @@ inline const char *ConnectFailureName(int failure)
 // resume grace expires.
 inline bool ConnectFailureIsFinal(int failure)
 {
-    return failure == CONNFAIL_ADDRESS || failure == CONNFAIL_VERSION;
+    return failure == CONNFAIL_RANDOM || failure == CONNFAIL_ADDRESS || failure == CONNFAIL_VERSION || failure == CONNFAIL_RESUME || failure == CONNFAIL_CLOSED;
 }
 
 }

@@ -17,10 +17,12 @@ enum class WireChannel : std::uint8_t { Reliable = 0, Unreliable = 1 };
 
 struct TransportEvent
 {
-    enum class Type : std::uint8_t { Connected, Disconnected, Data };
+    enum class Type : std::uint8_t { Connected, Disconnected, Expired, Data };
     Type type = Type::Data;
     std::uint32_t peer = 0; // host side: peer id; client side: 0 = host
     std::uint8_t channel = 0;
+    bool resumed = false;
+    std::uint8_t slot = 0;
     std::uint8_t reason = 0;          // Disconnected before acceptance: refusal code
     std::string name;                 // Connected on the host: peer name
     std::vector<std::uint8_t> data;   // Data only

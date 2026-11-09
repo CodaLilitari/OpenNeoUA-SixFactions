@@ -17,6 +17,11 @@ public:
     //Client methods
     void Start(const std::string &name, const IPaddress &addr);
     void Stop() override;
+    bool GetResumeToken(World::NetProtocol::ResumeToken&) override;
+    bool SetResumeToken(const World::NetProtocol::ResumeToken&) override;
+    void ClearResumeToken() override;
+    bool SetResumeOnly(bool) override;
+
     uint8_t GetStatus();
 
     bool GetSessions(SessionInfoVect &dst);
@@ -49,6 +54,10 @@ protected:
     void ProcessRegularPkt(Pkt *pkt);
 
     void SendConnect();
+    // Caller holds eSyncMutex; this never joins workers or closes their socket.
+    void CancelAttempt();
+    void ApplyControl(const uint8_t *data,size_t size);
+    void CompleteAcceptance();
     void RequestGamesList();
 
     void InterprocessUpdate();
@@ -70,6 +79,15 @@ protected:
     std::string cJoinedSessionName;
     uint64_t    cTimeOut = 0;
     unsigned char cResumeToken[16]{};
+    bool cResumeOnly=false, cAccepted=false, cHaveRoster=false, cWasResumed=false;
+    // A nonzero close countdown revokes admission/custody while the existing
+    // binding may still service its countdown. Hard cancel also drops all input.
+    bool cAdmissionClosed=false, cCancelled=true;
+    uint64_t cAttempt=0, cConnectDeadline=0, cRetryNext=0, cSession=0;
+    uint32_t cBinding=0;
+    RosterState cRoster;
+    RosterState cStagedRoster;
+
 
     SessionInfoVect cSessions;
     uint64_t        cSessionsReqTimeNext = 0;

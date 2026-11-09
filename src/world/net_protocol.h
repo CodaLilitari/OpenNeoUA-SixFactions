@@ -8,8 +8,8 @@ constexpr char ServiceId[] = "OpenNeoUA:six-factions:1";
 static_assert(sizeof(ServiceId) - 1 <= 255, "service identity fits handshake length");
 // Wire protocol version carried in the handshake (design Phase 2). Bump on any
 // incompatible wire change; hard-reject mismatches (closed 6-player groups).
-constexpr unsigned ProtoVer = 1;
-constexpr unsigned ProtoVerMin = 1;
+constexpr unsigned ProtoVer = 2;
+constexpr unsigned ProtoVerMin = 2;
 inline bool ProtoCompatible(unsigned peer) { return peer >= ProtoVerMin && peer <= ProtoVer; }
 // Handshake trailer: protocol version as little-endian U16 after the player name.
 inline void EncodeProtoVer(unsigned ver, unsigned char out[2]) { out[0] = (unsigned char)(ver & 0xFF); out[1] = (unsigned char)((ver >> 8) & 0xFF); }

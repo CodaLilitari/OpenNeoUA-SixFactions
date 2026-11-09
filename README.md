@@ -1,5 +1,13 @@
 # OpenNeoUA
 
+**`coda/rejoin-protocol2` is an experimental transport development branch.** It
+changes the network protocol and is incompatible with the published `dd80d607`
+platform checkpoint. Automatic game recovery is not enabled. Transport resume
+does not restore a world, transfer control to host AI, or return control to a
+rejoining player. See the [implemented scope, validation and remaining work](docs/rejoin-development-status.md)
+before building this branch. The existing `six-factions`, `windows-build` and
+`linux-build` branches remain separate from this checkpoint.
+
 This development fork adds six-player multiplayer with Black Sect and Sulgogars,
 alongside the four original multiplayer factions. All peers require this fork
 and matching maps with six authored starts. See the

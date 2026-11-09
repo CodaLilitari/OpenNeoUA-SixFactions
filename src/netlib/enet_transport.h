@@ -2,6 +2,8 @@
 #define ZNDNET_ENET_TRANSPORT_H_INCLUDED
 
 #include "transport.h"
+#include "transport_state.h"
+#include "world/net_protocol.h"
 #include <enet/enet.h>
 #include <map>
 #include <string>
@@ -27,11 +29,14 @@ public:
         RefuseService = 1,  // different fork/service identity
         RefuseVersion = 2,  // wire protocol or ENet framing version
         RefuseName = 3,     // callsign already present in the session
+        RefuseResume = 5,
+        RefuseClosed = 6,
+        RefuseRandom = 7,
         RefuseFull = 4      // no free client slot, or session closed
     };
     // Bumped whenever the ENet-only framing changes (it is independent of
     // the ZNDNet wire, so ZNDNet compatibility is unaffected).
-    enum : std::uint8_t { FramingVersion = 2 };
+    enum : std::uint8_t { FramingVersion = 3 };
 
     explicit EnetTransport(const std::string &servstring);
     ~EnetTransport();
@@ -54,6 +59,21 @@ public:
     // Client: graceful leave ('X' control) so the host frees the slot
     // immediately instead of orphaning it for resume.
     bool SendGoodbye();
+    void CloseSession();
+    bool GetResumeToken(World::NetProtocol::ResumeToken &out) const;
+    bool SetResumeToken(const World::NetProtocol::ResumeToken &in);
+    void ClearResumeToken();
+    bool SetResumeOnly(bool only);
+    bool SetResumeGraceMs(std::uint32_t ms);
+    std::uint32_t GetResumeGraceMs() const { return graceMs_; }
+    std::uint64_t SessionId() const { return session_; }
+    std::uint64_t Attempt() const { return attempt_; }
+    std::uint32_t Generation() const { return generation_; }
+    bool Resumed() const { return resumed_; }
+    std::uint8_t MySlot() const { return slot_; }
+    void RetryHandshake();
+    bool PeerBinding(std::uint32_t id,std::uint64_t &attempt,std::uint32_t &generation)const;
+
     // Host: drop one peer; allowResume=false also suppresses the orphan.
     void DisconnectPeer(std::uint32_t peer, bool allowResume);
 
@@ -64,6 +84,10 @@ private:
         std::uint32_t id = 0;
         std::string name;
         bool accepted = false;
+        std::uint8_t slot = 0;
+        std::uint32_t generation = 0, terminal = 0;
+        std::uint64_t attempt = 0, deadline = 0;
+        bool resumed = false;
         bool graceful = false; // explicit leave/kick: no resume orphan
         unsigned char token[16] = {};
     };
@@ -73,11 +97,16 @@ private:
         std::uint32_t id = 0;
         std::string name;
         std::uint64_t expiryMs = 0;
+        std::uint8_t slot = 0;
+        std::uint8_t terminalReason = LeaveExpired;
     };
 
     bool HandleHandshake(PeerInfo &info, const std::uint8_t *data, std::size_t len,
                          TransportEvent &out);
-    void GenerateToken(unsigned char out[16], std::uint32_t id);
+    void Accept(PeerInfo &info);
+    void Handshake();
+    bool Maintenance(TransportEvent &out);
+    bool GenerateToken(unsigned char out[16], std::uint32_t id);
     PeerInfo *FindPeer(std::uint32_t id);
     const PeerInfo *FindPeer(std::uint32_t id) const;
 
@@ -87,6 +116,7 @@ private:
     bool isHost_ = false;
     std::map<ENetPeer *, PeerInfo> peers_;
     std::vector<Orphan> orphans_;
+    std::deque<TransportEvent> pendingEvents_;
     std::uint32_t nextId_ = 1;
     std::uint64_t tokenCounter_ = 0;
     std::size_t maxClients_ = 0;
@@ -96,6 +126,12 @@ private:
     bool clientAccepted_ = false;
     std::uint32_t myId_ = 0;
     unsigned char myToken_[16] = {};
+    bool resumeOnly_ = false, resumed_ = false, refused_ = false;
+    std::uint8_t slot_ = 0;
+    std::uint32_t graceMs_ = 60000, generation_ = 0, nextGeneration_ = 0, terminal_ = 0;
+    HandshakeBudget handshakeBudget_;
+    std::uint64_t session_ = 0, attempt_ = 0, deadline_ = 0, retryNext_ = 0;
+
 };
 
 }

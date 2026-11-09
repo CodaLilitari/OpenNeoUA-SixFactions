@@ -42,7 +42,7 @@ static void Run()
     host.Start("hosty", 0, "enet-test-session", 6);
     const std::uint16_t port = host.BoundPort();
     Check(port != 0, "host bound port unknown");
-    Check(host.GetMyID() == 1 && host.GetMySesID() == 1, "host identity wrong");
+    Check(host.GetMyID() == 1 && host.GetMySesID() != 0, "host identity wrong");
 
     IPaddress addr;
     Check(SDLNet_ResolveHost(&addr, "127.0.0.1", port) == 0, "resolve failed");
@@ -59,10 +59,10 @@ static void Run()
     Check(WaitEvent(client, true, EVENT_SESSION_JOIN, 10000, ev),
           "client EVENT_SESSION_JOIN missing");
     EventNameID *join = (EventNameID *)ev;
-    Check(join->id == 1 && join->name == "enet-test-session",
+    Check(join->id == host.GetMySesID() && join->name == "enet-test-session",
           "client EVENT_SESSION_JOIN payload wrong");
     delete ev; ev = nullptr;
-    Check(client.GetMyID() == 2 && client.GetMySesID() == 1 &&
+    Check(client.GetMyID() == 2 && client.GetMySesID() == host.GetMySesID() &&
           client.GetStatus() == NetUser::STATUS_CONNECTED, "client state wrong");
 
     Check(WaitEvent(host, false, EVENT_USER_ADD, 10000, ev),

@@ -309,9 +309,9 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
             usr->netSelMode = UserData::NETSCREEN_INSESSION;
         }
 
-        for(uint32_t i = 0; i < _netDriver->GetPlayerCount(); i++)
-            if ( UserData::TNetPlayerLobbyData *row = World::NetLobby::RowAt(_GameShell->lobbyPlayers, i) )
-                row->Name = _netDriver->GetPlayerName(i);
+        for (const TDPPlayerData &player : _netDriver->GetPlayersData())
+            if ( UserData::TNetPlayerLobbyData *row = World::NetLobby::RowAt(_GameShell->lobbyPlayers, player.Index) )
+                row->Name = player.name;
 
         usr->update_time_norm = 400;
         usr->flush_time_norm = 400;

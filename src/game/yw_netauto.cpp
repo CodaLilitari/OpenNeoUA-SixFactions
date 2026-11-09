@@ -106,7 +106,7 @@ void BuildView(NC_STACK_ypaworld *world, Flags::LobbyView &v)
                 const UserData::TNetPlayerLobbyData &lobby = usr.lobbyPlayers[p.Index];
                 // As CheckNetLobbyRoster sees them: the host is always ready.
                 player.faction = player.me ? usr.SelectedFraction : lobby.NetFraction;
-                player.ready = player.me ? (usr.isHost || usr.rdyStart) : lobby.Ready;
+                player.ready = p.IsOnline() && (player.me ? (usr.isHost || usr.rdyStart) : lobby.Ready);
             }
             v.players.push_back(player);
         }

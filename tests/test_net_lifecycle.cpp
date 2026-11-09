@@ -142,6 +142,13 @@ static void Orderly()
         client.CheckStopped();
         Check(client.Token() == token, "Stop changed the opaque resume token");
         host.Stop();
+        // Each cycle deliberately starts a different host session. Stop still
+        // preserves custody above; a new session requires an explicit fresh
+        // reset and must never silently accept the previous session's token.
+        client.ClearResumeToken();
+        Check(client.SetResumeOnly(false), "fresh-mode reset failed while stopped");
+        Check(client.Token() == std::array<unsigned char, 16>{},
+              "explicit fresh reset retained a credential");
     }
     std::cout << "Three orderly restart cycles exchanged fresh data and retained the token\n";
 }

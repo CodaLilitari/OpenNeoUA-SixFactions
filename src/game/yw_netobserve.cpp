@@ -79,8 +79,7 @@ void Fill(NC_STACK_ypaworld *world, Agent::NetState &out)
     out.problem = usr.netProblem;
 
     NC_STACK_windp *driver = world->_netDriver;
-    // windp::Reset leaves connType and the last roster behind; only a live
-    // transport object makes them meaningful.
+    // Only a live transport object makes the current session view meaningful.
     if (driver && driver->zcon)
     {
         const size_t mode = driver->GetMode();

@@ -29,6 +29,24 @@ int main()
         *seventh = "never written";
     REQUIRE(seventh == nullptr);
 
+    // Sparse reservations and later slot reuse leave every survivor in place.
+    rows[0] = "HOST"; rows[2] = "TWO"; rows[5] = "FIVE";
+    REQUIRE(World::NetLobby::ClearSlot(rows, 2));
+    REQUIRE(rows[0] == "HOST");
+    REQUIRE(rows[2].empty());
+    REQUIRE(rows[4].empty());
+    REQUIRE(rows[5] == "FIVE");
+    rows[2] = "NEW";
+    REQUIRE(rows[5] == "FIVE");
+    REQUIRE(!World::NetLobby::ClearSlot(rows, -1));
+    REQUIRE(!World::NetLobby::ClearSlot(rows, 6));
+    REQUIRE(rows[2] == "NEW" && rows[5] == "FIVE");
+    for (size_t i = 0; i < rows.size(); ++i)
+        rows[i] = std::to_string(i);
+    REQUIRE(World::NetLobby::ClearSlot(rows, 2));
+    for (size_t i = 0; i < rows.size(); ++i)
+        REQUIRE(rows[i] == (i == 2 ? std::string() : std::to_string(i)));
+
     std::cout << "lobby rows are reached only inside the lobby\n";
     return 0;
 }

@@ -16,6 +16,8 @@ int main() {
     Require(ConnectFailureFromRefusal(ERR_CONN_FULL) == CONNFAIL_FULL, "FULL refusal mapped wrongly");
     Require(ConnectFailureFromRefusal(ERR_CONN_NAME) == CONNFAIL_NAME, "NAME refusal mapped wrongly");
     Require(ConnectFailureFromRefusal(ERR_CONN_VERSION) == CONNFAIL_VERSION, "VERSION refusal mapped wrongly");
+    Require(std::string(ConnectFailureName(ConnectFailureFromRefusal(ERR_CONN_RANDOM))) == "random", "random failure mislabeled");
+    Require(ConnectFailureIsFinal(ConnectFailureFromRefusal(ERR_CONN_RANDOM)), "entropy failure retried");
     Require(ConnectFailureFromRefusal(ERR_CONN_TIMEOUT) == CONNFAIL_NO_ANSWER, "transport timeout is not no-answer");
     Require(ConnectFailureFromRefusal(0xff) == CONNFAIL_NO_ANSWER, "unknown code is not treated as no answer");
 

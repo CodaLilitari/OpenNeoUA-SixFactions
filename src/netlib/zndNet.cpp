@@ -1,4 +1,5 @@
 #include "zndNet.h"
+#include "os_random.h"
 #include <regex>
 #include "world/net_protocol.h"
 
@@ -58,32 +59,11 @@ uint64_t ZNDNet::GenerateID()
 
 
 
-void ZNDNet::GenerateResumeToken(NetUser *usr)
+bool ZNDNet::GenerateResumeToken(NetUser *usr)
 {
-    if (!usr)
-        return;
-
-    // splitmix64 over clock, identity, address and a per-instance counter.
-    // The token is the resume identity; GenerateID stays display-only.
-    uint64_t z = SDL_GetPerformanceCounter()
-               ^ (usr->ID * 0x9E3779B97F4A7C15ULL)
-               ^ ((uint64_t)usr->addr.host << 32)
-               ^ (uint64_t)usr->addr.port
-               ^ (++resumeCounter * 0xD1B54A32D192ED03ULL);
-    for (int i = 0; i < 2; i++)
-    {
-        z += 0x9E3779B97F4A7C15ULL;
-        uint64_t x = z;
-        x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
-        x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
-        x = x ^ (x >> 31);
-        memcpy(&usr->resumeToken[i * 8], &x, 8);
-    }
-    bool any = false;
-    for (int i = 0; i < 16; i++) if (usr->resumeToken[i]) any = true;
-    if (!any)
-        usr->resumeToken[0] = 1;
+    return usr && OsRandom(usr->resumeToken, 16);
 }
+
 
 void ZNDNet::CorrectName(std::string &name)
 {
@@ -138,6 +118,7 @@ void ZNDNet::PendingCheck()
 
     for (PartedList::iterator it = pendingPkt.begin(); it != pendingPkt.end();)
     {
+        if ((*it)->expiry && tcur >= (*it)->expiry) { delete *it; it=pendingPkt.erase(it); continue; }
         if (tcur >= (*it)->timeout)
         {
             InPartedPkt *pkt = *it;
@@ -293,6 +274,23 @@ Event *ZNDNet::Events_Pop()
     return nullptr;
 }
 
+void ZNDNet::Events_ClearDataFrom(uint64_t id)
+{
+    SDL_LockMutex(eEventMutex);
+    for(auto it=eEventList.begin();it!=eEventList.end();)
+    {
+        Event *event=*it;
+        if(event->type==EVENT_DATA&&static_cast<EventData*>(event)->from==id)
+        {
+            eEventDataSize-=event->size;
+            it=eEventList.erase(it);
+            delete event;
+        }
+        else ++it;
+    }
+    SDL_UnlockMutex(eEventMutex);
+}
+
 void ZNDNet::Events_Clear()
 {
     if (SDL_LockMutex(eEventMutex) == 0)
@@ -385,13 +383,14 @@ void ZNDNet::Pending_Clear()
 
 
 
-RefData *ZNDNet::USRDataGenData(uint64_t from, bool cast, uint64_t to, void *data, uint32_t sz)
+RefData *ZNDNet::USRDataGenData(uint64_t from, bool cast, uint64_t to, void *data, uint32_t sz, uint32_t generation)
 {
     if (!data || !sz)
         return nullptr;
 
     RefDataWStream *rfdat = RefDataWStream::create(32 + sz);
     rfdat->writeU8(USR_MSG_DATA);
+    rfdat->writeU32(generation);
     rfdat->writeU64(from);
     rfdat->writeU8(cast ? 1 : 0);
     rfdat->writeU64(to);
@@ -603,11 +602,16 @@ void ZNDNet::SrvSessionBroadcast(NetSession *ses, RefData *dat, uint8_t flags, u
             NetUser *usr = *it;
             if (usr && usr != from && usr->net && usr->IsOnline())
             {
-                SendingData *dta = new SendingData(usr->addr, usr->GetSeq(), dat, flags);
+                RefData *perPeer=dat;
+                uint8_t type=0;dat->copy(&type,0,1);
+                if(type==USR_MSG_DATA&&dat->size()>=5){std::vector<uint8_t> bytes(dat->size());dat->copy(bytes.data());
+                    writeU32(usr->bindingGeneration,bytes.data()+1);perPeer=RefDataStatic::create(bytes.data(),bytes.size());}
+                SendingData *dta = new SendingData(usr->addr, usr->GetSeq(), perPeer, flags);
                 dta->SetChannel(usr->__idx, chnl);
                 sendPktList.push_back(dta);
             }
         }
+        if(dat->refs()==0)delete dat;
         SDL_UnlockMutex(sendPktListMutex);
     }
 }
@@ -638,6 +642,23 @@ bool ZNDNet::SessionCheckPswd(const std::string &pswd)
 
 
 
+Pkt *ZNDNet::Recv_Assemble(InRawPkt *pkt,NetUser *from)
+{
+    const AddrSeq key(pkt->addr,pkt->hdr.seqid);InPartedPkt *assembly=nullptr;
+    size_t bytes=0;
+    for(auto *pending:pendingPkt){bytes+=pending->len;if(pending->ipseq==key)assembly=pending;}
+    if(assembly&&(assembly->len!=pkt->hdr.fsize||assembly->flags!=pkt->hdr.flags||assembly->uchnl!=pkt->hdr.uchnl))
+    {pendingPkt.remove(assembly);delete assembly;delete pkt;return nullptr;}
+    if(!assembly){
+        if(pkt->hdr.fsize>MAX_ASSEMBLED_BYTES||pendingPkt.size()>=MAX_PENDING_ASSEMBLIES||pkt->hdr.fsize>MAX_PENDING_BYTES-bytes){delete pkt;return nullptr;}
+        assembly=new(std::nothrow) InPartedPkt(key,pkt->hdr.fsize,pkt->hdr.flags,pkt->hdr.uchnl);
+        if(!assembly||!assembly->data){delete assembly;delete pkt;return nullptr;}
+        pendingPkt.push_back(assembly);
+    }
+    if(!assembly->Feed(pkt,ttime.GetTicks()))return nullptr;
+    pendingPkt.remove(assembly);return new Pkt(assembly,from); // Pkt consumes and deletes assembly.
+}
+
 void ZNDNet::Recv_PushInRaw(InRawPkt *inpkt)
 {
     // Inbound flood guard (recv thread only): system packets are exempt;
@@ -665,7 +686,8 @@ void ZNDNet::Recv_PushInRaw(InRawPkt *inpkt)
     }
     if (SDL_LockMutex(recvPktListMutex) == 0)
     {
-        recvPktList.push_back(inpkt);
+        if(recvPktList.size()>=MAX_RAW_PACKETS)delete inpkt;
+        else recvPktList.push_back(inpkt);
         SDL_UnlockMutex(recvPktListMutex);
     }
 }

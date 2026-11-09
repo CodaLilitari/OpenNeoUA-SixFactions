@@ -179,8 +179,9 @@ static void Run()
         const uint64_t originalId = returning->GetMyID();
         Check(originalId != 0, "resume candidate has no identity");
         returning->Stop();
-        Check(Until([&] { return Count(host) == count - 1; }, 25000),
-              "silent drop did not vacate the session slot");
+        Check(Until([&] { UserInfo row{};return host.GetUser(row,originalId)&&row.status==RosterAway; },25000),
+              "silent drop did not mark the reserved row away");
+        Check(Count(host)==count,"silent drop released a reserved row");
         returning->Start("player-2", address);
         Check(Until([&] { return returning->GetStatus() == NetUser::STATUS_CONNECTED
                               && returning->GetMyID() == originalId; }, 15000),

@@ -31,6 +31,7 @@
 //#define ZNDNET_TUNE_SEND_MAXDATA 131070
 
 #include "errcode.h"
+#include "world/net_protocol.h"
 #include "ratelimit.h"
 #include "types.h"
 #include "tick.h"
@@ -74,6 +75,7 @@ enum
     SYS_MSG_CONNECTED    = 2,
     SYS_MSG_DISCONNECT   = 3,
     SYS_MSG_PING         = 5,
+    SYS_MSG_ROSTER_ACK   = 9,
     SYS_MSG_DELIVERED    = 7,
     SYS_MSG_RETRY        = 8,
     SYS_MSG_LIST_GAMES   = 0x30,
@@ -112,6 +114,12 @@ public:
 
     virtual void Stop(); // Lifecycle calls belong to the owning external thread.
 
+    virtual bool GetResumeToken(World::NetProtocol::ResumeToken &) { return false; }
+    virtual bool SetResumeToken(const World::NetProtocol::ResumeToken &) { return false; }
+    virtual void ClearResumeToken() {}
+    virtual bool SetResumeOnly(bool) { return false; }
+    virtual bool SetResumeGraceMs(uint32_t ms) { if (updateThread || ms<100 || ms>600000) return false; resumeGraceMs = ms; return true; }
+    virtual uint32_t GetResumeGraceMs() { return resumeGraceMs; }
     virtual void ShowSession(bool show) = 0;
     virtual void CloseSession(uint32_t closeTime) = 0;
 
@@ -140,6 +148,7 @@ protected:
     void Recv_PushInRaw(InRawPkt *inpkt);
     InRawPkt *Recv_PopInRaw();
     void Recv_Clear();
+    Pkt *Recv_Assemble(InRawPkt *pkt, NetUser *from);
 
     //For sending thread
     void Send_PushData(SendingData *data);
@@ -157,7 +166,7 @@ protected:
     void Pending_Clear(const IPaddress &addr);
     void Pending_Clear();
 
-    RefData *USRDataGenData(uint64_t from, bool cast, uint64_t to, void *data, uint32_t sz);
+    RefData *USRDataGenData(uint64_t from, bool cast, uint64_t to, void *data, uint32_t sz, uint32_t generation = 0);
 
     void SendDelivered(uint32_t _seqid, const IPaddress &addr);
     void SendRetry(uint32_t _seqid, const IPaddress &addr, uint32_t nextOff, uint32_t upto);
@@ -181,17 +190,19 @@ protected:
 
 
     uint64_t GenerateID();
-    void GenerateResumeToken(NetUser *usr);
+    bool GenerateResumeToken(NetUser *usr);
     void CorrectName(std::string &_name);
     SendingData *MkSendingData(NetUser *usr, RefData *data, uint8_t flags, uint32_t chnl = 0);
 
 // Events
     void Events_Push(Event *evnt);
+    void Events_ClearDataFrom(uint64_t id);
 
 // Data
 public:
 
 protected:
+    uint32_t resumeGraceMs = 60000;
     int         mode;
     std::string servString;
     UDPsocket   sock;

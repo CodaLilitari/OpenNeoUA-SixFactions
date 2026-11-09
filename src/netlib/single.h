@@ -9,6 +9,8 @@ class ZNDSingle: public ZNDNet
 {
 public:
     ZNDSingle(const std::string &servstring);
+    ~ZNDSingle() override;
+    void Stop() override;
 
     void Start(const std::string &name, uint16_t port, const std::string &sname, uint32_t max_players);
 
@@ -35,6 +37,10 @@ protected:
     static int _UpdateThread(void *data);
 
     void DisconnectUser(NetUser *usr, uint8_t type);
+    void SendAcceptance(NetUser *usr);
+    void SendRoster(NetUser *usr);
+    void Changed(NetUser *usr, Transition transition);
+    void SendControl(const IPaddress &addr, const std::vector<uint8_t>&bytes);
 
     Pkt *Recv_PreparePacket(InRawPkt *pkt);
     void ProcessSystemPkt(Pkt *pkt);
@@ -54,6 +60,10 @@ protected:
     NetUsersPack users;
 
     NetSession  session;
+    RosterState roster;
+    uint64_t closeFlushUntil = 0;
+    uint32_t nextBinding = 0;
+    HandshakeBudget handshakeBudget;
 
     std::atomic_uint_fast32_t eStatus;
 };

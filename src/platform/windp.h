@@ -9,6 +9,9 @@
 #include "netlib/zndNet.h"
 #include "netlib/enet_znd.h"
 #include "netlib/connfail.h"
+#include "platform/windp_roster.h"
+#include "platform/windp_resume.h"
+#include "platform/windp_events.h"
 
 
 struct ProviderStruct
@@ -44,28 +47,17 @@ struct windp_createPlayerMsg
     uint32_t data2;
 };
 
-struct TDPPlayerData
-{
-    enum NETPLAYERDATA
-    {
-        NPD_ITSME     =  (1 << 0),
-    };
-
-    uint32_t Index;
-    std::string name;
-    uint32_t flags;
-
-    bool IsItMe() const { return (flags & NPD_ITSME) != 0; }
-};
-
 struct windp_recvMsg
 {
     std::vector<uint8_t> _data;
-    void *data;
-    uint32_t size;
-    uint32_t cast;
-    uint32_t msgType;
+    void *data = nullptr;
+    uint32_t size = 0;
+    uint32_t cast = 0;
+    uint32_t msgType = RECVMSG_NONE;
     std::string senderName;
+    uint64_t playerId = 0;
+    int32_t playerSlot = -1;
+    uint32_t reason = 0;
 };
 
 struct windp_arg87
@@ -128,6 +120,11 @@ public:
     bool IsConnected();
     bool HasLobby();
     bool IsJoined();
+
+    // The game may arm this only once its owner/checkpoint path is ready.
+    void SetRecoveryEnabled(bool enabled);
+    bool CompleteRecovery();
+    WindpResume::Phase RecoveryPhase() const;
 
 
     // Only for host
@@ -219,6 +216,11 @@ protected:
 
     void _clear();
     void ClearConnectionState();
+    bool CanSendGameplay();
+    void TickRecovery();
+    bool StartRecoveryAttempt();
+    void StopClientTransport(bool terminal);
+    bool RememberConnection(const IPaddress &address, const std::string &text);
 
     void ReloadUsersList();
     void ReloadSessionsList();
@@ -243,6 +245,7 @@ public:
     uint64_t    _myID = 0;
     std::string _myName;
     ZNDNet::UserInfoVect _rawUsers;
+    std::vector<TDPPlayerData> _players;
     int32_t _myIndex = -1;
     ZNDNet::SessionInfoVect _rawSessions;
     uint32_t _nextUsersGet;
@@ -250,6 +253,8 @@ public:
     uint64_t _sesID;
     std::string _sesName;
     int _connectFailure = ZNDNet::CONNFAIL_NONE; // why the last Connect() failed (netlib/connfail.h)
+    WindpResume::State _recovery;
+    bool _recoveryFailurePending = false;
     std::string version_ident;
     int version_check;
     char *norm_block;

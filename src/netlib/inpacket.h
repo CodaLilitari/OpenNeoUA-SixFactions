@@ -2,6 +2,7 @@
 #define ZNDNET_INPKT_H_INCLUDED
 
 #include <list>
+#include <new>
 
 #include "types.h"
 #include "addrseq.h"
@@ -27,7 +28,7 @@ struct InRawPktHdr
 
     bool Parse(uint8_t *_data, size_t len)
     {
-        if (!_data)
+        if (!_data || !len)
             return false; // No data
 
         flags = _data[HDR_OFF_FLAGS];
@@ -49,7 +50,7 @@ struct InRawPktHdr
             if ( (flags & (~PKT_FLAG_MASK_NORMAL)) )
                 return false;
 
-            if (len < HDR_OFF_SEQID + 4)
+            if (len < HDR_OFF_MINSZ)
                 return false;
 
             seqid  = readU32( &_data[HDR_OFF_SEQID] );
@@ -79,7 +80,7 @@ struct InRawPktHdr
                 datasz = fsize;
             }
 
-            if ( offset + datasz > fsize )
+            if (!fsize || fsize > MAX_ASSEMBLED_BYTES || offset > fsize || datasz > fsize - offset)
                 return false;
         }
 
@@ -145,6 +146,7 @@ struct InPartedPkt
 {
     AddrSeq   ipseq;
     uint64_t  timeout;
+    uint64_t expiry = 0;
     size_t    nextOff;
     uint8_t  *data;
     size_t    len;
@@ -166,8 +168,8 @@ struct InPartedPkt
 
         if (_len)
         {
-            data = new uint8_t[_len];
-            len = _len;
+            if(_len <= MAX_ASSEMBLED_BYTES) data = new(std::nothrow) uint8_t[_len];
+            if(data) len = _len;
         }
     }
 
@@ -187,7 +189,8 @@ struct InPartedPkt
     bool Feed(InRawPkt *pkt, uint64_t timestamp)
     {
         if (!pkt || !pkt->hdr.data || pkt->hdr.datasz <= 0 ||
-            pkt->hdr.seqid != ipseq.seq ||
+            pkt->hdr.seqid != ipseq.seq || pkt->hdr.fsize != len ||
+            pkt->hdr.flags != flags || pkt->hdr.uchnl != uchnl ||
             pkt->hdr.offset < nextOff ||
             len < pkt->hdr.offset + pkt->hdr.datasz)
         {
@@ -195,6 +198,10 @@ struct InPartedPkt
             return false;
         }
 
+        if(!expiry)expiry=timestamp+MAX_PENDING_LIFETIME;
+        if(!timeout)timeout=timestamp+((flags&PKT_FLAG_GARANT)?TIMEOUT_PENDING_GARANT:TIMEOUT_PENDING);
+        for(auto *part:parts)if(part->hdr.offset==pkt->hdr.offset){delete pkt;return false;}
+        if(parts.size()>=MAX_PENDING_FRAGMENTS){delete pkt;return false;}
         if (pkt->hdr.offset == nextOff)
         {
             if (pkt->hdr.flags & PKT_FLAG_GARANT)

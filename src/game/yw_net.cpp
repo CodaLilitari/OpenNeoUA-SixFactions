@@ -137,14 +137,14 @@ void yw_CheckCRCs(NC_STACK_ypaworld *yw)
     {
         usr->takTime = 15000;
 
-        const int plCnt = std::min<int>(yw->_netDriver->GetPlayerCount(), World::CVMaxNetPlayers);
-
         bool err = false;
         int errmsg = 0;
 
-        for (int i = 0; i < plCnt; i++)
+        for (const TDPPlayerData &player : yw->_netDriver->GetPlayersData())
         {
-            UserData::TNetPlayerLobbyData &pl = yw->_GameShell->lobbyPlayers[i];
+            if (player.Index >= usr->lobbyPlayers.size() || !player.IsOnline())
+                continue;
+            UserData::TNetPlayerLobbyData &pl = usr->lobbyPlayers[player.Index];
             if ( StriCmp(yw->_GameShell->netPlayerName, pl.Name) &&
                     usr->netCRC != pl.DataChecksum &&
                     pl.DataChecksum != 0 &&
@@ -2806,25 +2806,19 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         }
 
         TMapRegionInfo &minf = yw->_globalMapRegions.MapRegions[lobbyMsg->lvlID];
-        int plCount = yw->_netDriver->GetPlayerCount();
-
-        index = 0;
-
         yw->_GameShell->FreeFraction = minf.FractionsBits & World::NetFactions::Mask;
         yw->_GameShell->SelectedFraction = 0;
         for (auto &player : yw->_GameShell->lobbyPlayers)
             player.NetFraction = 0;
-        for (int factionOwner : World::NetFactions::Owners)
+        for (const TDPPlayerData &player : yw->_netDriver->GetPlayersData())
         {
-            const uint32_t bit = 1u << factionOwner;
-            if ( (yw->_GameShell->FreeFraction & bit) && plCount > 0 )
+            const uint32_t bit = World::NetFactions::FirstAvailable(yw->_GameShell->FreeFraction);
+            if (UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(yw->_GameShell, player.Index))
             {
                 yw->_GameShell->FreeFraction &= ~bit;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = bit;
-                if ( index == yw->_netDriver->GetMyIndex() )
+                row->NetFraction = bit;
+                if (player.IsItMe())
                     yw->_GameShell->SelectedFraction = bit;
-                --plCount;
-                ++index;
             }
         }
 
@@ -2848,24 +2842,19 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
 
         TMapRegionInfo &minf = yw->_globalMapRegions.MapRegions[stlvlMsg->lvlID];
 
-        int plCount = yw->_netDriver->GetPlayerCount();
-        int32_t index = 0;
-
         yw->_GameShell->FreeFraction = minf.FractionsBits & World::NetFactions::Mask;
         yw->_GameShell->SelectedFraction = 0;
         for (auto &player : yw->_GameShell->lobbyPlayers)
             player.NetFraction = 0;
-        for (int factionOwner : World::NetFactions::Owners)
+        for (const TDPPlayerData &player : yw->_netDriver->GetPlayersData())
         {
-            const uint32_t bit = 1u << factionOwner;
-            if ( (yw->_GameShell->FreeFraction & bit) && plCount > 0 )
+            const uint32_t bit = World::NetFactions::FirstAvailable(yw->_GameShell->FreeFraction);
+            if (UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(yw->_GameShell, player.Index))
             {
                 yw->_GameShell->FreeFraction &= ~bit;
-                yw->_GameShell->lobbyPlayers[index].NetFraction = bit;
-                if ( index == yw->_netDriver->GetMyIndex() )
+                row->NetFraction = bit;
+                if (player.IsItMe())
                     yw->_GameShell->SelectedFraction = bit;
-                --plCount;
-                ++index;
             }
         }
 
@@ -3328,11 +3317,12 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     usr->problemTimer = 4000;
                 }
 
-                err_sender[0] = 0;
+                err_sender.clear();
 
                 switch ( recvMsg.msgType )
                 {
                 case RECVMSG_CREATEPLAYER:
+                case RECVMSG_PLAYERBACK:
                 {
                     // The lobby welcome (WELCOME, CRC, LOBBYINIT and a lobby
                     // row) is for players who join the lobby. During a match a
@@ -3374,9 +3364,9 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     if ( usr->netLevelID )
                         yw->SendCRC(usr->netLevelID);
 
-                    const int64_t plid = yw->_netDriver->GetPlayerCount();
+                    const int32_t slot = recvMsg.playerSlot;
 
-                    if ( UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(usr, plid - 1) )
+                    if ( UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(usr, slot) )
                     {
                         row->Name = recvMsg.senderName;
                         row->Welcomed = true;
@@ -3384,7 +3374,38 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                 }
                 break;
 
+                case RECVMSG_PLAYERAWAY:
+                {
+                    // A reserved seat survives a transport outage. The host
+                    // ownership/AI path is a separate game-level transition.
+                    if (UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(usr, recvMsg.playerSlot))
+                        if (!StriCmp(row->Name, recvMsg.senderName))
+                            row->Ready = false;
+                    log_netlog("%s is temporarily away in slot %d\n",
+                               recvMsg.senderName.c_str(), recvMsg.playerSlot);
+                }
+                break;
+
+                case RECVMSG_SELFLOST:
+                case RECVMSG_SELFRESUMED:
+                case RECVMSG_ROSTERRESET:
+                    // The provider reports these explicitly. Automatic match
+                    // recovery stays unarmed until owner/world reconciliation
+                    // consumes them; a transport acceptance is not hand-back.
+                    log_netlog("Provider recovery event %u, state %s\n", recvMsg.msgType,
+                        WindpResume::PhaseName(yw->_netDriver->RecoveryPhase()));
+                    break;
+
+                case RECVMSG_SESSIONEND:
+                case RECVMSG_RECOVERYFAILED:
+                    usr->rdyStart = false;
+                    yw->_levelInfo.State = TLevelInfo::STATE_ABORTED;
+                    log_netlog("Session transport ended: event %u, reason %u\n",
+                               recvMsg.msgType, recvMsg.reason);
+                    break;
+
                 case RECVMSG_DESTROYPLAYER:
+                case RECVMSG_PLAYERGONE:
                 {
                     bool itisI = false;
                     bool plFound = false;
@@ -3399,8 +3420,9 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     {
                         if ( !StriCmp(usr->lobbyPlayers[i].Name, recvMsg.senderName) )
                         {
-                            for (size_t j = i; j < usr->lobbyPlayers.size() - 1; j++)
-                                usr->lobbyPlayers[j] = usr->lobbyPlayers[ j + 1 ];
+                            // Terminal departure frees one stable slot. Other
+                            // players keep their faction and readiness rows.
+                            World::NetLobby::ClearSlot(usr->lobbyPlayers, i);
 
                             plFound = true;
                             break;
@@ -3632,12 +3654,8 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
     for ( const TDPPlayerData &plData :  _netDriver->GetPlayersData() )
     {
-        if ( (size_t)plData.Index >= Robos.size() )
-        {
-            log_netlog("No Robo declared for player %d\n", Robos.size());
-            return false;
-        }
-
+        // Roster slots may contain holes. Actual map coverage is checked by
+        // faction owner below, not by indexing the map's compact start list.
         UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(_GameShell, plData.Index);
         if ( !row )
             return false;

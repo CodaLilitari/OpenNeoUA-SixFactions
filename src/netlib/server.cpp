@@ -25,38 +25,11 @@ Pkt *ZNDServer::Recv_PreparePacket(InRawPkt *pkt)
     {
         return new Pkt(pkt, from);
     }
-    else if (from) // Not system msg and known user
+    else if (from && from->IsOnline()) // Not system msg and known online user
     {
         if (pkt->hdr.flags & PKT_FLAG_PART) // incomplete data, do assembly
         {
-            AddrSeq ipseq;
-            ipseq.set(pkt->addr, pkt->hdr.seqid);
-
-            InPartedPkt *parted = nullptr;
-
-            for (PartedList::iterator it = pendingPkt.begin(); it != pendingPkt.end(); it++)
-            {
-                if ((*it)->ipseq == ipseq)
-                {
-                    parted = *it;
-                    break;
-                }
-            }
-
-            if (!parted)
-            {
-                parted = new InPartedPkt(ipseq, pkt->hdr.fsize, pkt->hdr.flags, pkt->hdr.uchnl);
-                pendingPkt.push_back(parted);
-            }
-
-            if ( parted->Feed(pkt, ttime.GetTicks()) ) // Is complete?
-            {
-                /*if (parted->retry != RETRY_GARANT)
-                    printf("Recovered packet! %d\n", parted->ipseq.seq);*/
-                pendingPkt.remove(parted);
-                return new Pkt(parted, from);
-            }
-
+            return Recv_Assemble(pkt,from);
             // if not complete -> return NULL
         }
         else // not parted packet -> make it
@@ -76,6 +49,7 @@ void ZNDServer::ProcessSystemPkt(Pkt* pkt)
 {
     if (!pkt)
         return;
+    if(pkt->datasz && pkt->data[0]==SYS_MSG_HANDSHAKE){SrvSendConnErr(pkt->addr,ERR_CONN_VERSION);return;}
 
     if (pkt->datasz < 1 )
         return;

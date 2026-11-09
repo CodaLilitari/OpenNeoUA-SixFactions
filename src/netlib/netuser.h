@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "utils.h"
+#include "transport_state.h"
 
 namespace ZNDNet
 {
@@ -39,6 +40,10 @@ struct NetUser
     bool net;
     unsigned char resumeToken[16];
     uint64_t resumeExpiry;
+    uint8_t slot = 0;
+    uint32_t bindingGeneration = 0;
+    uint64_t attempt = 0, ackRevision = 0, controlNext = 0;
+    bool resumed = false;
     void *__master;
 
     NetUser()
@@ -166,6 +171,7 @@ public:
         for(uint32_t i = 0; i < maxUsers; i++)
         {
             NetUser *usr = &users[i];
+            *usr = NetUser();
             usr->__idx = i;
             usr->__master = this;
 
@@ -213,13 +219,16 @@ struct UserInfo
 {
     uint64_t    ID;
     std::string name;
-    bool        lead;
+    bool        lead = false;
+    uint8_t slot = 0;
+    uint8_t status = RosterOnline;
 
     UserInfo& operator= (const UserInfo& x)
     {
         ID = x.ID;
         name = x.name;
         lead = x.lead;
+        slot = x.slot; status = x.status;
         return *this;
     };
 
@@ -228,6 +237,7 @@ struct UserInfo
         ID = x.ID;
         name = x.name;
         lead = false;
+        slot = x.slot; status = x.status == NetUser::STATUS_CONNECTED ? RosterOnline : RosterAway;
         return *this;
     };
 };
