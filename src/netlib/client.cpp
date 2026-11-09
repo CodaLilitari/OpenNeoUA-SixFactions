@@ -108,7 +108,8 @@ ZNDClient::SetResumeOnly(bool only)
 void
 ZNDClient::CompleteAcceptance()
 {
-    if (cCancelled || cAdmissionClosed || !cAccepted || !cHaveRoster || cStagedRoster.session != cSession)
+    if (cCancelled || cAdmissionClosed || !cAccepted || !cHaveRoster ||
+        cStagedRoster.session != cSession || cStagedRoster.name != cJoinedSessionName)
         return;
     const bool first = cME.status != NetUser::STATUS_CONNECTED;
     cME.status = NetUser::STATUS_CONNECTED;
@@ -130,7 +131,8 @@ ZNDClient::ApplyControl(const uint8_t* data, size_t size)
     uint64_t attempt = 0;
     uint32_t generation = 0;
     if (!DecodeRoster(data, size, next, attempt, generation) || attempt != cAttempt ||
-        (cAccepted && (generation != cBinding || next.session != cSession)))
+        (cAccepted && (generation != cBinding || next.session != cSession ||
+                      next.name != cJoinedSessionName)))
         return;
     if(cAccepted){
         const auto self=std::find_if(next.rows.begin(),next.rows.end(),[&](const RosterRow&row){return row.id==cME.ID;});
@@ -258,12 +260,17 @@ ZNDClient::ProcessSystemPkt(Pkt* pkt)
             auto resumed = r.U(1), slot = r.U(1);
             auto grace = r.U(4), attempt = r.U(8);
             auto binding = r.U(4), session = r.U(8);
-            auto sessionName = r.Str(32);
-            if (!r.End() || lobby || !id || name.empty() || resumed > 1 || slot >= 6 ||
+            auto sessionName = r.Str(SessionDescriptorMaxBytes);
+            if (!r.End() || lobby || !id || name.empty() || !ValidSessionDescriptor(sessionName) ||
+                resumed > 1 || slot >= 6 ||
                 grace < 100 || grace > 600000 || attempt != cAttempt || !binding || !session ||
                 !World::NetProtocol::TokenValid(token))
                 return;
-            if (cAccepted && (cSession != session || cBinding != binding || cME.ID != id))
+            if (cAccepted && (cSession != session || cBinding != binding || cME.ID != id ||
+                              cJoinedSessionName != sessionName))
+                return;
+            if (cHaveRoster && cStagedRoster.session == session && cBinding == binding &&
+                cStagedRoster.name != sessionName)
                 return;
             if (cHaveRoster && (cStagedRoster.session != session || cBinding != binding))
             {

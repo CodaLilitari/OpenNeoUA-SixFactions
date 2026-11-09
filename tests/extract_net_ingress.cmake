@@ -63,14 +63,14 @@ endfunction()
 
 file(WRITE "${NET_INGRESS_GENERATED_DIR}/EXTRACTION.txt"
     "format=1\nnormalization=CRLF to LF only; raw hashes retained\n"
-    "scope=exact helper+validator+handler prefix through first dispatch switch; downstream gameplay omitted\n"
+    "scope=exact host lookup+helper+validator+handler prefix through first dispatch switch; downstream gameplay omitted\n"
     "fixture=only world presence/counts/grid and Common::Point coordinates; logging sink; seeded real identity records\n")
 _ingress_read("game/yw_net.cpp" net_source)
 _ingress_read("game/yw.h" user_source)
 _ingress_read("platform/windp.h" provider_source)
 _ingress_read("common/utils.cpp" utility_source)
 # Pin included production headers too; normal compiler dependency tracking also applies.
-foreach(header game/yw_net_msgs.h platform/windp_events.h world/net_update_gate.h
+foreach(header game/yw_net_msgs.h platform/windp_events.h platform/windp_resume.h world/net_update_gate.h
         world/net_factions.h world/net_lobby.h world/consts.h common/matrix.h common/vectors.h
         common/types.h common/listnode.h)
     _ingress_read("${header}" unused_header)
@@ -90,9 +90,10 @@ if(NOT (helper_position LESS validator_position AND validator_position LESS admi
     message(FATAL_ERROR "net ingress extraction: helper/validator/handler/switch order changed")
 endif()
 _ingress_slice(net_source "static bool yw_netLevelLoaded(" "size_t yw_handleNormMsg(" FALSE helper_prefix)
+_ingress_slice(net_source "NC_STACK_ypabact * NC_STACK_ypaworld::yw_getHostByOwner(" "NC_STACK_ypabact * NetGetBactByID(" FALSE get_host_method)
 _ingress_slice(handler_source "size_t yw_handleNormMsg(" "    switch (msgID)\n    {" TRUE handler_prefix)
 # These are contiguous slices of the same source, with no policy replacement.
-set(prefix "${helper_prefix}${handler_prefix}")
+set(prefix "${get_host_method}${helper_prefix}${handler_prefix}")
 _ingress_slice(user_source "    struct TNetPlayerLobbyData\n" "\n    struct TNetPlayerData\n" FALSE lobby_record)
 _ingress_slice(user_source "    struct TNetPlayerData\n" "\n    std::array<TNetPlayerData," FALSE player_record)
 _ingress_slice(user_source "    std::array<TNetPlayerData, World::CVFractionsCount> netPlayers;\n"

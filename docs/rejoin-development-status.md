@@ -141,6 +141,66 @@ A full native Windows Release engine compile and link also passed with unchanged
 recorded source/configuration/resource inputs. The remaining gameplay gates
 below still apply to that executable.
 
+## Startup station identity exchange
+
+SYNCGM is now explicitly a startup-only message. It must come from the frozen
+participant assigned to its payload owner, with the same session, player ID,
+slot and faction. Started, aborted, terminal, repair-held and recovery/reclaim
+states do not accept it. This rule does not change cross-owner combat handling.
+
+Before accounting or mutation, the receiver requires one station for that owner,
+zero through eight distinct mounted guns, owner-tagged nonzero IDs, no repeated
+IDs, and zero unused gun fields. An already-ready station accepts only its
+installed mapping. Conflicting mappings in one packet reject the complete packet.
+The local sender rejects unsupported topology instead of truncating a ninth gun.
+This is not a canonical all-peer identity transaction or a complete entity-registry
+collision check; those remain part of the launch and recovery work.
+
+The exact production outer receive loop, framing/admission, SYNCGM switch case
+and loader send tail run in a native fixture. Its 81 cases produced 53 passes and
+28 expected failures on the preceding source, then 81 passes with the correction.
+Valid sparse Black Sect/Sulgogars participants and every zero-to-eight-gun case
+are positive controls. The default standalone configuration passed 126 CTests,
+including explicit failure controls under NDEBUG. Engine objects, provider queues
+and side-effect sinks remain fixture boundaries; these are not actual level-load
+or multiplayer acceptance results.
+
+An actual Windows ZND pair using the preceding 188b0df4 executable failed before
+client lobby admission. The host listed the client, but the client remained on
+the address screen and timed out. Source tracing found that its full 51-byte
+session descriptor exceeded the acceptance reader's 32-byte limit. No normal
+control, creation or replication acceptance is claimed for that run.
+
+Both modern direct-host adapters now preserve the complete descriptor, using the
+existing one-byte wire length with an explicit 1–255-byte bound. Empty strings,
+embedded NULs and longer strings are rejected before opening a host listener.
+The roster codec uses the same bound, and ZND admission requires the acceptance
+and roster descriptors to agree in either arrival order. A repeated acceptance
+cannot replace an established descriptor. The wire layout, participant-name
+limit and separate legacy multi-session server policy are unchanged. Older
+32-byte-limited clients still cannot join a session with a longer descriptor;
+all peers in those sessions need the corrected modern transport code.
+
+Twenty-two Windows tests cover real ZND/ENet endpoint round trips at 32, 33, the
+frontend's 51, and 255 bytes, listener rejection and codec boundaries, message
+ordering and repeated acceptance. The unchanged tests produced 17 failures on
+the preceding transport source and then passed with the correction. Complete
+rosters and reliable markers in both directions are local transport evidence;
+they do not establish a successfully loaded or played multiplayer game.
+
+Review also identified stale visible identity when a previously hosting ENet
+adapter rejected a new host descriptor. Six reused-adapter cases reproduced the
+three ENet failures with three ZND positive controls. Fresh host Start now clears
+its old host/session presentation before validation; ordinary Stop and retained
+client resume credentials keep their existing behavior.
+
+The final combined Windows configuration passed all 218 CTests, including the
+28 session-descriptor cases, the startup fixtures, and existing real transport,
+timeout, cancellation and lifecycle coverage. The combined native Windows
+Release engine also compiled and linked with unchanged recorded source inputs.
+The game-facing pair must still
+be rerun with a source-aligned executable; those tests do not close that gate.
+
 ## Remaining game integration and acceptance
 
 - Define and enforce host-authored seat ownership and authority epochs for every

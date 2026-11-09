@@ -117,6 +117,17 @@ ZNDEnet::Start(const std::string& name,
                std::uint32_t max_players)
 {
     Stop();
+    // A fresh host attempt ends the previous presentation identity even when
+    // validation or listener creation fails. Ordinary Stop custody is unchanged.
+    LockNet();
+    hosting_ = false;
+    sessionOpen_ = false;
+    mySesId_ = 0;
+    myName_.clear();
+    sessionName_.clear();
+    UnlockNet();
+    if (!ValidSessionDescriptor(sname))
+        return;
     maxPlayers_ = std::max(1u, std::min(6u, max_players ? max_players : 6));
     // The host occupies one player slot itself.
     const std::size_t clientSlots = maxPlayers_ - 1;
@@ -135,7 +146,7 @@ ZNDEnet::Start(const std::string& name,
     users_[1] = name;
     roster_ = RosterState();
     roster_.session = transport_.SessionId();
-    roster_.name = sname.substr(0, 32);
+    roster_.name = sname;
     roster_.rows.push_back({ 1, 0, RosterOnline, name });
     acknowledgments_.clear();
     UnlockUsers();

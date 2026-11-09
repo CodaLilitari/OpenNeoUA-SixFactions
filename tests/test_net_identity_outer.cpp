@@ -22,7 +22,7 @@ struct Fixture {
         provider.players={{0,11,"host",4},{1,22,"local",1},{2,33,"peer",0}};
         bind(0,11,"host",loaded?6:0);bind(1,22,"local",loaded?1:0);bind(2,33,"peer",loaded?2:0);
         users.netLaunchPlayers=users.lobbyPlayers;users.netLaunchFrozen=loaded;
-        remote._owner=2;remote._gid=42;remote._lastFrmStamp=0;
+        remote._owner=2;remote._gid=42;remote._lastFrmStamp=0;remote._bact_type=BACT_TYPES_ROBO;
         world._unitsList.push_back(&remote);
         for(auto&p:users.netPlayers){p.LastMessageTime=3;p.TimeStamp=10;p.MessageCount=7;}
     }
@@ -102,7 +102,7 @@ static void terminalCases(){
     for(bool terminal:{false,true}){
         Fixture f(true);
         if(terminal)f.enqueue(RECVMSG_SESSIONEND,70,11,0,"host");
-        uamessage_syncgame m;NetMsgClear(m);m.msgID=UAMSG_SYNCGM;m.owner=2;
+        uamessage_syncgame m;NetMsgClear(m);m.msgID=UAMSG_SYNCGM;m.owner=2;m.hostID=0x02000100;
         f.packet(m,70,33,"peer");f.run();
         check(terminal?"terminal_sessionend_then_loaded_syncgm":"control_terminal_suite_loaded_syncgm",
             dispatch_marker==(terminal?0:1)&&f.users.netrecv_count==(terminal?0:sizeof(m)));

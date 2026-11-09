@@ -56,6 +56,8 @@ ZNDSingle::Start(const std::string& name,
                  uint32_t max_players)
 {
     Stop();
+    if (!ValidSessionDescriptor(sname))
+        return;
     mode = MODE_SINGLE;
     sock = SDLNet_UDP_Open(port);
 
@@ -71,7 +73,7 @@ ZNDSingle::Start(const std::string& name,
     session.max_players = std::max(1u, std::min(6u, max_players ? max_players : 6));
     roster = RosterState();
     roster.session = session.ID;
-    roster.name = sname.substr(0, 32);
+    roster.name = sname;
     if (!OsRandom(&nextBinding, sizeof(nextBinding)))
     {
         SDLNet_UDP_Close(sock);

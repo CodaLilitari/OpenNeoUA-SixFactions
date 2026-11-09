@@ -982,6 +982,91 @@ static bool yw_netLevelLoaded(const NC_STACK_ypaworld *yw)
     return yw->_userRobo != nullptr;
 }
 
+struct NetSyncGamePlan
+{
+    NC_STACK_ypabact *host = nullptr;
+    std::array<NC_STACK_ypabact *, 8> guns{};
+    size_t count = 0;
+};
+
+// Keep the legacy mount traversal order, but never truncate or partially write
+// a station whose topology cannot be represented by the fixed eight-ID record.
+static bool yw_netCollectSyncGuns(NC_STACK_ypabact *host, NetSyncGamePlan *plan)
+{
+    if (!host || host->_bact_type != BACT_TYPES_ROBO || !plan)
+        return false;
+    *plan = NetSyncGamePlan();
+    plan->host = host;
+    for (NC_STACK_ypabact *child : host->_kidList)
+    {
+        if (!child)
+            return false;
+        if (child->_bact_type != BACT_TYPES_GUN)
+            continue;
+        auto *gun = dynamic_cast<NC_STACK_ypagun *>(child);
+        if (!gun)
+            return false;
+        if (!gun->IsRoboGun())
+            continue;
+        if (child->_owner != host->_owner || plan->count == plan->guns.size() ||
+            std::find(plan->guns.begin(), plan->guns.begin() + plan->count, child) !=
+                plan->guns.begin() + plan->count)
+            return false;
+        plan->guns[plan->count++] = child;
+    }
+    return true;
+}
+
+// Read-only validation used both by the complete-packet scan and immediately
+// before dispatch. A Ready station accepts only its already installed mapping.
+static bool yw_netPreflightSyncGame(NC_STACK_ypaworld *yw,
+                                    const uamessage_syncgame &msg, NetSyncGamePlan *plan)
+{
+    if (!plan || !msg.owner || msg.owner >= yw->_GameShell->netPlayers.size())
+        return false;
+    NC_STACK_ypabact *host = nullptr;
+    for (NC_STACK_ypabact *unit : yw->_unitsList)
+    {
+        if (unit && unit->_owner == msg.owner && unit->_bact_type == BACT_TYPES_ROBO)
+        {
+            if (host)
+                return false;
+            host = unit;
+        }
+    }
+    if (!yw_netCollectSyncGuns(host, plan))
+        return false;
+    const auto validID = [&msg](uint32_t id)
+    {
+        return (id >> 24) == msg.owner && (id & 0x00FFFFFFu) != 0;
+    };
+    if (!validID(msg.hostID))
+        return false;
+    for (size_t i = 0; i < plan->guns.size(); ++i)
+    {
+        if (i >= plan->count)
+        {
+            if (msg.gun[i] != 0)
+                return false;
+            continue;
+        }
+        if (!validID(msg.gun[i]) || msg.gun[i] == msg.hostID)
+            return false;
+        for (size_t j = 0; j < i; ++j)
+            if (msg.gun[j] == msg.gun[i])
+                return false;
+    }
+    if (yw->_GameShell->netPlayers[msg.owner].Ready)
+    {
+        if (host->_gid != msg.hostID)
+            return false;
+        for (size_t i = 0; i < plan->count; ++i)
+            if (plan->guns[i]->_gid != msg.gun[i])
+                return false;
+    }
+    return true;
+}
+
 static UserData::TNetPlayerLobbyData *yw_netSenderRow(UserData *usr, const windp_recvMsg &msg)
 {
     if (!usr || usr->netSessionEnded || !usr->netSession.Matches(msg.sessionId))
@@ -1161,6 +1246,14 @@ static bool yw_netValidateNormMsg(NC_STACK_ypaworld *yw, const void *data, size_
 
     switch ( baseMsg.msgID )
     {
+    case UAMSG_SYNCGM:
+    {
+        NetSyncGamePlan plan;
+        if (levelLoaded && !yw_netPreflightSyncGame(yw,
+                *static_cast<const uamessage_syncgame *>(data), &plan))
+            return fail("invalid startup station mapping");
+        break;
+    }
     case UAMSG_STARTBUILD:
     {
         if ( !levelLoaded )
@@ -1259,6 +1352,26 @@ static bool yw_netAdmitNormMsg(NC_STACK_ypaworld *yw, const windp_recvMsg &msg,
 
     switch (msgID)
     {
+    case UAMSG_SYNCGM:
+    {
+        // This is the legacy startup identity exchange, never a repair or
+        // reclaim transaction. Bind it to the immutable frozen participant,
+        // not merely the mutable lobby row or the payload's selected owner.
+        const auto *frozen = World::NetLobby::MatchRow(usr->netLaunchPlayers,
+            msg.playerSlot, msg.sessionId, msg.playerId);
+        if (!loaded || !usr->netLaunchFrozen || !selfOwner || !frozen ||
+            frozen->Owner != owner || World::NetFactions::OwnerOf(frozen->NetFraction) != owner ||
+            yw->_isNetGameStarted || yw->_netStartTimer <= 0 ||
+            yw->_levelInfo.State == TLevelInfo::STATE_ABORTED ||
+            usr->netPlayers[owner].DestroyFlags ||
+            row->Update.HoldsEvents(static_cast<uint32_t>(yw->_timeStamp)) || !yw->_netDriver)
+            return false;
+        const auto phase = yw->_netDriver->RecoveryPhase();
+        // A host has no client recovery record, so its normal phase is Idle.
+        return phase == WindpResume::Phase::Connected ||
+            (phase == WindpResume::Phase::Idle &&
+             usr->netSession.LocalPlayerId == usr->netSession.HostPlayerId);
+    }
     case UAMSG_LOAD:
     case UAMSG_LOBBYINIT:
         return host && owner == 0;
@@ -1311,6 +1424,7 @@ static size_t yw_netAdmittedPacketBytes(NC_STACK_ypaworld *yw, const windp_recvM
         return 0;
     size_t offset = 0, admitted = 0;
     unsigned count = 0;
+    std::array<const uamessage_syncgame *, World::CVFractionsCount> syncMappings{};
     windp_recvMsg view;
     view.sessionId = msg.sessionId;
     view.playerId = msg.playerId;
@@ -1325,6 +1439,15 @@ static size_t yw_netAdmittedPacketBytes(NC_STACK_ypaworld *yw, const windp_recvM
             return 0; // No earlier frame from a malformed packet is dispatched.
         uamessage_base base;
         memcpy(&base, view.data, sizeof(base));
+        if (base.msgID == UAMSG_SYNCGM)
+        {
+            const auto *sync = static_cast<const uamessage_syncgame *>(view.data);
+            const auto *prior = syncMappings[base.owner];
+            if (prior && (prior->hostID != sync->hostID ||
+                          memcmp(prior->gun, sync->gun, sizeof(sync->gun)) != 0))
+                return 0; // Two different mappings cannot commit in one batch.
+            syncMappings[base.owner] = sync;
+        }
         if (yw_netAdmitNormMsg(yw, view, base.msgID, base.owner))
             admitted += size;
         offset += size;
@@ -2246,44 +2369,15 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
     case UAMSG_SYNCGM:
     {
         szmsg = sizeof(uamessage_syncgame);
-        uamessage_syncgame *sgMsg = (uamessage_syncgame *)msg->data;
-
-        if ( yw->_GameShell->netPlayers[owner].DestroyFlags )
-        {
-            log_netlog("\n+++SG: received sync of a dead player %s\n", msg->senderName.c_str());
+        const auto &sync = *static_cast<const uamessage_syncgame *>(msg->data);
+        NetSyncGamePlan plan;
+        if (!yw_netPreflightSyncGame(yw, sync, &plan))
             break;
-        }
-
-        NC_STACK_ypabact *bhost = yw->yw_getHostByOwner(sgMsg->owner);
-        if ( !bhost )
-        {
-            log_netlog("\n+++ SG: Havent found robo with owner %d (%ds)\n", sgMsg->owner, yw->_timeStamp / 1000);
-            break;
-        }
-
-        bhost->_gid = sgMsg->hostID;
-        int nmb = 0;
-
-        for(NC_STACK_ypabact* &comm : bhost->_kidList)
-        {
-            bool rbgun = false;
-            if ( comm->_bact_type == BACT_TYPES_GUN )
-            {
-                NC_STACK_ypagun *gno = dynamic_cast<NC_STACK_ypagun *>(comm);
-                if (gno)
-                    rbgun = gno->IsRoboGun();
-            }
-
-            if ( rbgun )
-            {
-                comm->_gid = sgMsg->gun[nmb];;
-                nmb++;
-            }
-        }
-
-        yw->_GameShell->netPlayers[sgMsg->owner].Ready = true;
-
-        log_netlog("received READY TO PLAY from owner %d\n", sgMsg->owner);
+        plan.host->_gid = sync.hostID;
+        for (size_t i = 0; i < plan.count; ++i)
+            plan.guns[i]->_gid = sync.gun[i];
+        yw->_GameShell->netPlayers[owner].Ready = true;
+        log_netlog("received READY TO PLAY from owner %d\n", owner);
     }
     break;
 
@@ -4069,6 +4163,27 @@ size_t NC_STACK_ypaworld::ypaworld_func179(yw_arg161 *arg)
         }
     }
 
+    NetSyncGamePlan localSync;
+    if (!yw_netCollectSyncGuns(fndHost, &localSync))
+    {
+        log_netlog("Cannot start network level: local station needs an invalid or unsupported gun mapping\n");
+        DeleteLevel();
+        return 0;
+    }
+    uamessage_syncgame syncMsg;
+    NetMsgClear(syncMsg);
+    syncMsg.owner = _GameShell->netPlayerOwner;
+    syncMsg.msgID = UAMSG_SYNCGM;
+    syncMsg.hostID = fndHost->_gid;
+    for (size_t i = 0; i < localSync.count; ++i)
+        syncMsg.gun[i] = localSync.guns[i]->_gid;
+    if (!yw_netPreflightSyncGame(this, syncMsg, &localSync))
+    {
+        log_netlog("Cannot start network level: invalid local station identities\n");
+        DeleteLevel();
+        return 0;
+    }
+
     _GameShell->netPlayers[ _GameShell->netPlayerOwner ].Ready = true;
     _isNetGameStarted = false;
 
@@ -4080,29 +4195,6 @@ size_t NC_STACK_ypaworld::ypaworld_func179(yw_arg161 *arg)
 
     if ( fndHost )
     {
-        uamessage_syncgame syncMsg;
-        NetMsgClear(syncMsg);
-        syncMsg.owner = _GameShell->netPlayerOwner;
-        syncMsg.msgID = UAMSG_SYNCGM;
-        syncMsg.hostID = fndHost->_gid;
-
-        int gn = 0;
-        for(NC_STACK_ypabact* &bct : fndHost->_kidList)
-        {
-            if (gn >= 8)
-                break;
-
-            int rbgun = 0;
-            if (bct->_bact_type == BACT_TYPES_GUN)
-                rbgun = ((NC_STACK_ypagun *)bct)->IsRoboGun();
-
-            if (rbgun)
-            {
-                syncMsg.gun[gn] = bct->_gid;
-                gn++;
-            }
-        }
-
         NetBroadcastMessage(&syncMsg, sizeof(syncMsg), true);
 
         _netDriver->FlushBroadcastBuffer();

@@ -8,6 +8,7 @@
 #include <strings.h>
 #include "game/yw_net_msgs.h"
 #include "platform/windp_events.h"
+#include "platform/windp_resume.h"
 #include "world/net_update_gate.h"
 #include "world/net_lobby.h"
 #include "net_ingress_types.inc"
@@ -17,11 +18,22 @@
 namespace Common { struct Point { int32_t x,y; Point(int32_t a,int32_t b):x(a),y(b) {} }; }
 
 // Minimal world fixture. Production validation and ingress are not reimplemented.
-class NC_STACK_ypabact {};
+#include "net_station_fixture.hpp"
+class NC_STACK_windp {
+public:
+    WindpResume::Phase RecoveryPhase()const{return WindpResume::Phase::Connected;}
+};
 class NC_STACK_ypaworld {
 public:
     UserData *_GameShell = nullptr;
     NC_STACK_ypabact *_userRobo = nullptr;
+    NC_STACK_windp fixtureProvider;
+    NC_STACK_windp *_netDriver = &fixtureProvider;
+    bool _isNetGameStarted = false;
+    int32_t _netStartTimer = 150000;
+    TLevelInfo _levelInfo;
+    std::vector<NC_STACK_ypabact*> _unitsList;
+    NC_STACK_ypabact *yw_getHostByOwner(uint8_t owner);
     struct { int gTime = 0; } _updateMessage;
     int32_t _timeStamp = 0;
     std::vector<int> _techUpgrades = std::vector<int>(4);

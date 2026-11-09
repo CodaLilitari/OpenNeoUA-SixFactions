@@ -8,6 +8,7 @@ int netSelMode=NETSCREEN_INSESSION, netLevelID=1, netProblem=0;
 std::string netPlayerName="local",netProblemName;
 uint8_t netPlayerOwner=1, SelectedFraction=1, FreeFraction=63;
 int update_time_norm=1000,sendScoreCountDown=1000,DTime=0,problemTimer=0,netProblemCountDown=0;
+int kickTime=20000;
 uint32_t deadCheckTime=0;
 uint32_t netrecv_count=0,netrecv_time=0,netsend_count=0,netrecv_speed=0,netsend_speed=0;
 uint32_t netrecv_bpsMin=0,netrecv_bpsMax=0,netrecv_bpsAvr=0;

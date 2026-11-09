@@ -12,6 +12,16 @@
 
 namespace ZNDNet
 {
+// Modern direct-host descriptors include level, callsign and compatibility text.
+// Their existing wire field has a one-byte length; the legacy lobby server's
+// separate SES_NAME_MAX policy does not describe this field.
+constexpr std::size_t SessionDescriptorMaxBytes = 255;
+inline bool ValidSessionDescriptor(const std::string& value)
+{
+    return !value.empty() && value.size() <= SessionDescriptorMaxBytes &&
+           value.find('\0') == std::string::npos;
+}
+
 inline std::uint64_t
 TransportNow()
 {
@@ -164,6 +174,8 @@ ReadRow(ControlReader& r)
 inline std::vector<std::uint8_t>
 EncodeRoster(const RosterState& s, std::uint64_t attempt, std::uint32_t generation)
 {
+    if (!ValidSessionDescriptor(s.name))
+        return {};
     ControlWriter w;
     w.U('U', 1);
     w.U(attempt, 8);
@@ -200,9 +212,9 @@ DecodeRoster(const void* data,
     RosterState s;
     s.session = r.U(8);
     s.revision = r.U(8);
-    s.name = r.Str(32);
+    s.name = r.Str(SessionDescriptorMaxBytes);
     const auto count = r.U(1);
-    if (!a || !g || !s.session || count < 1 || count > 6)
+    if (!a || !g || !s.session || !ValidSessionDescriptor(s.name) || count < 1 || count > 6)
         return false;
     std::array<bool, 6> slots{};
     for (unsigned i = 0; i < count && r.ok; ++i)

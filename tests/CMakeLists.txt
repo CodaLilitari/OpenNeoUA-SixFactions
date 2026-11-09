@@ -87,6 +87,15 @@ add_test(NAME net_identity_outer_terminal COMMAND test_net_identity_outer --term
 add_test(NAME net_identity_outer_checks_active COMMAND test_net_identity_outer --verify-failing-check)
 set_tests_properties(net_identity_outer net_identity_outer_terminal PROPERTIES TIMEOUT 10)
 set_tests_properties(net_identity_outer_checks_active PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
+include(${CMAKE_CURRENT_SOURCE_DIR}/extract_net_syncgm.cmake)
+add_executable(test_net_syncgm test_net_syncgm.cpp)
+target_include_directories(test_net_syncgm PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR} ${NET_INGRESS_GENERATED_DIR})
+target_compile_definitions(test_net_syncgm PRIVATE NDEBUG)
+add_test(NAME net_syncgm COMMAND test_net_syncgm)
+add_test(NAME net_syncgm_checks_active COMMAND test_net_syncgm --verify-failing-check)
+set_tests_properties(net_syncgm PROPERTIES TIMEOUT 10)
+set_tests_properties(net_syncgm_checks_active PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
 # Complete actual provider methods with fake clocks/transports. These are
 # boundary-fixture scenarios, distinct from the real endpoint tests below.
 include(${CMAKE_CURRENT_SOURCE_DIR}/extract_provider_identity.cmake)
@@ -306,4 +315,30 @@ if(TARGET test_wp1)
             set_tests_properties(wp1_${t}_control_${c} PROPERTIES TIMEOUT 15)
         endforeach()
     endforeach()
+endif()
+
+if(TARGET test_wp1)
+    add_executable(test_transport_session_names test_transport_session_names.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
+        ../src/netlib/single.cpp ../src/netlib/single_threads.cpp
+        ../src/netlib/enet_transport.cpp ../src/netlib/enet_znd.cpp ${ENET_ZND_SOURCES})
+    target_include_directories(test_transport_session_names PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../src/third_party/enet/include)
+    target_compile_definitions(test_transport_session_names PRIVATE NDEBUG)
+    target_link_libraries(test_transport_session_names PRIVATE PkgConfig::NET_SDL)
+    if(WIN32)
+        target_link_libraries(test_transport_session_names PRIVATE ws2_32 winmm)
+    endif()
+    foreach(t znd enet)
+        foreach(c 32 33 frontend 255 empty nul 256 rehost_empty rehost_nul rehost_256)
+            add_test(NAME session_name_${t}_${c} COMMAND test_transport_session_names ${t}_${c})
+            set_tests_properties(session_name_${t}_${c} PROPERTIES TIMEOUT 25)
+        endforeach()
+    endforeach()
+    foreach(c codec raw_accept_empty raw_accept_nul raw_accept_256 raw_roster_first raw_accept_first raw_changed_accept)
+        add_test(NAME session_name_${c} COMMAND test_transport_session_names ${c})
+        set_tests_properties(session_name_${c} PROPERTIES TIMEOUT 25)
+    endforeach()
+    add_test(NAME session_name_checks_active COMMAND test_transport_session_names intentional_failure)
+    set_tests_properties(session_name_checks_active PROPERTIES TIMEOUT 25 WILL_FAIL TRUE)
 endif()

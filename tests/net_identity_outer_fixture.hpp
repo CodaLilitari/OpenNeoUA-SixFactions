@@ -10,6 +10,7 @@
 #include <strings.h>
 #include "game/yw_net_msgs.h"
 #include "platform/windp_events.h"
+#include "platform/windp_resume.h"
 #include "world/net_update_gate.h"
 #include "world/net_lobby.h"
 
@@ -18,12 +19,12 @@ class NC_STACK_ypaworld;
 #include "net_identity_outer_types.inc"
 
 namespace Common {struct Point {int32_t x,y;Point(int32_t a,int32_t b):x(a),y(b){}};}
-namespace WindpResume {inline const char* PhaseName(int){return "fixture";}}
 
 struct Sent {uint32_t id;std::string destination;uint64_t boundSession=0,boundPlayer=0;};
 struct Sinks {
-    int logs=0,crc=0,clean=0,locks=0;
+    int logs=0,crc=0,clean=0,locks=0,deleted=0,flushes=0;
     std::vector<Sent> sent;
+    std::vector<uint8_t> lastBroadcast;
 };
 static Sinks sinks;
 static int dispatch_marker=0;
@@ -38,6 +39,7 @@ class NC_STACK_windp {
 public:
     std::deque<windp_recvMsg> events;
     std::vector<TDPPlayerData> players;
+    WindpResume::Phase fixturePhase=WindpResume::Phase::Connected;
     bool Recv(windp_recvMsg*out){
         if(events.empty())return false;
         *out=std::move(events.front());events.pop_front();
@@ -54,31 +56,34 @@ public:
     }
     int32_t GetPlayerIndex(const std::string&n)const{for(auto&p:players)if(!StriCmp(p.name,n))return p.Index;return -1;}
     bool IsPlayer(const std::string&n)const{return GetPlayerIndex(n)>=0;}
-    int RecoveryPhase()const{return 0;}
+    WindpResume::Phase RecoveryPhase()const{return fixturePhase;}
     void LockSession(int*){++sinks.locks;}
+    void FlushBroadcastBuffer(){++sinks.flushes;}
 };
-class NC_STACK_ypabact {
-public:
-    uint8_t _owner=0;uint32_t _gid=0;int _bact_type=0;int32_t _lastFrmStamp=0;
-    std::vector<NC_STACK_ypabact*> _kidList;
-};
-struct TLevelInfo {enum {STATE_ABORTED=99};int State=0;};
+#include "net_station_fixture.hpp"
 class NC_STACK_ypaworld {
 public:
     UserData *_GameShell=nullptr;NC_STACK_windp *_netDriver=nullptr;
     NC_STACK_ypabact *_userRobo=nullptr;
     struct {int32_t gTime=0,frameTime=0;} _updateMessage;
     int32_t _timeStamp=0,_netUpdateTimeStamp=0;
+    int32_t _netStartTimer=150000;
     bool _netInterpolate=false,_isNetGameStarted=false,_netInfoOverkill=false;
     TLevelInfo _levelInfo;
     std::vector<NC_STACK_ypabact*> _unitsList;
+    NC_STACK_ypabact *yw_getHostByOwner(uint8_t owner);
+    size_t FixtureStartupSend();
+    void DeleteLevel(){++sinks.deleted;_userRobo=nullptr;}
     std::array<World::TPlayerStatus,World::CVFractionsCount> _gameplayStats{};
     std::vector<int> _techUpgrades=std::vector<int>(4);
     struct {std::vector<int> MapRegions=std::vector<int>(8);} _globalMapRegions;
     std::vector<int> fixtureBuildProtos=std::vector<int>(4);
     const std::vector<int>&GetBuildProtos()const{return fixtureBuildProtos;}
     bool IsSector(const Common::Point&p)const{return p.x>=0&&p.y>=0&&p.x<8&&p.y<8;}
-    void NetBroadcastMessage(void*p,size_t,bool){sinks.sent.push_back({static_cast<uamessage_base*>(p)->msgID,"*"});}
+    void NetBroadcastMessage(void*p,size_t n,bool){
+        sinks.sent.push_back({static_cast<uamessage_base*>(p)->msgID,"*"});
+        const auto*b=static_cast<const uint8_t*>(p);sinks.lastBroadcast.assign(b,b+n);
+    }
     void NetSendMessage(void*p,size_t,const std::string&dest,bool){
         Sent event{static_cast<uamessage_base*>(p)->msgID,dest};
         // Observe identity at the send boundary, not merely after CREATE returns.
