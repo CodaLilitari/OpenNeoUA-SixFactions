@@ -3938,6 +3938,14 @@ bool NC_STACK_ypaworld::NetBroadcastMessage(uamessage_base *data, size_t dataSiz
     return _netDriver->Broadcast(data, dataSize, garantee);
 }
 
+bool NC_STACK_ypaworld::NetSendMessageToPlayer(uamessage_base *data, size_t dataSize,
+                                             uint64_t playerId, bool guarantee)
+{
+    if (_GameShell->noSent)
+        return false;
+    return _netDriver->SendToPlayer(data, dataSize, playerId, guarantee);
+}
+
 int ypaworld_func183__sub0(int lvlID, const char *userName)
 {
     FSMgr::FileHandle *fil = uaOpenFileAlloc( fmt::sprintf("save:%s/%d.fin", userName, lvlID) , "r");

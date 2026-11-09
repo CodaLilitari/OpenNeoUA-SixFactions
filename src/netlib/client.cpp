@@ -116,10 +116,10 @@ ZNDClient::CompleteAcceptance()
     eStatus |= FLAGS_SESSION_JOINED;
     if (first)
     {
-        Events_Push(new EventNameID(EVENT_CONNECTED, 0, cME.name, cME.ID));
-        Events_Push(new EventNameID(EVENT_SESSION_JOIN, 0, cJoinedSessionName, cSession));
+        Events_Push(new EventNameID(EVENT_CONNECTED, 0, cME.name, cME.ID, cME.slot, cSession));
+        Events_Push(new EventNameID(EVENT_SESSION_JOIN, 0, cJoinedSessionName, cSession, 0xff, cSession));
         if (cWasResumed)
-            Events_Push(new Event(EVENT_SELF_RESUMED, 0));
+            Events_Push(new Event(EVENT_SELF_RESUMED, 0, cSession));
     }
     cTimeOut = ttime.GetTicks() + TIMEOUT_USER;
 }
@@ -160,7 +160,7 @@ ZNDClient::ApplyControl(const uint8_t* data, size_t size)
         }
         eStatus |= FLAGS_USERS_LIST_GET | FLAGS_USERS_LIST_UPD;
         if (consolidated)
-            Events_Push(new Event(EVENT_USER_LIST, 1));
+            Events_Push(new Event(EVENT_USER_LIST, 1, cRoster.session));
         else
             for (const auto& change : changes)
             {
@@ -171,7 +171,7 @@ ZNDClient::ApplyControl(const uint8_t* data, size_t size)
                     Events_Push(new EventNameID(EVENT_USER_ADD,
                                                 t == Transition::Fresh ? JoinFresh : JoinResumed,
                                                 change.row.name,
-                                                change.row.id,change.row.slot));
+                                                change.row.id,change.row.slot,cRoster.session));
                 else
                     Events_Push(new EventNameID(EVENT_USER_LEAVE,
                                                 t == Transition::Away     ? LeaveAway
@@ -179,7 +179,7 @@ ZNDClient::ApplyControl(const uint8_t* data, size_t size)
                                                 : t == Transition::Kicked ? LeaveKicked
                                                                           : LeaveExpired,
                                                 change.row.name,
-                                                change.row.id,change.row.slot));
+                                                change.row.id,change.row.slot,cRoster.session));
             }
     }
     CompleteAcceptance();
@@ -293,8 +293,9 @@ ZNDClient::ProcessSystemPkt(Pkt* pkt)
             auto reason = r.U(1), attempt = r.U(8), generation = r.U(4);
             if (!r.End() || reason > 4 || attempt != cAttempt || generation != cBinding)
                 return;
+            const uint64_t eventSession = cSession;
             if (reason == 3)
-                Events_Push(new Event(EVENT_SESSION_END, 0));
+                Events_Push(new Event(EVENT_SESSION_END, 0, eventSession));
             if (reason != 0)
                 CancelAttempt();
             else
@@ -303,7 +304,7 @@ ZNDClient::ProcessSystemPkt(Pkt* pkt)
                 cME.status = NetUser::STATUS_DISCONNECTED;
                 threadsEnd = true;
             }
-            Events_Push(new Event(EVENT_DISCONNECT, reason));
+            Events_Push(new Event(EVENT_DISCONNECT, reason, eventSession));
             break;
         }
         case SYS_MSG_SES_JOIN:
@@ -315,17 +316,18 @@ ZNDClient::ProcessSystemPkt(Pkt* pkt)
                 eStatus &= ~(FLAGS_USERS_LIST_GET | FLAGS_USERS_LIST_UPD);
                 eStatus |= FLAGS_SESSION_JOINED;
 
-                Events_Push(new EventNameID(EVENT_SESSION_JOIN, 0, cJoinedSessionName, cME.sesID));
+                Events_Push(new EventNameID(EVENT_SESSION_JOIN, 0, cJoinedSessionName, cME.sesID, 0xff, cME.sesID));
             }
             break;
 
         case SYS_MSG_SES_LEAVE:
         {
+            const uint64_t eventSession = cME.sesID;
             cLeader = false;
             cME.sesID = 0;
             eStatus &= ~(FLAGS_SESSION_JOINED | FLAGS_USERS_LIST_GET | FLAGS_USERS_LIST_UPD);
 
-            Events_Push(new Event(EVENT_SESSION_LEAVE, rd.readU8()));
+            Events_Push(new Event(EVENT_SESSION_LEAVE, rd.readU8(), eventSession));
         }
         break;
 
@@ -334,7 +336,7 @@ ZNDClient::ProcessSystemPkt(Pkt* pkt)
             if (cME.sesID)
             {
                 cLeader = (rd.readU8() == 1);
-                Events_Push(new Event(EVENT_SESSION_LEAD, cLeader ? 1 : 0));
+                Events_Push(new Event(EVENT_SESSION_LEAD, cLeader ? 1 : 0, cME.sesID));
             }
         }
         break;
@@ -381,11 +383,12 @@ ZNDClient::ProcessSystemPkt(Pkt* pkt)
                 cAdmissionClosed = true;
                 memset(cResumeToken, 0, 16);
                 cResumeOnly = false;
-                Events_Push(new Event(EVENT_SESSION_END, remaining));
+                const uint64_t eventSession = cSession;
+                Events_Push(new Event(EVENT_SESSION_END, remaining, eventSession));
                 if (!remaining)
                 {
                     CancelAttempt();
-                    Events_Push(new Event(EVENT_DISCONNECT, 3));
+                    Events_Push(new Event(EVENT_DISCONNECT, 3, eventSession));
                 }
             }
             break;
@@ -398,7 +401,7 @@ ZNDClient::ProcessSystemPkt(Pkt* pkt)
                 if (type >= ERR_CONN_FULL && type <= ERR_CONN_RANDOM)
                 {
                     threadsEnd = true; // Go to
-                    Events_Push(new Event(EVENT_CONNERR, type));
+                    Events_Push(new Event(EVENT_CONNERR, type, cSession));
                 }
             }
             break;
@@ -450,7 +453,7 @@ ZNDClient::ProcessRegularPkt(Pkt* pkt)
                                                   to,
                                                   sz,
                                                   pkt->data + 1 + rd.tell(),
-                                                  pkt->uchnl));
+                                                  pkt->uchnl, cSession));
                     }
                 }
             }
@@ -711,9 +714,9 @@ ZNDClient::InterprocessUpdate()
         threadsEnd = true;
 
         if (cME.status == NetUser::STATUS_CONNECTING)
-            Events_Push(new Event(EVENT_CONNERR, ERR_CONN_TIMEOUT));
+            Events_Push(new Event(EVENT_CONNERR, ERR_CONN_TIMEOUT, cSession));
         else
-            Events_Push(new Event(EVENT_DISCONNECT, ERR_DISCONNECT_TIMEOUT));
+            Events_Push(new Event(EVENT_DISCONNECT, ERR_DISCONNECT_TIMEOUT, cSession));
 
         return;
     }

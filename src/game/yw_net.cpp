@@ -142,10 +142,11 @@ void yw_CheckCRCs(NC_STACK_ypaworld *yw)
 
         for (const TDPPlayerData &player : yw->_netDriver->GetPlayersData())
         {
-            if (player.Index >= usr->lobbyPlayers.size() || !player.IsOnline())
+            if (!World::NetLobby::MatchRow(usr->lobbyPlayers, player.Index,
+                                           usr->netSession.SessionId, player.ID) || !player.IsOnline())
                 continue;
             UserData::TNetPlayerLobbyData &pl = usr->lobbyPlayers[player.Index];
-            if ( StriCmp(yw->_GameShell->netPlayerName, pl.Name) &&
+            if ( player.ID != usr->netSession.LocalPlayerId &&
                     usr->netCRC != pl.DataChecksum &&
                     pl.DataChecksum != 0 &&
                     usr->netCRC != 0 )
@@ -748,7 +749,7 @@ void yw_netUpdDataVhcl(vhclUpdData *dat, NC_STACK_ypabact *bact, char owner, NC_
 }
 
 
-void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
+void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, uint64_t recvID)
 {
     if ( !owner )
     {
@@ -769,7 +770,7 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
 
     if ( !bhost )
     {
-        log_netlog("\n+++ UPD:No Robo found for owner %d/receiver %s\n", owner, recvID);
+        log_netlog("\n+++ UPD:No Robo found for owner %d/receiver %llu\n", owner, static_cast<unsigned long long>(recvID));
         return;
     }
 
@@ -824,8 +825,8 @@ void yw_netSendUpdate(NC_STACK_ypaworld *yw, uint8_t owner, const char *recvID)
     updinf.msgID = UAMSG_UPDATE;
     updinf.num = numb;
 
-    if ( yw->NetSendMessage(&updinf, updinf.sz, recvID, true) )
-        log_netlog("\n+++ UPD: Ok, sent Update from owner %d to reciever %s\n", owner, recvID);
+    if ( yw->NetSendMessageToPlayer(&updinf, updinf.sz, recvID, true) )
+        log_netlog("\n+++ UPD: Ok, sent Update from owner %d to receiver %llu\n", owner, static_cast<unsigned long long>(recvID));
     else
         log_netlog("\n+++ UPD: Send-Error. Hmmmm...\n");
 }
@@ -979,6 +980,19 @@ static UserData::TNetPlayerLobbyData *yw_netLobbyRow(UserData *usr, int64_t inde
 static bool yw_netLevelLoaded(const NC_STACK_ypaworld *yw)
 {
     return yw->_userRobo != nullptr;
+}
+
+static UserData::TNetPlayerLobbyData *yw_netSenderRow(UserData *usr, const windp_recvMsg &msg)
+{
+    if (!usr || usr->netSessionEnded || !usr->netSession.Matches(msg.sessionId))
+        return nullptr;
+    const int32_t slot = World::NetLobby::FindPlayerSlot(usr->lobbyPlayers, msg.sessionId, msg.playerId);
+    if (slot < 0 || slot != msg.playerSlot)
+        return nullptr;
+    if (usr->netLaunchFrozen &&
+        !World::NetLobby::MatchRow(usr->netLaunchPlayers, slot, msg.sessionId, msg.playerId))
+        return nullptr;
+    return World::NetLobby::MatchRow(usr->lobbyPlayers, slot, msg.sessionId, msg.playerId);
 }
 
 // Logs a message that is consumed without being applied. A client that joins
@@ -1223,7 +1237,102 @@ static bool yw_netValidateNormMsg(NC_STACK_ypaworld *yw, const void *data, size_
     return true;
 }
 
-size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remaining, std::string *err)
+// Called only after framing validation. Payload owner is not a universal actor:
+// KICK names its victim and existing combat includes legitimate cross-owner work.
+static bool yw_netAdmitNormMsg(NC_STACK_ypaworld *yw, const windp_recvMsg &msg,
+                               uint32_t msgID, uint8_t owner)
+{
+    UserData *usr = yw->_GameShell;
+    auto *row = yw_netSenderRow(usr, msg);
+    if (!row)
+        return false;
+    const bool loaded = yw_netLevelLoaded(yw);
+    const NetMsgScope scope = NetMsgScopeOf(msgID);
+    if ((scope == NetMsgScope::Lobby && (loaded || usr->netLaunchFrozen)) ||
+        (scope == NetMsgScope::Level && !loaded))
+        return false;
+    const bool host = msg.playerId == usr->netSession.HostPlayerId;
+    const bool selfOwner = owner != 0 && row->Owner == owner &&
+        usr->netPlayers[owner].SessionId == msg.sessionId &&
+        usr->netPlayers[owner].PlayerId == msg.playerId &&
+        usr->netPlayers[owner].PlayerSlot == msg.playerSlot;
+
+    switch (msgID)
+    {
+    case UAMSG_LOAD:
+    case UAMSG_LOBBYINIT:
+        return host && owner == 0;
+    case UAMSG_SCORE:
+    case UAMSG_REQPING:
+        return host && selfOwner;
+    case UAMSG_STARTPROBLEM:
+        return host && selfOwner && static_cast<const uamessage_startproblem *>(msg.data)->problem == 1;
+    case UAMSG_ENDPROBLEM:
+        return host && selfOwner && static_cast<const uamessage_endproblem *>(msg.data)->solved == 3;
+    case UAMSG_KICK:
+    {
+        const auto &victim = usr->netPlayers[owner];
+        return host && owner != 0 && victim.SessionId == msg.sessionId && victim.PlayerId != 0 &&
+            victim.PlayerId != usr->netSession.HostPlayerId &&
+            World::NetLobby::MatchRow(usr->netLaunchPlayers, victim.PlayerSlot,
+                                      victim.SessionId, victim.PlayerId);
+    }
+    case UAMSG_READY:
+        return owner == 0 && static_cast<const uamessage_ready *>(msg.data)->rdy <= 1;
+    case UAMSG_WELCOME:
+        return owner == 0 && static_cast<const uamessage_welcome *>(msg.data)->rdy <= 1;
+    case UAMSG_FRACTION:
+    case UAMSG_CRC:
+        return owner == 0;
+    case UAMSG_MESSAGE:
+        // Consume stale owner-zero lobby chat after LOAD rather than granting it
+        // a match owner. Normal loaded chat carries the sender's assigned owner.
+        return loaded ? selfOwner : owner == 0 && !usr->netLaunchFrozen;
+    case UAMSG_EXIT:
+        return selfOwner && static_cast<const uamessage_exit *>(msg.data)->norm <= 1;
+    case UAMSG_PONG:
+        return selfOwner && usr->netSession.LocalPlayerId == usr->netSession.HostPlayerId;
+    case UAMSG_REQUPDATE:
+    case UAMSG_UPDATE:
+        return selfOwner;
+    case UAMSG_SETLEVEL:
+    case UAMSG_NEWLEADER:
+        // No reachable producer in this version. Historical layouts remain
+        // parseable, but do not create an unimplemented authority fallback.
+        return false;
+    default:
+        return true; // Typed combat authority is a separate protocol work item.
+    }
+}
+
+static size_t yw_netAdmittedPacketBytes(NC_STACK_ypaworld *yw, const windp_recvMsg &msg)
+{
+    if (!yw_netSenderRow(yw->_GameShell, msg))
+        return 0;
+    size_t offset = 0, admitted = 0;
+    unsigned count = 0;
+    windp_recvMsg view;
+    view.sessionId = msg.sessionId;
+    view.playerId = msg.playerId;
+    view.playerSlot = msg.playerSlot;
+    view.senderName = msg.senderName;
+    while (offset < msg._data.size())
+    {
+        size_t size = 0;
+        view.data = const_cast<uint8_t *>(msg._data.data()) + offset;
+        if (++count > 100 || !yw_netValidateNormMsg(yw, view.data, msg._data.size() - offset,
+                                                   &size, nullptr))
+            return 0; // No earlier frame from a malformed packet is dispatched.
+        uamessage_base base;
+        memcpy(&base, view.data, sizeof(base));
+        if (yw_netAdmitNormMsg(yw, view, base.msgID, base.owner))
+            admitted += size;
+        offset += size;
+    }
+    return admitted;
+}
+
+size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remaining, uint64_t *err)
 {
     size_t validatedSize = 0;
     const char *validationError = nullptr;
@@ -1260,11 +1369,16 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         return validatedSize;
     }
 
+    if (!yw_netAdmitNormMsg(yw, *msg, msgID, owner))
+        return validatedSize;
+    UserData::TNetPlayerLobbyData *plr = yw_netSenderRow(yw->_GameShell, *msg);
+    const uint8_t actorOwner = plr->Owner;
+
     int tv481 = 0;
 
-    if (owner > 0 && owner < 8)
+    if (actorOwner > 0 && actorOwner < yw->_GameShell->netPlayers.size())
     {
-        UserData::TNetPlayerData &pl = yw->_GameShell->netPlayers[owner];
+        UserData::TNetPlayerData &pl = yw->_GameShell->netPlayers[actorOwner];
         pl.LastMessageTime = yw->_updateMessage.gTime;
 
         if ( msgID != UAMSG_VHCLENERGY && msgID != UAMSG_ENDPLASMA && msg->cast == 2 )
@@ -1312,17 +1426,6 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         tv481 = 0;
     }
 
-    UserData::TNetPlayerLobbyData *plr = nullptr;
-
-    for(UserData::TNetPlayerLobbyData &pl : yw->_GameShell->lobbyPlayers)
-    {
-        if (StriCmp(pl.Name, msg->senderName) == 0)
-        {
-            plr = &pl;
-            break;
-        }
-    }
-
     // While an UPDATE requested from this sender is pending, its unit events
     // are ignored: the update replaces the tree they would apply to. The
     // sender's own traffic never ends the hold (World::NetUpdate::PeerGate).
@@ -1341,6 +1444,15 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             break;
 
         uamessage_load *ldMsg = (uamessage_load *)msg->data;
+        if (!yw->_GameShell->FreezeNetLaunch(ldMsg->level))
+        {
+            yw->_GameShell->netSessionEnded = true;
+            yw->_GameShell->noSent = true;
+            yw->_GameShell->rdyStart = false;
+            yw->_GameShell->envAction.action = EnvAction::ACTION_NONE;
+            yw->_levelInfo.State = TLevelInfo::STATE_ABORTED;
+            break;
+        }
         yw->_GameShell->envAction.action = EnvAction::ACTION_NETPLAY;
         yw->_GameShell->envAction.params[0] = ldMsg->level;
         yw->_GameShell->envAction.params[1] = ldMsg->level;
@@ -1410,7 +1522,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             {
                 log_netlog("NV: No master for created shadow object!\n");
                 yw->ypaworld_func144(bacto);
-                *err = msg->senderName;
+                *err = msg->playerId;
 
                 break;
             }
@@ -1451,14 +1563,14 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( !bctt )
         {
             log_netlog("\n+++ DV: Havent found vehicle %d (%ds)\n", dvMsg->id, yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
             break;
         }
 
         if ( !(bctt->_status_flg & BACT_STFLAG_DEATH1) )
         {
             log_netlog("+++ DV: Release a non-logic-dead vehicle %d! (%ds)\n", dvMsg->id, yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
             break;
         }
 
@@ -1468,7 +1580,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         {
             yw->ypaworld_func144(bctt->_kidList.front());
             log_netlog("+++ DV: Released vehicle with slave! (%ds)\n", yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
         }
 
         while(bctt->_missiles_list.begin() != bctt->_missiles_list.end())
@@ -1481,7 +1593,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             yw->NetReleaseMissiles(bctt);
 
             log_netlog("+++ DV: Released vehicle with weapons! (%ds)\n", yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
         }
 
         yw->ypaworld_func144(bctt);
@@ -1491,7 +1603,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( dvMsg->type != BACT_TYPES_MISSLE && yw_netGetUnitsCount(host_node) != (vnumb - 1) )
         {
             log_netlog("\n+++ DV: Vehiclecount changed more than 1! (%ds)\n", yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
             break;
         }
     }
@@ -1520,7 +1632,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( !oldLeader )
         {
             log_netlog("\n+++ NC: Havent found vehicle %d (%ds)\n", nlMsg->id, yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
             break;
         }
 
@@ -1542,7 +1654,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( yw_netGetUnitsCount(host_node) != unitscnt )
         {
             log_netlog("\n+++ NC: Vehiclecount changed! (%ds)\n", yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
             break;
         }
     }
@@ -1583,7 +1695,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         {
             log_netlog("\n+++ NW: Havent found vehicle %d (%ds)\n", nwMsg->id, yw->_timeStamp / 1000);
             yw->ypaworld_func144(weapo);
-            *err = msg->senderName;
+            *err = msg->playerId;
             break;
         }
 
@@ -1631,7 +1743,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
                 if ( !ownerhost )
                 {
                     log_netlog("\n+++ NW: false targetowner %d for weapon\n", nwMsg->targetOwner);
-                    *err = msg->senderName;
+                    *err = msg->playerId;
                     break;
                 }
 
@@ -1685,7 +1797,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         if ( !bct )
         {
             log_netlog("\n+++ SS: Havent found vehicle %d (%ds)\n", ssMsg->id, yw->_timeStamp / 1000);
-            *err = msg->senderName;
+            *err = msg->playerId;
             break;
         }
 
@@ -1768,7 +1880,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             if ( !fndBact )
             {
                 log_netlog("\n+++ D: Havent found weapon %d (%ds)\n", ddMsg->id, yw->_timeStamp / 1000);
-                *err = msg->senderName;
+                *err = msg->playerId;
                 break;
             }
 
@@ -1780,7 +1892,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             if ( !fndBact )
             {
                 log_netlog("\n+++ D: Havent found vehicle %d (%ds)\n", ddMsg->id, yw->_timeStamp / 1000);
-                *err = msg->senderName;
+                *err = msg->playerId;
                 break;
             }
         }
@@ -1848,7 +1960,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
                 else
                     log_netlog("\n+++ D: No master given for my slaves (%ds)\n", yw->_timeStamp / 1000);
 
-                *err = msg->senderName;
+                *err = msg->playerId;
             }
         }
 
@@ -2109,7 +2221,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             if ( !fndbct )
             {
                 log_netlog("\n+++ V: Havent found weapon %d of rifleman %d (%ds)\n", vwMsg->id, vwMsg->launcher, yw->_timeStamp / 1000);
-                *err = msg->senderName;
+                *err = msg->playerId;
                 break;
             }
         }
@@ -2119,7 +2231,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             if ( !fndbct )
             {
                 log_netlog("\n+++ V: Havent found vehicle %d (%ds)\n", vwMsg->id, yw->_timeStamp / 1000);
-                *err = msg->senderName;
+                *err = msg->playerId;
                 break;
             }
         }
@@ -2372,7 +2484,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             break;
 
 
-        if ( yw->_netDriver->IsPlayer( msg->senderName ) )
+        if ( plr )
         {
             int nmb = strtol(msgMsg->message, 0, 0);
 
@@ -2415,9 +2527,11 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
 
         yw->_GameShell->netProblemOwner = kcMsg->owner;
 
-        yw->_GameShell->netProblemName = kcMsg->text;
+        const auto &victim = yw->_GameShell->netPlayers[owner];
+        yw->_GameShell->netProblemName = victim.Name;
+        const bool isSelf = victim.PlayerId == yw->_GameShell->netSession.LocalPlayerId;
 
-        if ( !StriCmp(kcMsg->text, yw->_GameShell->netPlayerName) )
+        if ( isSelf )
         {
             yw->_GameShell->netPlayers[owner].DestroyFlags = 1;
             yw->_GameShell->noSent = true;
@@ -2427,7 +2541,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         else
         {
             yw_cleanPlayer(yw, "", kcMsg->owner, 1);
-            yw_DestroyPlayer(yw, kcMsg->text);
+            yw_DestroyPlayer(yw, victim.PlayerId);
 
             if ( yw->_GameShell->netProblem != 3 )
             {
@@ -2436,7 +2550,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             }
         }
 
-        if ( !StriCmp(kcMsg->text, yw->_GameShell->netPlayerName) )
+        if ( isSelf )
         {
             log_netlog(">>> I was kicked off by the host! (time %d)\n", yw->_timeStamp / 1000);
         }
@@ -2540,7 +2654,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         yw->_GameShell->FreeFraction |= frMsg->freefrac;
 
         if ( UserData::TNetPlayerLobbyData *row =
-                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex( msg->senderName )) )
+                 plr )
             row->NetFraction = frMsg->newfrac;
     }
     break;
@@ -2554,7 +2668,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             break;
 
         if ( UserData::TNetPlayerLobbyData *row =
-                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex( msg->senderName )) )
+                 plr )
         {
             if ( yw->_GameShell->remoteMode )
                 yw->_GameShell->FreeFraction |= row->NetFraction;
@@ -2594,7 +2708,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             break;
 
         if ( UserData::TNetPlayerLobbyData *row =
-                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex( msg->senderName )) )
+                 plr )
             row->Ready = rdMsg->rdy;
     }
     break;
@@ -2621,7 +2735,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         }
         plr->Update.Answered(netNow);
 
-        yw_netSendUpdate(yw, yw->_GameShell->netPlayerOwner, msg->senderName.c_str());
+        yw_netSendUpdate(yw, yw->_GameShell->netPlayerOwner, msg->playerId);
     }
     break;
 
@@ -2797,7 +2911,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         yw->_GameShell->netLevelID = lobbyMsg->lvlID;
         yw->_GameShell->netLevelName = yw->GetLevelName(lobbyMsg->lvlID);
 
-        int32_t index = yw->_netDriver->GetPlayerIndex( lobbyMsg->hostName );
+        int32_t index = msg->playerSlot; // Host provenance was admitted above.
         if ( index != -1 )
         {
             if ( UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(yw->_GameShell, index) )
@@ -3051,7 +3165,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
             break;
 
         if ( UserData::TNetPlayerLobbyData *row =
-                 yw_netLobbyRow(yw->_GameShell, yw->_netDriver->GetPlayerIndex(msg->senderName)) )
+                 plr )
             row->DataChecksum = crcMsg->checksum;
 
         yw->_GameShell->takTime = 0;
@@ -3072,7 +3186,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
         pongMsg.msgID = UAMSG_PONG;
         pongMsg.timestamp = pingMsg->timestamp;
 
-        yw->NetSendMessage(&pongMsg, sizeof(pongMsg), msg->senderName, true);
+        yw->NetSendMessageToPlayer(&pongMsg, sizeof(pongMsg), msg->playerId, true);
 
         if ( yw->_updateMessage.frameTime >= 3 )
             break;
@@ -3166,7 +3280,7 @@ size_t yw_handleNormMsg(NC_STACK_ypaworld *yw, windp_recvMsg *msg, size_t remain
     return szmsg;
 }
 
-std::string yw_corruptionCheck(UserData *usr)
+uint64_t yw_corruptionCheck(UserData *usr)
 {
     NC_STACK_ypaworld *ywo = usr->p_YW;
     NC_STACK_ypabact *found = nullptr;
@@ -3215,15 +3329,31 @@ std::string yw_corruptionCheck(UserData *usr)
         if ( found )
         {
             log_netlog("\n+++ CC: found old vehicle id %d, class %d, owner %d at time %d. Request update\n", found->_gid, found->_bact_type, found->_owner, ywo->_timeStamp / 1000);
-            return usr->netPlayers[found->_owner].Name;
+            if (found->_owner < usr->netPlayers.size())
+            {
+                const auto &player = usr->netPlayers[found->_owner];
+                if (usr->netSession.Matches(player.SessionId))
+                    return player.PlayerId;
+            }
         }
     }
-    return "";
+    return 0;
 }
 
 void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
 {
     UserData *usr = yw->_GameShell;
+    if (usr->netSessionEnded)
+        return;
+    const auto endSession = [&]()
+    {
+        usr->netSessionEnded = true;
+        usr->noSent = true;
+        usr->rdyStart = false;
+        if (usr->envAction.action == EnvAction::ACTION_NETPLAY)
+            usr->envAction.action = EnvAction::ACTION_NONE;
+        yw->_levelInfo.State = TLevelInfo::STATE_ABORTED;
+    };
 
     uint32_t upd_time;
 
@@ -3292,15 +3422,62 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
     }
 
     uint32_t msgcount = 0;
-    std::string err_sender;
+    uint64_t err_sender = 0;
 
     windp_recvMsg recvMsg;
 
     while ( yw->_netDriver->Recv(&recvMsg) )
     {
+        if (usr->netSessionEnded)
+            continue;
         if (recvMsg.msgType != RECVMSG_NONE)
         {
-            usr->netrecv_count += recvMsg._data.size();
+            // Session provenance belongs to the queued event, never to a
+            // pop-time name/current-session lookup. Reject before any packet
+            // accounting, overload timer, dispatch or corruption/repair scan.
+            if (!usr->netSession.Matches(recvMsg.sessionId))
+                continue;
+            size_t admittedBytes = 0;
+            if (recvMsg.msgType == RECVMSG_NORMAL)
+            {
+                admittedBytes = yw_netAdmittedPacketBytes(yw, recvMsg);
+                if (!admittedBytes)
+                    continue;
+            }
+            else if (recvMsg.msgType == RECVMSG_CREATEPLAYER || recvMsg.msgType == RECVMSG_PLAYERBACK)
+            {
+                if (usr->netLaunchFrozen)
+                {
+                    if (!yw_netSenderRow(usr, recvMsg))
+                        continue;
+                }
+                else
+                {
+                    TDPPlayerData current;
+                    if (!yw->_netDriver->HasValidRoster() || recvMsg.playerId == 0 ||
+                        !yw->_netDriver->GetPlayerData(recvMsg.playerSlot, &current) ||
+                        current.ID != recvMsg.playerId || !current.IsOnline())
+                        continue;
+                    const int32_t boundSlot = World::NetLobby::FindPlayerSlot(usr->lobbyPlayers,
+                        recvMsg.sessionId, recvMsg.playerId);
+                    if (boundSlot >= 0 && boundSlot != recvMsg.playerSlot)
+                        continue;
+                    if (recvMsg.msgType == RECVMSG_PLAYERBACK && !yw_netSenderRow(usr, recvMsg))
+                        continue;
+                }
+            }
+            else if (recvMsg.msgType == RECVMSG_PLAYERAWAY || recvMsg.msgType == RECVMSG_PLAYERGONE ||
+                     recvMsg.msgType == RECVMSG_DESTROYPLAYER)
+            {
+                if (!yw_netSenderRow(usr, recvMsg))
+                    continue;
+            }
+            else if (recvMsg.msgType != RECVMSG_SELFLOST && recvMsg.msgType != RECVMSG_SELFRESUMED &&
+                     recvMsg.msgType != RECVMSG_ROSTERRESET && recvMsg.msgType != RECVMSG_SESSIONEND &&
+                     recvMsg.msgType != RECVMSG_RECOVERYFAILED)
+                continue; // In particular, legacy HOST never elects a new host.
+
+            usr->netrecv_count += admittedBytes;
 
             msgcount++;
 
@@ -3317,7 +3494,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     usr->problemTimer = 4000;
                 }
 
-                err_sender.clear();
+                err_sender = 0;
 
                 switch ( recvMsg.msgType )
                 {
@@ -3329,12 +3506,16 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     // new transport user is a resumed player or an outsider;
                     // running it would rewrite the lobby rows and make every
                     // peer send its faction again.
-                    if ( yw_netLevelLoaded(yw) )
+                    if ( usr->netLaunchFrozen || yw_netLevelLoaded(yw) )
                     {
                         log_netlog("%s joined the session during the match: lobby welcome skipped\n",
                                    recvMsg.senderName.c_str());
                         break;
                     }
+
+                    if (!World::NetLobby::BindRow(usr->lobbyPlayers, recvMsg.playerSlot,
+                            recvMsg.sessionId, recvMsg.playerId, recvMsg.senderName))
+                        break;
 
                     if ( usr->isHost && usr->remoteMode && usr->netSelMode == UserData::NETSCREEN_INSESSION )
                     {
@@ -3359,7 +3540,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     wlcmMsg.fraction = usr->SelectedFraction;
                     wlcmMsg.rdy = usr->rdyStart;
 
-                    yw->NetSendMessage(&wlcmMsg, sizeof(wlcmMsg), recvMsg.senderName, true);
+                    yw->NetSendMessageToPlayer(&wlcmMsg, sizeof(wlcmMsg), recvMsg.playerId, true);
 
                     if ( usr->netLevelID )
                         yw->SendCRC(usr->netLevelID);
@@ -3378,9 +3559,11 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                 {
                     // A reserved seat survives a transport outage. The host
                     // ownership/AI path is a separate game-level transition.
-                    if (UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(usr, recvMsg.playerSlot))
-                        if (!StriCmp(row->Name, recvMsg.senderName))
-                            row->Ready = false;
+                    if (auto *row = yw_netSenderRow(usr, recvMsg))
+                        row->Ready = false;
+                    if (recvMsg.playerId == usr->netSession.HostPlayerId ||
+                        (usr->netLaunchFrozen && !yw->_isNetGameStarted))
+                        endSession();
                     log_netlog("%s is temporarily away in slot %d\n",
                                recvMsg.senderName.c_str(), recvMsg.playerSlot);
                 }
@@ -3398,8 +3581,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
 
                 case RECVMSG_SESSIONEND:
                 case RECVMSG_RECOVERYFAILED:
-                    usr->rdyStart = false;
-                    yw->_levelInfo.State = TLevelInfo::STATE_ABORTED;
+                    endSession();
                     log_netlog("Session transport ended: event %u, reason %u\n",
                                recvMsg.msgType, recvMsg.reason);
                     break;
@@ -3407,27 +3589,16 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                 case RECVMSG_DESTROYPLAYER:
                 case RECVMSG_PLAYERGONE:
                 {
-                    bool itisI = false;
-                    bool plFound = false;
-
-                    if ( !StriCmp(usr->netPlayerName, recvMsg.senderName) )
-                    {
-                        itisI = true;
-                        yw->_levelInfo.State = TLevelInfo::STATE_ABORTED;
-                    }
-
-                    for(size_t i = 0; i < usr->lobbyPlayers.size(); i++)
-                    {
-                        if ( !StriCmp(usr->lobbyPlayers[i].Name, recvMsg.senderName) )
-                        {
-                            // Terminal departure frees one stable slot. Other
-                            // players keep their faction and readiness rows.
-                            World::NetLobby::ClearSlot(usr->lobbyPlayers, i);
-
-                            plFound = true;
-                            break;
-                        }
-                    }
+                    const bool itisI = recvMsg.playerId == usr->netSession.LocalPlayerId;
+                    auto *row = yw_netSenderRow(usr, recvMsg);
+                    if (!row)
+                        break;
+                    const uint8_t departedOwner = row->Owner;
+                    const bool plFound = true;
+                    if (itisI || recvMsg.playerId == usr->netSession.HostPlayerId ||
+                        (usr->netLaunchFrozen && !yw->_isNetGameStarted))
+                        endSession();
+                    World::NetLobby::ClearSlot(usr->lobbyPlayers, recvMsg.playerSlot);
 
                     log_netlog(">>> Received a destroy player for %s at %d\n", recvMsg.senderName.c_str(), yw->_timeStamp / 1000);
 
@@ -3435,7 +3606,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     {
                         for ( UserData::TNetPlayerData &pl : usr->netPlayers )
                         {
-                            if ( !StriCmp(pl.Name, recvMsg.senderName) )
+                            if (pl.SessionId == recvMsg.sessionId && pl.PlayerId == recvMsg.playerId)
                             {
                                 if ( pl.Status != 3 )
                                     pl.Status = 4;
@@ -3452,7 +3623,8 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                             }
                         }
 
-                        yw_cleanPlayer(yw, recvMsg.senderName, 0, 0);
+                        if (departedOwner != 0)
+                            yw_cleanPlayer(yw, "", departedOwner, 1);
                     }
                     else
                     {
@@ -3465,18 +3637,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                 break;
 
                 case RECVMSG_HOST:
-                    usr->isHost = true;
-                    if ( !yw->_isNetGameStarted )
-                    {
-                        int v70 = 0;
-                        yw->_netDriver->LockSession(&v70);
-
-                        usr->rdyStart = true;
-                        usr->blocked = false;
-
-                        if ( UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(usr, yw->_netDriver->GetMyIndex()) )
-                            row->Ready = true;
-                    }
+                    // Host migration has no authority protocol on this path.
                     break;
 
                 case RECVMSG_NORMAL:
@@ -3540,8 +3701,8 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                         printf("RECVMSG_NORMAL ID %d\n", HNDL_MSG[1]);
                     printf("RECVMSG_NORMAL msgcnt %d\n", msgcnt);
 
-                    std::string crpt = yw_corruptionCheck(usr);
-                    if ( !crpt.empty() )
+                    const uint64_t crpt = usr->netSessionEnded ? 0 : yw_corruptionCheck(usr);
+                    if ( crpt )
                         err_sender = crpt;
                 }
                 break;
@@ -3550,7 +3711,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     break;
                 }
 
-                if ( !err_sender.empty() )
+                if ( err_sender && !usr->netSessionEnded )
                 {
                     // One REQUPDATE per peer while its update is pending and
                     // per World::NetUpdate::RequestIntervalMs, however many
@@ -3558,20 +3719,19 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
                     const uint32_t netNow = static_cast<uint32_t>(yw->_timeStamp);
                     for (UserData::TNetPlayerLobbyData &pl : usr->lobbyPlayers)
                     {
-                        if (StriCmp(pl.Name, err_sender) == 0)
+                        if (usr->netSession.Matches(pl.SessionId) && pl.PlayerId == err_sender)
                         {
                             if ( pl.Update.MayRequest(netNow) )
                             {
-                                log_netlog("Drastic Error: Request Update from %s\n", err_sender.c_str());
+                                log_netlog("Drastic Error: Request Update from %s\n", pl.Name.c_str());
 
                                 uamessage_requpdate updMsg;
                                 NetMsgClear(updMsg);
                                 updMsg.msgID = UAMSG_REQUPDATE;
                                 updMsg.owner = usr->netPlayerOwner;
 
-                                yw->NetSendMessage(&updMsg, sizeof(updMsg), err_sender, true);
-
-                                pl.Update.Requested(netNow);
+                                if (yw->NetSendMessageToPlayer(&updMsg, sizeof(updMsg), err_sender, true))
+                                    pl.Update.Requested(netNow);
                             }
                             break;
                         }
@@ -3638,13 +3798,51 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw)
 
 bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 {
+    if (_GameShell->netSessionEnded || !_GameShell->netLaunchFrozen || !_GameShell->netSession.Valid() ||
+        !_netDriver->HasValidRoster() || _levelInfo.State == TLevelInfo::STATE_ABORTED)
+        return false;
+    // Validate the frozen participants against current transport membership and
+    // map/prototype coverage before creating the first station. Newcomers are
+    // never added by reading the live roster during loading.
+    uint32_t admittedOwners = 0;
+    bool selfPresent = false;
+    for (size_t slot = 0; slot < _GameShell->netLaunchPlayers.size(); ++slot)
+    {
+        const auto &seat = _GameShell->netLaunchPlayers[slot];
+        if (!seat.PlayerId)
+            continue;
+        TDPPlayerData current;
+        if (!_GameShell->netSession.Matches(seat.SessionId) ||
+            !_netDriver->GetPlayerData(slot, &current) || !current.IsOnline() || current.ID != seat.PlayerId ||
+            !World::NetLobby::MatchRow(_GameShell->lobbyPlayers, slot, seat.SessionId, seat.PlayerId))
+            return false;
+        const int selectedOwner = World::NetFactions::OwnerOf(seat.NetFraction);
+        if (selectedOwner <= 0 || seat.Owner != selectedOwner || (admittedOwners & (1u << selectedOwner)))
+            return false;
+        admittedOwners |= 1u << selectedOwner;
+        selfPresent = selfPresent || seat.PlayerId == _GameShell->netSession.LocalPlayerId;
+        const MapRobo *start = nullptr;
+        for (const auto &candidate : Robos)
+            if (candidate.Owner == selectedOwner)
+            {
+                if (start)
+                    return false;
+                start = &candidate;
+            }
+        const int vehicle = start ? World::NetFactions::HostVehicle(selectedOwner, start->VhclID) : 0;
+        if (vehicle <= 0 || static_cast<size_t>(vehicle) >= _vhclProtos.size() ||
+            _vhclProtos[vehicle].model_id != BACT_TYPES_ROBO)
+            return false;
+    }
+    if (!selfPresent)
+        return false;
     _levelInfo.OwnerMask = 0;
     _levelInfo.UserMask = 0;
 
     for (size_t i = 0; i < _GameShell->netPlayers.size(); i++)
     {
         UserData::TNetPlayerData &pl = _GameShell->netPlayers[i];
-        pl.Ready = false;
+        pl = UserData::TNetPlayerData{};
         pl.Owner = i;
     }
 
@@ -3652,28 +3850,22 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
     int owner = 0;
 
-    for ( const TDPPlayerData &plData :  _netDriver->GetPlayersData() )
+    for (size_t slot = 0; slot < _GameShell->netLaunchPlayers.size(); ++slot)
     {
+        const auto &seat = _GameShell->netLaunchPlayers[slot];
+        if (!seat.PlayerId)
+            continue;
         // Roster slots may contain holes. Actual map coverage is checked by
         // faction owner below, not by indexing the map's compact start list.
-        UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(_GameShell, plData.Index);
+        UserData::TNetPlayerLobbyData *row = yw_netLobbyRow(_GameShell, slot);
         if ( !row )
             return false;
 
-        int selFraction;
-
-        if ( plData.IsItMe() )
-        {
-            selFraction = _GameShell->SelectedFraction;
-        }
-        else
-        {
-            selFraction = row->NetFraction;
-        }
+        const int selFraction = seat.NetFraction;
 
         if ( selFraction == 0 )
         {
-            log_netlog("Error no race for robo %s found\n", plData.name.c_str());
+            log_netlog("Error no race for robo %s found\n", seat.Name.c_str());
             return false;
         }
 
@@ -3704,7 +3896,11 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
         vec3d place(selHost->Pos);
 
-        _GameShell->netPlayers[owner].Name = plData.name;
+        auto &player = _GameShell->netPlayers[owner];
+        player.Name = seat.Name;
+        player.SessionId = seat.SessionId;
+        player.PlayerId = seat.PlayerId;
+        player.PlayerSlot = static_cast<int32_t>(slot);
 
         ypaworld_arg136 arg136;
         arg136.stPos = place.X0Z() - vec3d::OY(30000.0);
@@ -3732,7 +3928,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
         if ( !hostObj )
         {
-            log_netlog("NetPlaceRobos: Unable to create robo (owner %d, type %d)\n", plData.Index + 1, arg146.vehicle_id);
+            log_netlog("NetPlaceRobos: Unable to create robo (owner %d, type %d)\n", owner, arg146.vehicle_id);
             return false;
         }
 
@@ -3747,7 +3943,7 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
             bct->_owner = owner;
         }
 
-        if ( plData.IsItMe() )
+        if ( seat.PlayerId == _GameShell->netSession.LocalPlayerId )
         {
             hostObj->setBACT_viewer(true);
             hostObj->setBACT_inputting(true);
@@ -3783,6 +3979,8 @@ bool NC_STACK_ypaworld::yw_NetSetHostStations(const std::vector<MapRobo> &Robos)
 
 size_t NC_STACK_ypaworld::ypaworld_func179(yw_arg161 *arg)
 {
+    if (_GameShell->netSessionEnded || !_GameShell->netLaunchFrozen)
+        return 0;
     bact_id = 0x10000;
 
     _particles.Clear();
@@ -4009,7 +4207,8 @@ int yw_NetCheckPlayers(NC_STACK_ypaworld *yw)
 
             for ( UserData::TNetPlayerData &pl : usr->netPlayers )
             {
-                if ( StriCmp(pl.Name, plData.name) == 0 )
+                if (usr->netSession.Matches(pl.SessionId) && pl.PlayerId == plData.ID &&
+                    pl.PlayerSlot == static_cast<int32_t>(plData.Index))
                 {
                     plr = &pl;
                     break;
@@ -4052,7 +4251,7 @@ int yw_NetCheckPlayers(NC_STACK_ypaworld *yw)
                             msgKk.msgID = UAMSG_KICK;
                             strcpy(msgKk.text, plr->Name.c_str());
 
-                            yw_cleanPlayer(yw, plr->Name, 0, 0);
+                            yw_cleanPlayer(yw, "", plr->Owner, 1);
 
                             if ( usr->netProblem != 3 )
                             {
@@ -4065,7 +4264,7 @@ int yw_NetCheckPlayers(NC_STACK_ypaworld *yw)
 
                             yw->NetBroadcastMessage(&msgKk, sizeof(msgKk), true);
 
-                            yw_DestroyPlayer(yw, msgKk.text);
+                            yw_DestroyPlayer(yw, plr->PlayerId);
 
                             log_netlog(">>> I have kicked off %s because I haven't heard anything for %d sec (at time %d)\n", msgKk.text, usr->kickTime / 1000, yw->_timeStamp / 1000);
                         }
@@ -4108,7 +4307,12 @@ int yw_NetCheckPlayersInGame(NC_STACK_ypaworld *yw)
 {
     UserData *usr = yw->_GameShell;
 
-    int numpl = yw->_netDriver->GetPlayerCount();
+    if (!usr->netLaunchFrozen || yw->_levelInfo.State == TLevelInfo::STATE_ABORTED)
+        return 0;
+    int numpl = 0;
+    for (const auto &seat : usr->netLaunchPlayers)
+        if (seat.PlayerId)
+            ++numpl;
 
     if ( yw->_isNetGameStarted )
         return 1;
@@ -4119,7 +4323,7 @@ int yw_NetCheckPlayersInGame(NC_STACK_ypaworld *yw)
 
     for(UserData::TNetPlayerData &pl : usr->netPlayers)
     {
-        if (!pl.Name.empty())
+        if (usr->netSession.Matches(pl.SessionId) && pl.PlayerId != 0)
         {
             if ( pl.Ready )
                 rdypl++;
@@ -4169,11 +4373,16 @@ int yw_NetCheckPlayersInGame(NC_STACK_ypaworld *yw)
             msgKk.msgID = UAMSG_KICK;
             msgKk.owner = pl->Owner;
 
-            yw_cleanPlayer(yw, pl->Name, 0, 0);
+            yw_cleanPlayer(yw, "", pl->Owner, 1);
 
             yw->NetBroadcastMessage(&msgKk, sizeof(msgKk), true);
 
-            yw_DestroyPlayer(yw, msgKk.text);
+            yw_DestroyPlayer(yw, pl->PlayerId);
+            usr->netSessionEnded = true;
+            usr->noSent = true;
+            usr->rdyStart = false;
+            usr->envAction.action = EnvAction::ACTION_NONE;
+            yw->_levelInfo.State = TLevelInfo::STATE_ABORTED;
 
             if ( usr->netProblem != 3 )
             {

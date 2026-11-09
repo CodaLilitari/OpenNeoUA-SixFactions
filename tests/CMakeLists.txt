@@ -53,6 +53,9 @@ add_executable(test_net_protocol test_net_protocol.cpp)
 add_test(NAME net_protocol COMMAND test_net_protocol)
 add_executable(test_net_lobby test_net_lobby.cpp)
 add_test(NAME net_lobby COMMAND test_net_lobby)
+add_executable(test_net_lobby_identity test_net_lobby_identity.cpp)
+target_compile_definitions(test_net_lobby_identity PRIVATE NDEBUG)
+add_test(NAME net_lobby_identity COMMAND test_net_lobby_identity)
 add_executable(test_windp_roster test_windp_roster.cpp)
 add_test(NAME windp_roster COMMAND test_windp_roster)
 add_executable(test_windp_resume test_windp_resume.cpp)
@@ -73,6 +76,45 @@ add_test(NAME net_ingress_phase COMMAND test_net_ingress_phase)
 add_test(NAME net_ingress_phase_checks_active COMMAND test_net_ingress_phase --verify-failing-check)
 set_tests_properties(net_ingress_phase PROPERTIES TIMEOUT 10)
 set_tests_properties(net_ingress_phase_checks_active PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
+# Real queued outer/lifecycle and corruption paths; NORMAL handlers remain a
+# dispatch marker. This C++14 target requires neither Python nor SDL at runtime.
+add_executable(test_net_identity_outer test_net_identity_outer.cpp)
+target_include_directories(test_net_identity_outer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR} ${NET_INGRESS_GENERATED_DIR})
+target_compile_definitions(test_net_identity_outer PRIVATE NDEBUG)
+add_test(NAME net_identity_outer COMMAND test_net_identity_outer)
+add_test(NAME net_identity_outer_terminal COMMAND test_net_identity_outer --terminal-only)
+add_test(NAME net_identity_outer_checks_active COMMAND test_net_identity_outer --verify-failing-check)
+set_tests_properties(net_identity_outer net_identity_outer_terminal PROPERTIES TIMEOUT 10)
+set_tests_properties(net_identity_outer_checks_active PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
+# Complete actual provider methods with fake clocks/transports. These are
+# boundary-fixture scenarios, distinct from the real endpoint tests below.
+include(${CMAKE_CURRENT_SOURCE_DIR}/extract_provider_identity.cmake)
+add_executable(test_provider_identity test_provider_identity.cpp)
+target_include_directories(test_provider_identity PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR} ${PROVIDER_IDENTITY_GENERATED_DIR})
+target_compile_definitions(test_provider_identity PRIVATE NDEBUG)
+set(_provider_identity_scenarios
+    barrier fresh events malformed metadata explicit kick superseded unarmed session_end
+    timeout refusal_retry refusal_final wrong_id wrong_session disable configuration_failure
+    repeat_loss enable_waiting enable_connecting late_reclaim fresh_malformed fresh_no_token reset host
+    identity_client identity_host identity_data identity_lifecycle identity_stale_data
+    identity_stale_terminal identity_missing_session identity_host_migration identity_session_change
+    identity_self_change identity_roster_unavailable identity_send_kick identity_loss
+    identity_invalid_lifecycle identity_rejected_lifecycle identity_invalid_reset identity_invalid_reclaim
+    identity_stale_refusal identity_rehost identity_offline_retained identity_host_offline identity_host_end)
+list(LENGTH _provider_identity_scenarios _provider_scenario_count)
+if(NOT _provider_scenario_count EQUAL 47)
+    message(FATAL_ERROR "provider identity test: expected exactly 47 scenarios per fake adapter mode")
+endif()
+foreach(mode znd enet)
+    foreach(scenario IN LISTS _provider_identity_scenarios)
+        add_test(NAME provider_identity_${mode}_${scenario} COMMAND test_provider_identity ${mode} ${scenario})
+        set_tests_properties(provider_identity_${mode}_${scenario} PROPERTIES TIMEOUT 10)
+    endforeach()
+endforeach()
+add_test(NAME provider_identity_checks_active COMMAND test_provider_identity --verify-failing-check)
+set_tests_properties(provider_identity_checks_active PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
 add_executable(test_net_factions test_net_factions.cpp)
 add_test(NAME net_factions COMMAND test_net_factions)
 add_executable(test_net_restore test_net_restore.cpp)
@@ -198,7 +240,7 @@ if(OPENNEOUA_TRANSPORT_TEST AND OPENNEOUA_ENET_ZND_TEST)
     add_test(NAME wp1_enet_reservations COMMAND test_wp1 enet)
     set_tests_properties(wp1_znd_reservations wp1_enet_reservations PROPERTIES TIMEOUT 55)
     foreach(wp1_transport znd enet)
-        foreach(wp1_case migration terminal expiry awaykick close unknown backlog eventslots initialroster countdown)
+        foreach(wp1_case migration terminal expiry awaykick close unknown backlog eventslots initialroster countdown eventsession)
             add_test(NAME wp1_${wp1_transport}_${wp1_case} COMMAND test_wp1 ${wp1_transport}_${wp1_case})
             set_tests_properties(wp1_${wp1_transport}_${wp1_case} PROPERTIES TIMEOUT 35)
         endforeach()

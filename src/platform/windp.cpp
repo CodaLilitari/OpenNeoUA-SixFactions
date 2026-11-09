@@ -82,6 +82,9 @@ void NC_STACK_windp::ClearConnectionState()
     broadcastBuff_off = 0;
     _recovery.Clear();
     _recoveryFailurePending = false;
+    _sessionIdentity = WindpRoster::SessionIdentity{};
+    _identityRejected = false;
+    _rosterValid = false;
 }
 
 bool NC_STACK_windp::init()
@@ -217,6 +220,13 @@ bool NC_STACK_windp::Connect(const std::string &connString)
                 case ZNDNet::EVENT_CONNECTED:
                     {
                         ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
+                        if (!dat->id || dat->id != zcon->GetMyID() ||
+                            !evt->sessionId || evt->sessionId != zcon->GetMySesID())
+                        {
+                            delete evt;
+                            StopClientTransport(true);
+                            return false;
+                        }
                         _myName = dat->name;
                         _hasLobby = dat->value == 1 ? true : false;
                         _myID = dat->id;
@@ -229,6 +239,12 @@ bool NC_STACK_windp::Connect(const std::string &connString)
                 case ZNDNet::EVENT_SESSION_JOIN:
                 {
                     ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
+                    if (!dat->id || dat->id != evt->sessionId || dat->id != zcon->GetMySesID())
+                    {
+                        delete evt;
+                        StopClientTransport(true);
+                        return false;
+                    }
                     _sesID = dat->id;
                     _sesName = dat->name;
                     waitConn = false;
@@ -276,7 +292,7 @@ bool NC_STACK_windp::Connect(const std::string &connString)
 
 bool NC_STACK_windp::RememberConnection(const IPaddress &address, const std::string &text)
 {
-    if (!zcon || connType != 2 || !IsConnected())
+    if (!zcon || connType != 2 || !IsConnected() || !HasValidRoster())
         return false;
     WindpResume::Record record;
     record.kind = zenet ? WindpResume::Transport::Enet : WindpResume::Transport::Znd;
@@ -294,6 +310,12 @@ bool NC_STACK_windp::RememberConnection(const IPaddress &address, const std::str
 
 void NC_STACK_windp::StopClientTransport(bool terminal)
 {
+    // Terminal session events also invalidate a hosting provider's cached
+    // authority. Only the transport stop/token operations below are client-only.
+    _rosterValid = false;
+    if (terminal && _sessionIdentity.Valid())
+        _identityRejected = true;
+    broadcastBuff_off = 0;
     if (connType != 2 || !zcon)
         return;
     zcon->Stop();
@@ -302,7 +324,6 @@ void NC_STACK_windp::StopClientTransport(bool terminal)
         zcon->ClearResumeToken();
         zcon->SetResumeOnly(false);
     }
-    broadcastBuff_off = 0;
 }
 
 void NC_STACK_windp::SetRecoveryEnabled(bool enabled)
@@ -323,7 +344,7 @@ bool NC_STACK_windp::CompleteRecovery()
     // A completion arriving between receive frames still obeys the same
     // deadline; it cannot reopen gameplay after the grace period expired.
     TickRecovery();
-    return IsConnected() && _recovery.Reclaimed();
+    return IsConnected() && HasValidRoster() && _recovery.Reclaimed();
 }
 
 WindpResume::Phase NC_STACK_windp::RecoveryPhase() const
@@ -333,7 +354,7 @@ WindpResume::Phase NC_STACK_windp::RecoveryPhase() const
 
 bool NC_STACK_windp::CanSendGameplay()
 {
-    if (!zcon)
+    if (!zcon || !HasValidRoster())
         return false;
     if (connType == 1)
         return _myID != 0 && zcon->GetMyID() == _myID;
@@ -428,11 +449,15 @@ bool NC_STACK_windp::Host(const std::string &gameName, int playerNum)
     if (connType != 1 || (!zenet && !zhost))
         return false;
 
+    // Choosing another map deliberately creates a new session. Both host
+    // adapters stop/join their old session and clear its queued events in Start.
+    // Preserve the selected adapter and callsign, but do not compare the fresh
+    // tuple against the previous session's pinned authority.
+    ClearConnectionState();
+    connType = 1;
     if (zenet) zenet->Start(_myName, 61234, gameName, playerNum); else zhost->Start(_myName, 61234, gameName, playerNum);
     _myID = zcon->GetMyID();
-
-    ReloadUsersList();
-    return true;
+    return RefreshPlayers();
 }
 
 
@@ -529,6 +554,55 @@ bool NC_STACK_windp::GetPlayerData(uint32_t index, TDPPlayerData *out) const
 std::vector<TDPPlayerData> NC_STACK_windp::GetPlayersData() const
 {
     return _players;
+}
+
+bool NC_STACK_windp::GetSessionIdentity(WindpRoster::SessionIdentity *out) const
+{
+    if (!out)
+        return false;
+    *out = WindpRoster::SessionIdentity{};
+    if (_identityRejected || !_sessionIdentity.Valid())
+        return false;
+    *out = _sessionIdentity;
+    return true;
+}
+
+bool NC_STACK_windp::HasValidRoster() const
+{
+    // ENet's legacy status reports a running host as CONNECTING; unlike its
+    // historical identity getters, DISCONNECTED still reliably means stopped.
+    if (connType == 1 && zenet && zenet->GetStatus() == ZNDNet::NetUser::STATUS_DISCONNECTED)
+        return false;
+    if (connType != 1 && (connType != 2 ||
+        (zenet ? zenet->GetStatus() != ZNDNet::NetUser::STATUS_CONNECTED
+               : !zcli || zcli->GetStatus() != ZNDNet::NetUser::STATUS_CONNECTED)))
+        return false;
+    const TDPPlayerData *self = WindpRoster::ByID(_players, _sessionIdentity.ownPlayerId);
+    return _rosterValid && !_identityRejected && _sessionIdentity.Valid() && self && self->IsOnline() &&
+           zcon && zcon->GetMyID() == _sessionIdentity.ownPlayerId &&
+           zcon->GetMySesID() == _sessionIdentity.sessionId;
+}
+
+bool NC_STACK_windp::SendToPlayer(void *data, size_t size, uint64_t playerId, bool guarantee)
+{
+    if (!data || !size || !CanSendGameplay())
+        return false;
+    const TDPPlayerData *target = WindpRoster::ByID(_players, playerId);
+    if (!target || !target->IsOnline())
+        return false;
+    FlushBroadcastBuffer();
+    zcon->SendData(playerId, data, size, guarantee ? ZNDNet::PKT_FLAG_GARANT : 0);
+    return true;
+}
+
+bool NC_STACK_windp::KickPlayer(uint64_t playerId)
+{
+    if (connType != 1 || !CanSendGameplay() ||
+        _sessionIdentity.ownPlayerId != _sessionIdentity.hostPlayerId ||
+        playerId == _sessionIdentity.ownPlayerId || !WindpRoster::ByID(_players, playerId))
+        return false;
+    zcon->KickUser(playerId);
+    return true; // The request was issued; lifecycle events confirm removal.
 }
 
 int32_t NC_STACK_windp::GetMyIndex() const
@@ -630,6 +704,7 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
         _recoveryFailurePending = false;
         recv->msgType = RECVMSG_RECOVERYFAILED;
         recv->reason = _recovery.Failure();
+        recv->sessionId = _sessionIdentity.sessionId;
         return true;
     }
     if (!zcon)
@@ -640,11 +715,36 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
     if (!evt)
         return false;
 
+    recv->sessionId = evt->sessionId;
+    const uint64_t livePlayerId = zcon->GetMyID();
+    const uint64_t liveSessionId = zcon->GetMySesID();
+    if (!_identityRejected && _sessionIdentity.Valid() &&
+        ((livePlayerId && livePlayerId != _sessionIdentity.ownPlayerId) ||
+         (liveSessionId && liveSessionId != _sessionIdentity.sessionId)))
+        RejectSessionIdentity();
+    // A refusal before admission can have no session. It belongs to the current
+    // provider-owned attempt, not to a peer's gameplay/lifecycle stream.
+    const bool unadmittedRefusal = evt->type == ZNDNet::EVENT_CONNERR && !evt->sessionId &&
+        connType == 2 && _recovery.GetPhase() == WindpResume::Phase::Connecting;
+    if (_identityRejected || (_sessionIdentity.Valid() &&
+        evt->sessionId != _sessionIdentity.sessionId && !unadmittedRefusal))
+    {
+        recv->msgType = RECVMSG_SYSUNK;
+        delete evt;
+        return true;
+    }
+
     switch( evt->type )
     {
         case ZNDNet::EVENT_CONNECTED:
         {
             ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
+            if (_identityRejected || !dat->id || dat->id != zcon->GetMyID() ||
+                !evt->sessionId || evt->sessionId != zcon->GetMySesID())
+            {
+                recv->msgType = RECVMSG_SYSUNK;
+                break;
+            }
             _myName = dat->name;
             _myID = dat->id;
             _hasLobby = dat->value == 1;
@@ -662,16 +762,27 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
         case ZNDNet::EVENT_SESSION_JOIN:
         {
             ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
+            if (_identityRejected || !dat->id || dat->id != evt->sessionId ||
+                dat->id != zcon->GetMySesID())
+            {
+                recv->msgType = RECVMSG_SYSUNK;
+                break;
+            }
             _sesID = dat->id;
             _sesName = dat->name;
+            RefreshPlayers();
         }
         break;
 
         case ZNDNet::EVENT_USER_ADD:
         {
             ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
-            zcon->GetUsers(_rawUsers);
-            UpdateOwnPlayerIndex();
+            RefreshPlayers();
+            if (!_rosterValid)
+            {
+                recv->msgType = RECVMSG_SYSUNK;
+                break;
+            }
 
             recv->msgType = dat->value == ZNDNet::JoinFresh ? RECVMSG_CREATEPLAYER
                 : dat->value == ZNDNet::JoinResumed ? RECVMSG_PLAYERBACK : RECVMSG_SYSUNK;
@@ -687,8 +798,12 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
         case ZNDNet::EVENT_USER_LEAVE:
         {
             ZNDNet::EventNameID *dat = (ZNDNet::EventNameID *)evt;
-            zcon->GetUsers(_rawUsers);
-            UpdateOwnPlayerIndex();
+            RefreshPlayers();
+            if (!_rosterValid)
+            {
+                recv->msgType = RECVMSG_SYSUNK;
+                break;
+            }
 
             recv->msgType = dat->value == ZNDNet::LeaveAway ? RECVMSG_PLAYERAWAY
                 : dat->value == ZNDNet::LeaveLeft || dat->value == ZNDNet::LeaveKicked ||
@@ -711,28 +826,38 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
             if (!dat->data || !dat->size)
                 break;
 
+            recv->playerId = dat->from;
+            const TDPPlayerData *sender = WindpRoster::ByID(_players, dat->from);
+            if (!HasValidRoster() || !_sessionIdentity.Valid() ||
+                evt->sessionId != _sessionIdentity.sessionId || !sender || !sender->IsOnline())
+            {
+                recv->msgType = RECVMSG_SYSUNK;
+                break;
+            }
+
             recv->msgType = RECVMSG_NORMAL;
             recv->_data.assign(dat->data, dat->data + dat->size);
             recv->data = recv->_data.data();
             recv->size = recv->_data.size();
-            recv->senderName = GetUserName(dat->from);
-            recv->playerId = dat->from;
+            recv->senderName = sender->name;
+            recv->playerSlot = static_cast<int32_t>(sender->Index);
             recv->cast = dat->cast;
         }
         break;
 
         case ZNDNet::EVENT_USER_LIST:
         {
-            zcon->GetUsers(_rawUsers);
-            UpdateOwnPlayerIndex();
-            if (evt->value == 1)
+            RefreshPlayers();
+            if (!_rosterValid)
+                recv->msgType = RECVMSG_SYSUNK;
+            else if (evt->value == 1)
                 recv->msgType = RECVMSG_ROSTERRESET;
         }
         break;
 
         case ZNDNet::EVENT_SELF_RESUMED:
         {
-            if (connType == 2 && _recovery.Accepted(_myID, _sesID))
+            if (connType == 2 && RefreshPlayers() && _recovery.Accepted(_myID, _sesID))
                 recv->msgType = RECVMSG_SELFRESUMED;
             else
             {
@@ -755,6 +880,8 @@ bool NC_STACK_windp::Recv(windp_recvMsg *recv)
 
         case ZNDNet::EVENT_CONNERR:
         {
+            if (!recv->sessionId && _recovery.Saved().Valid())
+                recv->sessionId = _recovery.Saved().session; // Local attempt context.
             const int failure = ZNDNet::ConnectFailureFromRefusal(evt->value);
             const bool retry = _recovery.AttemptFailed(SDL_GetTicks(), failure);
             StopClientTransport(!retry);
@@ -901,20 +1028,91 @@ void NC_STACK_windp::ReloadUsersList()
     if (connType > 0 && zcon && SDL_GetTicks() > _nextUsersGet)
     {
         _nextUsersGet = SDL_GetTicks() + CONF_USERS_GET_TIME;
-        zcon->GetUsers(_rawUsers);
-        UpdateOwnPlayerIndex();
+        RefreshPlayers();
     }
 }
 
 void NC_STACK_windp::UpdateOwnPlayerIndex()
 {
-    if (!WindpRoster::Convert(_rawUsers, _myID, _players))
+    _rosterValid = false;
+    if (_identityRejected)
+    {
+        _players.clear();
+        _myIndex = -1;
+        return;
+    }
+    const uint64_t liveId = zcon ? zcon->GetMyID() : 0;
+    if (!WindpRoster::Convert(_rawUsers, liveId ? liveId : _myID, _players))
     {
         // No partial or stale roster may be used to enable a match launch.
         _players.clear();
         log_netlog("Invalid transport reservation roster ignored.\n");
     }
     _myIndex = WindpRoster::OwnSlot(_players);
+    if (!_players.empty())
+        _rosterValid = AcceptTransportIdentity();
+}
+
+bool NC_STACK_windp::RefreshPlayers()
+{
+    ZNDNet::UserInfoVect next;
+    if (!zcon || !zcon->GetUsers(next))
+    {
+        _rawUsers.clear();
+        _players.clear();
+        _myIndex = -1;
+        _rosterValid = false;
+        return false;
+    }
+    _rawUsers.swap(next);
+    UpdateOwnPlayerIndex();
+    return HasValidRoster();
+}
+
+void NC_STACK_windp::RejectSessionIdentity()
+{
+    // Keep the original tuple for diagnosis, but never expose it as authority
+    // after contradictory validated state. Only a deliberate fresh reset clears
+    // this latch; an ordinary roster refresh cannot migrate the session host.
+    _identityRejected = true;
+    _rosterValid = false;
+    _players.clear();
+    _myIndex = -1;
+    broadcastBuff_off = 0;
+    _recovery.Terminal(ZNDNet::CONNFAIL_RESUME);
+    StopClientTransport(true);
+    _recoveryFailurePending = true;
+}
+
+bool NC_STACK_windp::AcceptTransportIdentity()
+{
+    if (!zcon || _identityRejected)
+        return false;
+    WindpRoster::SessionIdentity candidate;
+    candidate.sessionId = zcon->GetMySesID();
+    candidate.ownPlayerId = zcon->GetMyID();
+    for (const auto &player : _players)
+        if (player.IsHost())
+            candidate.hostPlayerId = player.ID;
+    if (!candidate.Valid())
+        return false; // Expected offline getters do not erase a retained tuple.
+    const bool contradicts = (_myID && _myID != candidate.ownPlayerId) ||
+        (_sesID && _sesID != candidate.sessionId) ||
+        (_sessionIdentity.Valid() &&
+         (_sessionIdentity.sessionId != candidate.sessionId ||
+          _sessionIdentity.ownPlayerId != candidate.ownPlayerId ||
+          _sessionIdentity.hostPlayerId != candidate.hostPlayerId));
+    if (contradicts || (connType == 1 && candidate.ownPlayerId != candidate.hostPlayerId))
+    {
+        RejectSessionIdentity();
+        return false;
+    }
+    if (!WindpRoster::ByID(_players, candidate.ownPlayerId))
+        return false;
+    _sessionIdentity = candidate;
+    _myID = candidate.ownPlayerId;
+    _sesID = candidate.sessionId;
+    return true;
 }
 
 void NC_STACK_windp::ReloadSessionsList()
@@ -972,15 +1170,26 @@ void UserData::yw_FractionInit()
 
 void UserData::AfterMapChoose()
 {
-    if ( netSel < 0 )
+    if ( netSel < 0 || netLaunchFrozen || p_YW->_userRobo )
         return;
 
     switch ( p_YW->_netDriver->GetMode() )
     {
         case 1:
         {
+            // Host() starts a fresh transport session, including the existing
+            // in-lobby choose-map route. Preserve the selected map, but never
+            // carry participant authority/readiness across that boundary.
+            netSession = {};
+            lobbyPlayers.fill(TNetPlayerLobbyData{});
+            netPlayers.fill(TNetPlayerData{});
+            netLaunchPlayers.fill(TNetPlayerLobbyData{});
+            netSessionEnded = false;
+            noSent = false;
+            netPlayerOwner = 0;
             std::string bff = fmt::sprintf("%d%s%s%s%s", netLevelID, "|", p_YW->_netDriver->GetMyName(), "|", p_YW->_buildDate);
-            p_YW->_netDriver->Host(bff, World::CVMaxNetPlayers);
+            if (!p_YW->_netDriver->Host(bff, World::CVMaxNetPlayers) || !InitializeNetIdentity())
+                return;
 
             p_YW->_isNetGame = true;
             netSel = -1;
@@ -1178,6 +1387,8 @@ void UserData::yw_JoinNetGame()
 
             if ( p_YW->_netDriver->JoinSession(gName.name) )
             {
+                if (!InitializeNetIdentity())
+                    return;
                 if ( p_YW->_netDriver->GetProvType() == 4 )
                     GFX::Engine.windd_func321(nullptr);
 
@@ -1283,6 +1494,8 @@ void UserData::JoinLobbyLessGame()
 
         if (p_YW->_netDriver->IsJoined())
         {
+            if (!InitializeNetIdentity())
+                return;
             netName = "";
             netNameCurPos = 0;
             netLevelID = 0;
@@ -1439,14 +1652,20 @@ void UserData::JoinLobbyLessGame()
     }
 }
 
-int yw_DestroyPlayer(NC_STACK_ypaworld *yw, const char *playerName)
+int yw_DestroyPlayer(NC_STACK_ypaworld *yw, uint64_t playerId)
 {
-    int32_t plID = yw->_netDriver->GetPlayerIndex(playerName);
     UserData *usr = yw->_GameShell;
-
-    World::NetLobby::ClearSlot(usr->lobbyPlayers, plID);
-
-    return yw->_netDriver->DeletePlayer(playerName);
+    const int32_t slot = World::NetLobby::FindPlayerSlot(usr->lobbyPlayers,
+        usr->netSession.SessionId, playerId);
+    if (!usr->netSession.Valid() || slot < 0)
+        return 0;
+    // Only the retained session host can ask the transport to revoke a peer.
+    // Local row cleanup is distinct from observing the terminal transport event.
+    if (usr->netSession.LocalPlayerId == usr->netSession.HostPlayerId &&
+        playerId != usr->netSession.LocalPlayerId)
+        yw->_netDriver->KickPlayer(playerId);
+    World::NetLobby::ClearSlot(usr->lobbyPlayers, slot);
+    return 1;
 }
 
 void UserData::yw_netcleanup()
@@ -1454,7 +1673,7 @@ void UserData::yw_netcleanup()
     p_YW->_netDriver->FlushBroadcastBuffer();
 
     if( netSelMode ==NETSCREEN_INSESSION || p_YW->_isNetGameStarted )
-        yw_DestroyPlayer( p_YW, netPlayerName.c_str() );
+        yw_DestroyPlayer( p_YW, netSession.LocalPlayerId );
 
     if( ( netSelMode == NETSCREEN_INSESSION && isHost) || p_YW->_isNetGameStarted )
         p_YW->_netDriver->CloseSession(nullptr);
@@ -1479,7 +1698,11 @@ void UserData::yw_netcleanup()
         pl = UserData::TNetPlayerLobbyData();
 
     for (TNetPlayerData &pl : netPlayers)
-        pl.Name.clear();
+        pl = TNetPlayerData{};
+    netSession = {};
+    netLaunchPlayers.fill(TNetPlayerLobbyData{});
+    netLaunchFrozen = false;
+    netSessionEnded = false;
 
     rdyStart = false;
 

@@ -40,6 +40,7 @@
 #include "world/saveparsers.h"
 #include "world/net_tick.h"
 #include "world/net_update_gate.h"
+#include "world/net_lobby.h"
 #include "world/nparticle.h"
 #include "world/grounddecal_smoke.h"
 #include "world/grounddecal_profile.h"
@@ -962,6 +963,8 @@ public:
 
     struct TNetPlayerLobbyData
     {
+        uint64_t SessionId = 0;
+        uint64_t PlayerId = 0;
         std::string Name;
         std::string Msg;
         uint8_t  NetFraction = 0;
@@ -975,6 +978,9 @@ public:
 
     struct TNetPlayerData
     {
+        uint64_t SessionId = 0;
+        uint64_t PlayerId = 0;
+        int32_t PlayerSlot = -1;
         std::string Name;
         uint8_t  Owner       = 0;
         bool     Ready       = false;
@@ -991,6 +997,12 @@ public:
 
     std::array<TNetPlayerData, World::CVFractionsCount> netPlayers;
     std::array<TNetPlayerLobbyData, World::CVMaxNetPlayers> lobbyPlayers;
+    World::NetLobby::SessionIdentity netSession;
+    // A local launch snapshot closes the loading-window admission race. It is
+    // not a revisioned, globally acknowledged launch or a recovery checkpoint.
+    std::array<TNetPlayerLobbyData, World::CVMaxNetPlayers> netLaunchPlayers;
+    bool netLaunchFrozen = false;
+    bool netSessionEnded = false;
 
 
     NC_STACK_button *confirm_button;
@@ -1080,6 +1092,8 @@ public:
     void ypaworld_func151__sub7();
     void yw_FractionInit();
     void yw_netcleanup();
+    bool InitializeNetIdentity();
+    bool FreezeNetLaunch(int level);
     World::NetFactions::RosterCheck CheckNetLobbyRoster() const;
     void sub_46DC1C();
     void sub_46D960();
@@ -2382,6 +2396,7 @@ public:
     virtual size_t ypaworld_func179(yw_arg161 *arg);
     virtual void ypaworld_func180(yw_arg180 *arg);
     virtual bool NetSendMessage(uamessage_base *data, size_t dataSize, const std::string &recvID, bool garantee);
+    bool NetSendMessageToPlayer(uamessage_base *data, size_t dataSize, uint64_t playerId, bool guarantee);
     virtual bool NetBroadcastMessage(uamessage_base *data, size_t dataSize, bool garantee);
 
     virtual size_t ypaworld_func183(yw_arg161 *arg);

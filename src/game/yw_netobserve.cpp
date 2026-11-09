@@ -94,7 +94,7 @@ void Fill(NC_STACK_ypaworld *world, Agent::NetState &out)
             row.slot = static_cast<int>(player.Index);
             row.name = player.name;
             row.me = player.IsItMe();
-            if (player.Index < usr.lobbyPlayers.size())
+            if (World::NetLobby::MatchRow(usr.lobbyPlayers, player.Index, usr.netSession.SessionId, player.ID))
             {
                 const UserData::TNetPlayerLobbyData &lobby = usr.lobbyPlayers[player.Index];
                 row.faction = OwnerOfBit(row.me ? usr.SelectedFraction : lobby.NetFraction);
@@ -109,7 +109,7 @@ void Fill(NC_STACK_ypaworld *world, Agent::NetState &out)
     for (size_t owner = 0; owner < usr.netPlayers.size(); ++owner)
     {
         const UserData::TNetPlayerData &player = usr.netPlayers[owner];
-        if (player.Name.empty())
+        if (!usr.netSession.Matches(player.SessionId) || !player.PlayerId)
             continue;
         Agent::Seat seat;
         seat.owner = static_cast<int>(owner);

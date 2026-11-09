@@ -285,12 +285,9 @@ bool NC_STACK_ypaworld::InitGameShell(UserData *usr)
 
     if ( v67.isClient )
     {
+        if (!usr->InitializeNetIdentity())
+            return false;
         _GameShell->netPlayerName = v67.callSIGN;
-
-        if ( v67.isHoster )
-            _GameShell->isHost = true;
-        else
-            _GameShell->isHost = false;
 
         _GameShell->remoteMode = true;
 

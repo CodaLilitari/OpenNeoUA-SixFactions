@@ -64,38 +64,46 @@ endfunction()
 file(WRITE "${NET_INGRESS_GENERATED_DIR}/EXTRACTION.txt"
     "format=1\nnormalization=CRLF to LF only; raw hashes retained\n"
     "scope=exact helper+validator+handler prefix through first dispatch switch; downstream gameplay omitted\n"
-    "fixture=only world presence/counts/grid and Common::Point coordinates; logging sink\n")
+    "fixture=only world presence/counts/grid and Common::Point coordinates; logging sink; seeded real identity records\n")
 _ingress_read("game/yw_net.cpp" net_source)
 _ingress_read("game/yw.h" user_source)
 _ingress_read("platform/windp.h" provider_source)
 _ingress_read("common/utils.cpp" utility_source)
 # Pin included production headers too; normal compiler dependency tracking also applies.
 foreach(header game/yw_net_msgs.h platform/windp_events.h world/net_update_gate.h
-        world/net_factions.h world/consts.h common/matrix.h common/vectors.h
+        world/net_factions.h world/net_lobby.h world/consts.h common/matrix.h common/vectors.h
         common/types.h common/listnode.h)
     _ingress_read("${header}" unused_header)
 endforeach()
 
 _ingress_unique(net_source "static bool yw_netLevelLoaded(" helper_position)
 _ingress_unique(net_source "static bool yw_netValidateNormMsg(" validator_position)
+_ingress_unique(net_source "static bool yw_netAdmitNormMsg(" admission_position)
+_ingress_unique(net_source "static size_t yw_netAdmittedPacketBytes(" packet_position)
 _ingress_unique(net_source "size_t yw_handleNormMsg(" handler_position)
-_ingress_unique(net_source "    switch (msgID)\n    {" switch_position)
-if(NOT (helper_position LESS validator_position AND validator_position LESS handler_position
+string(SUBSTRING "${net_source}" ${handler_position} -1 handler_source)
+_ingress_unique(handler_source "    switch (msgID)\n    {" handler_switch_position)
+math(EXPR switch_position "${handler_position}+${handler_switch_position}")
+if(NOT (helper_position LESS validator_position AND validator_position LESS admission_position
+        AND admission_position LESS packet_position AND packet_position LESS handler_position
         AND handler_position LESS switch_position))
     message(FATAL_ERROR "net ingress extraction: helper/validator/handler/switch order changed")
 endif()
-_ingress_slice(net_source "static bool yw_netLevelLoaded(" "    switch (msgID)\n    {" TRUE prefix)
+_ingress_slice(net_source "static bool yw_netLevelLoaded(" "size_t yw_handleNormMsg(" FALSE helper_prefix)
+_ingress_slice(handler_source "size_t yw_handleNormMsg(" "    switch (msgID)\n    {" TRUE handler_prefix)
+# These are contiguous slices of the same source, with no policy replacement.
+set(prefix "${helper_prefix}${handler_prefix}")
 _ingress_slice(user_source "    struct TNetPlayerLobbyData\n" "\n    struct TNetPlayerData\n" FALSE lobby_record)
 _ingress_slice(user_source "    struct TNetPlayerData\n" "\n    std::array<TNetPlayerData," FALSE player_record)
+_ingress_slice(user_source "    std::array<TNetPlayerData, World::CVFractionsCount> netPlayers;\n"
+    "\n    NC_STACK_button *confirm_button;" FALSE identity_members)
 _ingress_slice(provider_source "struct windp_recvMsg\n" "\nstruct windp_arg87\n" FALSE receive_record)
 _ingress_slice(utility_source "int StriCmp(const std::string &a, const std::string &b)\n"
     "\nbool StrGetBool(" FALSE compare_function)
 
 file(WRITE "${NET_INGRESS_GENERATED_DIR}/net_ingress_types.inc"
     "// Generated exact normalized production records; do not hand edit.\nclass UserData { public:\n"
-    "${lobby_record}${player_record}"
-    "std::array<TNetPlayerData,World::CVFractionsCount> netPlayers;\n"
-    "std::array<TNetPlayerLobbyData,World::CVMaxNetPlayers> lobbyPlayers;\n};\n"
+    "${lobby_record}${player_record}${identity_members}\n};\n"
     "${receive_record}${compare_function}")
 file(WRITE "${NET_INGRESS_GENERATED_DIR}/net_ingress_prefix.inc"
     "#include \"net_ingress_fixture.hpp\"\n${prefix}\n"
@@ -105,4 +113,37 @@ foreach(generated net_ingress_types.inc net_ingress_prefix.inc)
     file(SHA256 "${NET_INGRESS_GENERATED_DIR}/${generated}" generated_hash)
     file(APPEND "${NET_INGRESS_GENERATED_DIR}/EXTRACTION.txt"
         "generated=${generated}\ngenerated_sha256=${generated_hash}\n")
+endforeach()
+
+# The outer test executes the complete receive/lifecycle loop and corruption
+# scan. It shares the exact validator/typed-admission/dispatch prefix above;
+# only the downstream NORMAL switch is an entry marker, never a fake policy.
+_ingress_slice(net_source "static UserData::TNetPlayerLobbyData *yw_netLobbyRow("
+    "static bool yw_netLevelLoaded(" FALSE outer_lobby_helper)
+_ingress_slice(net_source "uint64_t yw_corruptionCheck(" "void yw_HandleNetMsg(" FALSE outer_corruption)
+_ingress_slice(net_source "void yw_HandleNetMsg("
+    "bool NC_STACK_ypaworld::yw_NetSetHostStations(" FALSE outer_receive)
+_ingress_slice(user_source "struct EnvAction\n" "\nclass UserData\n" FALSE env_action_record)
+file(WRITE "${NET_INGRESS_GENERATED_DIR}/net_identity_outer_types.inc"
+    "// Generated exact normalized production records; do not hand edit.\n${env_action_record}\n"
+    "class UserData { public:\n${lobby_record}${player_record}${identity_members}\n"
+    "#include \"net_identity_outer_fields.inc\"\n};\n${receive_record}${compare_function}")
+file(WRITE "${NET_INGRESS_GENERATED_DIR}/net_identity_outer.inc"
+    "#include \"net_identity_outer_fixture.hpp\"\n${outer_lobby_helper}${prefix}\n"
+    "// TEST ONLY: mark switch entry, omitting all downstream NORMAL gameplay cases.\n"
+    "default: ++dispatch_marker; break;\n}\nreturn szmsg;\n}\n"
+    "${outer_corruption}${outer_receive}")
+file(APPEND "${NET_INGRESS_GENERATED_DIR}/EXTRACTION.txt"
+    "outer_scope=complete actual receive/lifecycle/corruption functions plus exact helper/validator/admission/prefix; downstream NORMAL switch omitted\n"
+    "outer_fixture=queued provider and engine/network sinks; exact identity/EnvAction records; no substitute admission policy\n")
+foreach(generated net_identity_outer_types.inc net_identity_outer.inc)
+    file(SHA256 "${NET_INGRESS_GENERATED_DIR}/${generated}" generated_hash)
+    file(APPEND "${NET_INGRESS_GENERATED_DIR}/EXTRACTION.txt"
+        "generated=${generated}\ngenerated_sha256=${generated_hash}\n")
+endforeach()
+foreach(fixture test_net_identity_outer.cpp net_identity_outer_fixture.hpp net_identity_outer_fields.inc)
+    file(SHA256 "${CMAKE_CURRENT_LIST_DIR}/${fixture}" fixture_hash)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/${fixture}")
+    file(APPEND "${NET_INGRESS_GENERATED_DIR}/EXTRACTION.txt"
+        "outer_fixture=${fixture}\nfixture_sha256=${fixture_hash}\n")
 endforeach()

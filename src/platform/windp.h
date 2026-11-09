@@ -58,6 +58,7 @@ struct windp_recvMsg
     uint64_t playerId = 0;
     int32_t playerSlot = -1;
     uint32_t reason = 0;
+    uint64_t sessionId = 0; // Captured when the transport event was enqueued.
 };
 
 struct windp_arg87
@@ -79,7 +80,7 @@ void yw_HandleNetMsg(NC_STACK_ypaworld *yw);
 void yw_CheckCRCs(NC_STACK_ypaworld *yw);
 
 
-int yw_DestroyPlayer(NC_STACK_ypaworld *yw, const char *playerName);
+int yw_DestroyPlayer(NC_STACK_ypaworld *yw, uint64_t playerId);
 
 
 
@@ -114,6 +115,13 @@ public:
     void SetWantedName(const std::string &name);
     std::string GetMyName();
     std::string GetCurrentSessionName();
+
+    // Identity is pinned through temporary loss. Readiness is separate: a
+    // retained identity alone is not a complete current roster or connectivity.
+    bool GetSessionIdentity(WindpRoster::SessionIdentity *out) const;
+    bool HasValidRoster() const;
+    bool SendToPlayer(void *data, size_t size, uint64_t playerId, bool guarantee);
+    bool KickPlayer(uint64_t playerId);
 
     // Only for client
     bool Connect(const std::string &connString);
@@ -227,6 +235,9 @@ protected:
     uint64_t GetUserID(const std::string &name);
     std::string GetUserName(uint64_t id);
     void UpdateOwnPlayerIndex();
+    bool RefreshPlayers();
+    bool AcceptTransportIdentity();
+    void RejectSessionIdentity();
 
 
     //Data
@@ -255,6 +266,9 @@ public:
     int _connectFailure = ZNDNet::CONNFAIL_NONE; // why the last Connect() failed (netlib/connfail.h)
     WindpResume::State _recovery;
     bool _recoveryFailurePending = false;
+    WindpRoster::SessionIdentity _sessionIdentity;
+    bool _identityRejected = false;
+    bool _rosterValid = false;
     std::string version_ident;
     int version_check;
     char *norm_block;

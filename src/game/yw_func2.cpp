@@ -905,12 +905,81 @@ void UserData::sb_0x46aa8c()
     titel_button->ShowScreen();
 }
 
+bool UserData::InitializeNetIdentity()
+{
+    if (!p_YW || !p_YW->_netDriver || netLaunchFrozen || netSessionEnded)
+        return false;
+    WindpRoster::SessionIdentity identity;
+    if (!p_YW->_netDriver->HasValidRoster() ||
+        !p_YW->_netDriver->GetSessionIdentity(&identity) || !identity.Valid())
+        return false;
+    if (netSession.Valid() && (netSession.SessionId != identity.sessionId ||
+        netSession.LocalPlayerId != identity.ownPlayerId ||
+        netSession.HostPlayerId != identity.hostPlayerId))
+        return false;
+
+    const auto players = p_YW->_netDriver->GetPlayersData();
+    if (players.empty() || players.size() > lobbyPlayers.size())
+        return false;
+    auto next = lobbyPlayers;
+    uint32_t slots = 0;
+    for (const TDPPlayerData &player : players)
+    {
+        if (!World::NetLobby::BindRow(next, player.Index, identity.sessionId,
+                                     player.ID, player.name))
+            return false;
+        slots |= 1u << player.Index;
+    }
+    for (size_t slot = 0; slot < next.size(); ++slot)
+        if (!(slots & (1u << slot)))
+            next[slot] = TNetPlayerLobbyData{};
+
+    netSession.SessionId = identity.sessionId;
+    netSession.LocalPlayerId = identity.ownPlayerId;
+    netSession.HostPlayerId = identity.hostPlayerId;
+    lobbyPlayers = std::move(next);
+    isHost = identity.ownPlayerId == identity.hostPlayerId;
+    return true;
+}
+
+bool UserData::FreezeNetLaunch(int level)
+{
+    if (netLaunchFrozen || level != netLevelID || !CheckNetLobbyRoster().Valid)
+        return false;
+    decltype(netLaunchPlayers) next{};
+    for (const TDPPlayerData &player : p_YW->_netDriver->GetPlayersData())
+    {
+        const auto *row = World::NetLobby::MatchRow(lobbyPlayers, player.Index,
+                                                   netSession.SessionId, player.ID);
+        if (!row || !player.IsOnline())
+            return false;
+        next[player.Index] = *row;
+        auto &seat = next[player.Index];
+        if (player.ID == netSession.LocalPlayerId)
+            seat.NetFraction = SelectedFraction;
+        const int owner = World::NetFactions::OwnerOf(seat.NetFraction);
+        if (owner <= 0)
+            return false;
+        seat.Owner = static_cast<uint8_t>(owner);
+    }
+    netLaunchPlayers = std::move(next);
+    netLaunchFrozen = true;
+    return true;
+}
+
 World::NetFactions::RosterCheck UserData::CheckNetLobbyRoster() const
 {
     if (!p_YW || !p_YW->_netDriver || netLevelID <= 0 ||
         static_cast<size_t>(netLevelID) >= p_YW->_globalMapRegions.MapRegions.size())
         return {};
 
+    WindpRoster::SessionIdentity identity;
+    if (netSessionEnded || !netSession.Valid() || !p_YW->_netDriver->HasValidRoster() ||
+        !p_YW->_netDriver->GetSessionIdentity(&identity) ||
+        identity.sessionId != netSession.SessionId ||
+        identity.ownPlayerId != netSession.LocalPlayerId ||
+        identity.hostPlayerId != netSession.HostPlayerId)
+        return {};
     const auto players = p_YW->_netDriver->GetPlayersData();
     if (players.empty() || players.size() > lobbyPlayers.size())
         return {};
@@ -919,11 +988,13 @@ World::NetFactions::RosterCheck UserData::CheckNetLobbyRoster() const
     for (size_t i = 0; i < players.size(); ++i)
     {
         const TDPPlayerData &player = players[i];
-        if (static_cast<size_t>(player.Index) >= lobbyPlayers.size())
+        const auto *row = World::NetLobby::MatchRow(lobbyPlayers, player.Index,
+                                                   netSession.SessionId, player.ID);
+        if (!row)
             return {};
         entries[i] = {static_cast<int>(player.Index),
-                      player.IsItMe() ? SelectedFraction : lobbyPlayers[player.Index].NetFraction,
-                      player.IsOnline() && (player.IsItMe() || lobbyPlayers[player.Index].Ready)};
+                      player.ID == netSession.LocalPlayerId ? SelectedFraction : row->NetFraction,
+                      player.IsOnline() && (player.ID == netSession.LocalPlayerId || row->Ready)};
     }
     return World::NetFactions::CheckRoster(
         p_YW->_globalMapRegions.MapRegions[netLevelID].FractionsBits, entries.data(), players.size());
@@ -933,7 +1004,8 @@ void UserData::sub_46DC1C()
 {
     // Widget enablement was computed on an earlier frame. Re-read the roster
     // before broadcasting LOAD, including the one-player confirmation path.
-    if (!isHost || !CheckNetLobbyRoster().CanStart())
+    if (!isHost || netSession.LocalPlayerId != netSession.HostPlayerId ||
+        !CheckNetLobbyRoster().CanStart() || !FreezeNetLaunch(netLevelID))
     {
         netGameCanStart = false;
         log_netlog("Network launch deferred: roster or readiness changed.\n");
@@ -1582,6 +1654,18 @@ int ypaworld_func158__sub0__sub6(char a1)
 }
 
 void UserData::ConnectToServer(std::string connStr){
+    if (netLaunchFrozen || p_YW->_userRobo)
+        return;
+    // A deliberate connection attempt is a fresh session boundary, including
+    // failure. Old queued events must not retain any game-side authority.
+    netSession = {};
+    lobbyPlayers.fill(TNetPlayerLobbyData{});
+    netPlayers.fill(TNetPlayerData{});
+    netLaunchPlayers.fill(TNetPlayerLobbyData{});
+    netSessionEnded = false;
+    noSent = false;
+    netPlayerOwner = 0;
+    isHost = false;
     fmt::printf("Connectiong to: %s\n", connStr);
     if ( p_YW->_netDriver->Connect(connStr) )
     {
@@ -4201,7 +4285,7 @@ void UserData::GameShellUiHandleInput()
         isWelcmd = true;
         for ( TDPPlayerData &p : p_YW->_netDriver->GetPlayersData() )
         {
-            if (static_cast<size_t>(p.Index) >= lobbyPlayers.size() || !p.IsOnline())
+            if (!World::NetLobby::MatchRow(lobbyPlayers, p.Index, netSession.SessionId, p.ID) || !p.IsOnline())
             {
                 netGameCanStart = false;
                 isWelcmd = false;

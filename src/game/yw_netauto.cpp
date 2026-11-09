@@ -101,7 +101,7 @@ void BuildView(NC_STACK_ypaworld *world, Flags::LobbyView &v)
             Flags::Player player;
             player.name = p.name;
             player.me = p.IsItMe();
-            if (p.Index < usr.lobbyPlayers.size())
+            if (World::NetLobby::MatchRow(usr.lobbyPlayers, p.Index, usr.netSession.SessionId, p.ID))
             {
                 const UserData::TNetPlayerLobbyData &lobby = usr.lobbyPlayers[p.Index];
                 // As CheckNetLobbyRoster sees them: the host is always ready.

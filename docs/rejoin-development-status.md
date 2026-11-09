@@ -78,6 +78,69 @@ gameplay acceptance is inferred from those tests.
 CI results must be checked against the exact commit being considered. Building
 an executable or passing transport tests does not close the gameplay gates below.
 
+## Game identity prerequisite
+
+The game now binds lobby and loaded owner rows to the transport session, player
+ID and stable slot. Names are presentation labels. Initial host/join setup seeds
+these bindings before peer announcements; terminal cleanup and deliberate new
+connections clear them. The provider retains the accepted host/self/session
+identity separately from current roster availability. A contradictory identity
+cannot silently replace that binding. Transport events carry the session in
+which they were queued, including events whose live connection getters have
+already been cleared.
+
+The existing host lobby map-selection route deliberately starts a fresh
+transport session; it now clears both provider and game identity first while
+preserving the selected map. Existing peers must rejoin that new session.
+Unexpected identity changes during an ordinary session remain rejected.
+Readiness also requires a live transport; retained ENet IDs after a direct Stop
+do not make a stopped endpoint usable. A zero-session connection refusal is
+accepted only during the provider's active connection attempt.
+
+The receive loop validates the complete packet framing before dispatch and
+rejects an unknown sender, wrong session or unauthorized control before
+liveness, overload warnings or corruption-triggered repair work. LOAD,
+LOBBYINIT, KICK, SCORE, REQPING, STARTPROBLEM and ENDPROBLEM require the retained
+host. PONG and repair requests remain peer messages with their own typed rules.
+KICK's owner identifies the victim; accounting belongs to the sending host.
+Existing cross-owner combat messages are not subject to a blanket owner-equality
+rule. SETLEVEL and NEWLEADER have no located reachable producer in this version
+and are consumed without application.
+
+An accepted LOAD freezes the local participant/faction snapshot before any
+station is created. Seating and the start barrier use that snapshot, so a
+newcomer cannot acquire an owner or increase the waiting count while a level is
+loading. Delayed departure events cannot clear a replacement in the same slot.
+Directed WELCOME, ping and repair messages and explicit removal use player IDs.
+Host loss remains terminal; the legacy host-election event grants no authority.
+A terminal latch cancels a pending launch and prevents later queued packets or
+stale load-entry calls from reopening the session.
+
+This snapshot is local. It does **not** prove that all peers acknowledged the
+same canonical launch configuration, and it is not a checkpoint or a reclaim
+transaction. Transport BACK/SELFRESUMED do not hand a world owner to a controller.
+Full typed combat authorization, host-authored seat incarnations and epochs are
+still pending. The new event metadata changes no wire layout; it does not add
+encryption or a cryptographic identity mechanism.
+
+Windows regression evidence includes 38 exact-source handler-prefix cases,
+25 actual outer-loop/lifecycle cases and 15 terminal-session cases. The latter
+reproduced acceptance after terminal events on frozen pre-fix source before
+passing against the corrected source. CMake extracts the production functions
+and records source hashes; native fixtures supply clock/queue/world boundaries.
+The full outer loop and corruption scan execute, while downstream NORMAL
+gameplay handlers are represented by an entry marker. These results do not
+establish actual multiplayer gameplay, atomic world repair or recovery success.
+Earlier validation counts above describe earlier checkpoints, not this change.
+
+The provider's 50 extracted production methods passed 94 cases with fake clock
+and adapter boundaries. Separate native transport regressions passed 65 tests,
+including real loopback endpoints for both adapters and enqueue-time session
+metadata. Neither a method fixture nor local socket traffic is a remote match.
+A full native Windows Release engine compile and link also passed with unchanged
+recorded source/configuration/resource inputs. The remaining gameplay gates
+below still apply to that executable.
+
 ## Remaining game integration and acceptance
 
 - Define and enforce host-authored seat ownership and authority epochs for every

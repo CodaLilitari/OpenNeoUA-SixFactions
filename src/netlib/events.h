@@ -2,6 +2,7 @@
 #define ZNDNET_EVENT_H_INCLUDED
 
 #include <list>
+#include <cstdint>
 
 namespace ZNDNet
 {
@@ -30,11 +31,12 @@ class Event
 public:
     const uint32_t type;
     const uint32_t value;
+    const uint64_t sessionId; // Local enqueue context, never serialized on wire.
     uint32_t size;
     uint32_t __id;
 
-    Event(uint32_t _type, uint32_t _value)
-    : type(_type), value(_value)
+    Event(uint32_t _type, uint32_t _value, uint64_t _sessionId = 0)
+    : type(_type), value(_value), sessionId(_sessionId)
     {
         size = 0;
         __id = 0;
@@ -50,8 +52,8 @@ public:
     uint64_t id;
     uint8_t slot;
 
-    EventNameID(uint32_t _type, uint32_t _value, const std::string &_name, uint64_t _id, uint8_t _slot = 0xff)
-    : Event(_type, _value)
+    EventNameID(uint32_t _type, uint32_t _value, const std::string &_name, uint64_t _id, uint8_t _slot = 0xff, uint64_t _sessionId = 0)
+    : Event(_type, _value, _sessionId)
     {
         name = _name;
         id = _id;
@@ -70,8 +72,8 @@ public:
     uint8_t *data;
     uint8_t  channel;
 
-    EventData(uint32_t _type, uint32_t _value, uint64_t _from, bool _cast, uint64_t _to, uint32_t _sz, uint8_t *_data, uint8_t _channel)
-    : Event(_type, _value)
+    EventData(uint32_t _type, uint32_t _value, uint64_t _from, bool _cast, uint64_t _to, uint32_t _sz, uint8_t *_data, uint8_t _channel, uint64_t _sessionId = 0)
+    : Event(_type, _value, _sessionId)
     {
         from = _from;
         cast = _cast;

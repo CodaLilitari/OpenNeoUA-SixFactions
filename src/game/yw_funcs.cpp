@@ -3600,6 +3600,10 @@ void UserData::clear()
     netPlayers.fill(TNetPlayerData());
 
     lobbyPlayers.fill(TNetPlayerLobbyData());
+    netSession = {};
+    netLaunchPlayers.fill(TNetPlayerLobbyData{});
+    netLaunchFrozen = false;
+    netSessionEnded = false;
 
     confirm_button = nullptr;
     confirmMode = 0;

@@ -280,7 +280,10 @@ ZNDEnet::CreateSession(const std::string&, const std::string&, std::uint32_t)
 {
     // Direct transport has a fixed single session; creation is an error,
     // matching the no-lobby ZNDSingle behaviour surfaced to windp.
-    Events_Push(new Event(EVENT_SESSION_FAIL, 0));
+    LockNet();
+    const uint64_t eventSession = mySesId_;
+    UnlockNet();
+    Events_Push(new Event(EVENT_SESSION_FAIL, 0, eventSession));
 }
 
 void
@@ -288,9 +291,10 @@ ZNDEnet::JoinSession(std::uint64_t SID, const std::string&)
 {
     LockNet();
     const bool accepted = SID == mySesId_ && transportConnected_;
+    const uint64_t eventSession = mySesId_;
     UnlockNet();
     if (!accepted)
-        Events_Push(new Event(EVENT_SESSION_FAIL, 0));
+        Events_Push(new Event(EVENT_SESSION_FAIL, 0, eventSession));
     // Already auto-joined: SESSION_JOIN was (or will be) pushed by the pump.
 }
 
@@ -325,10 +329,11 @@ ZNDEnet::CloseSession(std::uint32_t)
     if (hosting_)
     {
         LockNet();
+        const uint64_t eventSession = mySesId_;
         transport_.CloseSession();
         UnlockNet();
         Stop();
-        Events_Push(new Event(EVENT_SESSION_END, 0));
+        Events_Push(new Event(EVENT_SESSION_END, 0, eventSession));
         mySesId_ = 0;
     }
     else
@@ -528,7 +533,7 @@ ZNDEnet::ApplyRoster(const std::uint8_t* data, std::size_t len)
     if (applied)
     {
         if (consolidated)
-            Events_Push(new Event(EVENT_USER_LIST, 1));
+            Events_Push(new Event(EVENT_USER_LIST, 1, next.session));
         else
             for (const auto& c : changes)
             {
@@ -539,7 +544,7 @@ ZNDEnet::ApplyRoster(const std::uint8_t* data, std::size_t len)
                     Events_Push(new EventNameID(EVENT_USER_ADD,
                                                 t == Transition::Fresh ? JoinFresh : JoinResumed,
                                                 c.row.name,
-                                                c.row.id,c.row.slot));
+                                                c.row.id,c.row.slot,next.session));
                 else
                     Events_Push(new EventNameID(EVENT_USER_LEAVE,
                                                 t == Transition::Away     ? LeaveAway
@@ -547,7 +552,7 @@ ZNDEnet::ApplyRoster(const std::uint8_t* data, std::size_t len)
                                                 : t == Transition::Kicked ? LeaveKicked
                                                                           : LeaveExpired,
                                                 c.row.name,
-                                                c.row.id,c.row.slot));
+                                                c.row.id,c.row.slot,next.session));
             }
     }
     if (!joined_)
@@ -555,10 +560,10 @@ ZNDEnet::ApplyRoster(const std::uint8_t* data, std::size_t len)
         joined_ = true;
         transportConnected_ = true;
         mySesId_ = transport_.SessionId();
-        Events_Push(new EventNameID(EVENT_CONNECTED, 0, myName_, uint64_t(transport_.MyId()) + 1));
-        Events_Push(new EventNameID(EVENT_SESSION_JOIN, 0, sessionName_, mySesId_));
+        Events_Push(new EventNameID(EVENT_CONNECTED, 0, myName_, uint64_t(transport_.MyId()) + 1, transport_.MySlot(), mySesId_));
+        Events_Push(new EventNameID(EVENT_SESSION_JOIN, 0, sessionName_, mySesId_, 0xff, mySesId_));
         if (transport_.Resumed())
-            Events_Push(new Event(EVENT_SELF_RESUMED, 0));
+            Events_Push(new Event(EVENT_SELF_RESUMED, 0, mySesId_));
     }
     ControlWriter w;
     w.U('K', 1);
@@ -592,7 +597,7 @@ ZNDEnet::HostDeliver(std::uint64_t from,
                                   mySesId_,
                                   size,
                                   size ? (std::uint8_t*)payload : nullptr,
-                                  channelId));
+                                  channelId, mySesId_));
         std::vector<std::uint8_t> frame(data, data + len);
         for (int i = 0; i < 8; ++i)
             frame[1 + i] = (std::uint8_t)((from >> (8 * i)) & 0xFF);
@@ -601,7 +606,7 @@ ZNDEnet::HostDeliver(std::uint64_t from,
     else if (to == 1)
     {
         Events_Push(new EventData(
-          EVENT_DATA, 0, from, false, 1, size, size ? (std::uint8_t*)payload : nullptr, channelId));
+          EVENT_DATA, 0, from, false, 1, size, size ? (std::uint8_t*)payload : nullptr, channelId, mySesId_));
     }
     else if (to > 1 && to != from)
     {
@@ -631,7 +636,7 @@ ZNDEnet::Pump()
         if (!hosting_ && !joined_ && now >= connectDeadline_)
         {
             running_ = false;
-            Events_Push(new Event(EVENT_CONNERR, ERR_CONN_TIMEOUT));
+            Events_Push(new Event(EVENT_CONNERR, ERR_CONN_TIMEOUT, mySesId_));
             UnlockNet();
             break;
         }
@@ -663,7 +668,7 @@ ZNDEnet::Pump()
                 acknowledgments_.erase(id);
                 UnlockUsers();
                 Events_Push(new EventNameID(
-                  EVENT_USER_ADD, ev.resumed ? JoinResumed : JoinFresh, ev.name, id,ev.slot));
+                  EVENT_USER_ADD, ev.resumed ? JoinResumed : JoinFresh, ev.name, id,ev.slot,mySesId_));
                 SendRoster();
             }
             else
@@ -698,15 +703,15 @@ ZNDEnet::Pump()
                                 : ev.reason == LeaveKicked ? Transition::Kicked
                                                            : Transition::Expired);
                 UnlockUsers();
-                Events_Push(new EventNameID(EVENT_USER_LEAVE, ev.reason, row.name, id,row.slot));
+                Events_Push(new EventNameID(EVENT_USER_LEAVE, ev.reason, row.name, id,row.slot,mySesId_));
                 SendRoster();
             }
             else
             {
                 if (ev.reason == 3)
-                    Events_Push(new Event(EVENT_SESSION_END, 0));
+                    Events_Push(new Event(EVENT_SESSION_END, 0, mySesId_));
                 Events_Push(new Event(joined_ ? EVENT_DISCONNECT : EVENT_CONNERR,
-                                      joined_ ? ev.reason : ConnErrFor(ev.reason)));
+                                      joined_ ? ev.reason : ConnErrFor(ev.reason), mySesId_));
                 transportConnected_ = false;
                 joined_ = false;
                 running_ = false;
@@ -744,7 +749,7 @@ ZNDEnet::Pump()
                                           cast ? mySesId_ : uint64_t(transport_.MyId()) + 1,
                                           size,
                                           size ? ev.data.data() + DataHeader : nullptr,
-                                          ev.channel));
+                                          ev.channel, mySesId_));
             }
         }
         UnlockNet();

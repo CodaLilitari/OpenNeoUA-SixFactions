@@ -67,6 +67,7 @@ ZNDSingle::Start(const std::string& name,
     ME.status = NetUser::STATUS_CONNECTED;
 
     session.Init(GenerateID(), sname, false);
+    ME.sesID = session.ID;
     session.max_players = std::max(1u, std::min(6u, max_players ? max_players : 6));
     roster = RosterState();
     roster.session = session.ID;
@@ -272,7 +273,7 @@ ZNDSingle::ProcessSystemPkt(Pkt* pkt)
             old->pingTime = old->pongTime = ttime.GetTicks();
             old->pingSeq = old->pongSeq = 0;
             Changed(old, Transition::Resumed);
-            Events_Push(new EventNameID(EVENT_USER_ADD, JoinResumed, old->name, old->ID, old->slot));
+            Events_Push(new EventNameID(EVENT_USER_ADD, JoinResumed, old->name, old->ID, old->slot, session.ID));
             SendAcceptance(old);
             return;
         }
@@ -331,7 +332,7 @@ ZNDSingle::ProcessSystemPkt(Pkt* pkt)
         u->pingSeq = u->pongSeq = 0;
         session.users.push_back(u);
         Changed(u, Transition::Fresh);
-        Events_Push(new EventNameID(EVENT_USER_ADD, JoinFresh, u->name, u->ID, u->slot));
+        Events_Push(new EventNameID(EVENT_USER_ADD, JoinFresh, u->name, u->ID, u->slot, session.ID));
         SendAcceptance(u);
         return;
     }
@@ -431,7 +432,7 @@ ZNDSingle::ProcessRegularPkt(Pkt* pkt)
                                             to,
                                             sz,
                                             pkt->data + 1 + rd.tell(),
-                                            pkt->uchnl));
+                                            pkt->uchnl, session.ID));
                         }
                         else
                         {
@@ -463,7 +464,7 @@ ZNDSingle::ProcessRegularPkt(Pkt* pkt)
                                                   to,
                                                   sz,
                                                   pkt->data + 1 + rd.tell(),
-                                                  pkt->uchnl));
+                                                  pkt->uchnl, session.ID));
 
                         RefData* dat =
                           USRDataGenData(from, true, to, pkt->data + 1 + rd.tell(), sz);
@@ -588,7 +589,7 @@ ZNDSingle::DisconnectUser(NetUser* usr, uint8_t reason)
             : reason == LeaveKicked  ? Transition::Kicked
             : reason == LeaveExpired ? Transition::Expired
                                      : Transition::Left);
-    Events_Push(new EventNameID(EVENT_USER_LEAVE, reason, usr->name, usr->ID, usr->slot));
+    Events_Push(new EventNameID(EVENT_USER_LEAVE, reason, usr->name, usr->ID, usr->slot, session.ID));
     if (online)
     {
         ControlWriter w;
@@ -634,7 +635,7 @@ ZNDSingle::CloseSession()
 
     eStatus = 0;
     ME.status = NetUser::STATUS_DISCONNECTED;
-    Events_Push(new Event(EVENT_DISCONNECT, ERR_DISCONNECT_SERVER));
+    Events_Push(new Event(EVENT_DISCONNECT, ERR_DISCONNECT_SERVER, session.ID));
 
     threadsEnd = true;
 }
@@ -680,7 +681,7 @@ ZNDSingle::CloseSession(uint32_t closeTime)
                     packet.maxlen = packet.len;
                     SDLNet_UDP_Send(sock, -1, &packet);
                 }
-            Events_Push(new Event(EVENT_SESSION_END, closeTime));
+            Events_Push(new Event(EVENT_SESSION_END, closeTime, session.ID));
         }
         SDL_UnlockMutex(eSyncMutex);
     }

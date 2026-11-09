@@ -992,6 +992,101 @@ static void CancelPendingSystem()
     Check(counts.second==0,"server hard cancellation left a handshake for the final sender flush");
     f.FreshControl();
 }
+
+// The fallback permits a real runtime RED against the pre-metadata transport;
+// it does not supply a session identity to production events.
+template<class E> static auto EventSession(const E &event, int) -> decltype(event.sessionId)
+{ return event.sessionId; }
+template<class E> static uint64_t EventSession(const E &, long) { return 0; }
+
+static void EventSessions(bool enet)
+{
+    Fixture f(enet, 3);
+    auto &one = f.Join("one");
+    auto &two = f.Join("two");
+    const uint64_t session = f.host->GetMySesID();
+    Check(session && one.GetMySesID() == session && two.GetMySesID() == session,
+          "event-session fixture did not join the same session");
+    bool connected = false, joined = false, added = false;
+    auto drain = [&](ZNDNet::ZNDNet &node, unsigned wanted, uint8_t marker) {
+        bool found = false;
+        unsigned remaining = 256;
+        while (remaining--)
+        {
+            std::unique_ptr<Event> event(node.Events_Pop());
+            if (!event) break;
+            Check(event->type != EVENT_CONNERR, "unexpected connection failure in event-session fixture");
+            if (event->type == EVENT_SESSION_LIST) continue;
+            Check(EventSession(*event, 0) == session,
+                  "transport event lost its enqueue-time session identity");
+            if (&node == &one && event->type == EVENT_CONNECTED) connected = true;
+            if (&node == &one && event->type == EVENT_SESSION_JOIN) joined = true;
+            if (&node == f.host.get() && event->type == EVENT_USER_ADD) added = true;
+            if (event->type == wanted)
+            {
+                if (wanted != EVENT_DATA) found = true;
+                else
+                {
+                    auto *data = static_cast<EventData *>(event.get());
+                    if (data->size == 1 && data->data[0] == marker) found = true;
+                }
+            }
+        }
+        return found;
+    };
+    Check(Wait([&] {
+        drain(*f.host, EVENT_CONNECTED, 0);
+        drain(one, EVENT_CONNECTED, 0);
+        drain(two, EVENT_CONNECTED, 0);
+        return connected && joined && added;
+    }, 2000), "admission metadata positive controls missing");
+
+    uint8_t marker = 0xA1;
+    one.SendData(f.host->GetMyID(), &marker, 1, PKT_FLAG_GARANT);
+    Check(Wait([&] { return drain(*f.host, EVENT_DATA, marker); }, 2000),
+          "client-to-host directed session metadata missing");
+    marker = 0xA2;
+    f.host->SendData(one.GetMyID(), &marker, 1, PKT_FLAG_GARANT);
+    Check(Wait([&] { return drain(one, EVENT_DATA, marker); }, 2000),
+          "host-to-client directed session metadata missing");
+    marker = 0xA3;
+    one.BroadcastData(&marker, 1, PKT_FLAG_GARANT);
+    bool hostData = false, peerData = false;
+    Check(Wait([&] {
+        hostData = drain(*f.host, EVENT_DATA, marker) || hostData;
+        peerData = drain(two, EVENT_DATA, marker) || peerData;
+        return hostData && peerData;
+    }, 2000), "relayed broadcast session metadata missing");
+
+    f.host->KickUser(two.GetMyID());
+    bool hostLeft = false, peerLeft = false;
+    Check(Wait([&] {
+        hostLeft = drain(*f.host, EVENT_USER_LEAVE, 0) || hostLeft;
+        peerLeft = drain(one, EVENT_USER_LEAVE, 0) || peerLeft;
+        return hostLeft && peerLeft;
+    }, 3000), "terminal leave session metadata missing");
+    // The kick event stays queued after admission ends. ZND's getters clear;
+    // ENet retains its historical session value after disconnect. Neither supplies
+    // the provenance of this already-queued event at pop time.
+    Check(Wait([&] { return (enet ? static_cast<ZNDEnet &>(two).GetStatus()
+                                 : static_cast<ZNDClient &>(two).GetStatus()) == NetUser::STATUS_DISCONNECTED; }, 3000),
+          "kicked endpoint did not finish disconnecting");
+    if (!enet)
+        Check(two.GetMyID() == 0 && two.GetMySesID() == 0,
+              "disconnected ZND endpoint still exposed a live admitted identity");
+    Check(drain(two, EVENT_DISCONNECT, 0),
+          "queued disconnect lost its original session after live identity cleared");
+    f.host->CloseSession(0);
+    if (enet)
+    {
+        Check(static_cast<ZNDEnet &>(*f.host).GetStatus() == NetUser::STATUS_DISCONNECTED,
+              "ENet host close did not stop the endpoint");
+        Check(drain(*f.host, EVENT_SESSION_END, 0),
+              "ENet queued host-close event lost its session across Stop");
+    }
+    Check(Wait([&] { return drain(one, EVENT_SESSION_END, 0); }, 3000),
+          "session-end event lost its old session context");
+}
 int
 main(int argc, char** argv)
 {
@@ -1011,6 +1106,7 @@ main(int argc, char** argv)
         else if(mode=="cancel_server_countdown")CancelServerTerminal(true);
         else if(mode=="cancel_after_timeout")CancelAfterTimeout();
         else if(mode=="cancel_pending_system")CancelPendingSystem();
+        else if(mode.find("eventsession")!=std::string::npos)EventSessions(enet);
         else if(mode.find("initialroster")!=std::string::npos)InitialRoster(enet);
         else if(mode.find("countdown")!=std::string::npos)CloseCountdown(enet);
         else if(mode=="kickrace")KickRace();

@@ -9,6 +9,7 @@
 #include "game/yw_net_msgs.h"
 #include "platform/windp_events.h"
 #include "world/net_update_gate.h"
+#include "world/net_lobby.h"
 #include "net_ingress_types.inc"
 
 // Only point coordinates/construction are required by the world fixture's IsSector.
