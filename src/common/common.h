@@ -3,6 +3,7 @@
 #define COMMON_H_INCLUDED
 
 #include <inttypes.h>
+#include <cmath>
 #include <vector>
 #include <array>
 #include <deque>
@@ -95,14 +96,18 @@ struct TPoint
             y -= delta.y;
     }
 
+    // std::sqrt from <cmath>, not the global sqrt that SDL_stdinc.h used to
+    // bring in: SDL2 on MSYS2 is sdl2-compat now, whose Windows config pulls
+    // in no C library header, so <math.h> may be missing here. Same overloads
+    // as before (float stays float; integers go through double).
     template <typename R>
     R Length() const {
-        return sqrt( (x * x) + (y * y) );
+        return std::sqrt( (x * x) + (y * y) );
     }
 
     template <typename R>
     R LengthTo(const __Point &b) const {
-        return sqrt( (x - b.x) * (x - b.x) + ((y - b.y)  * (y - b.y)) );
+        return std::sqrt( (x - b.x) * (x - b.x) + ((y - b.y)  * (y - b.y)) );
     }
 
     __Point Invert() const { return TPoint( -x, -y ); }
