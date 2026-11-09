@@ -669,6 +669,22 @@ inline void NetMsgClear(T &msg)
     ::new (static_cast<void *>(&msg)) T;
 }
 
+// The STARTBUILD a station's process broadcasts once its own ypaworld_func148
+// has started building `buildingID` on cell (sectorX, sectorY) for `owner`
+// (NC_STACK_yparobo::StartBuilding). Every peer starts the same construction
+// from it (yw_net.cpp).
+inline void NetMsgFillStartBuild(uamessage_startBuild &msg, std::uint8_t owner,
+                                 std::uint32_t buildingID, std::int16_t sectorX,
+                                 std::int16_t sectorY)
+{
+    NetMsgClear(msg);
+    msg.msgID = UAMSG_STARTBUILD;
+    msg.owner = owner;
+    msg.bproto = buildingID;
+    msg.sec_x = sectorX;
+    msg.sec_y = sectorY;
+}
+
 // When a message can be applied. Lobby messages describe the lobby and mean
 // nothing once a level is loaded: the stations are seated by then. Level
 // messages act on the loaded world and cannot be applied without one.

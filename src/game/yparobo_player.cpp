@@ -558,7 +558,6 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     ypaworld_arg146 arg146;
     setState_msg arg78;
     bact_arg109 arg109;
-    ypaworld_arg148 arg148;
     robo_arg134 arg134;
     bact_arg124 arg124;
 
@@ -779,28 +778,8 @@ void NC_STACK_yparobo::doUserCommands(update_msg *arg)
     case World::DOACTION_6:
         if ( arg->energy <= _roboEnergyLife )
         {
-            arg148.owner = _owner;
-            arg148.blg_ID = arg->protoID;
-            arg148.field_C = 0;
-            arg148.CellId = arg->target_Sect->CellId;
-            arg148.field_18 = 0;
-            if ( _world->ypaworld_func148(&arg148) )
-            {
+            if ( StartBuilding(arg->protoID, arg->target_Sect->CellId) )
                 _roboEnergyLife -= arg->energy;
-
-                if ( _world->_isNetGame )
-                {
-                    uamessage_startBuild sbMsg;
-                    NetMsgClear(sbMsg);
-                    sbMsg.msgID = UAMSG_STARTBUILD;
-                    sbMsg.owner = _owner;
-                    sbMsg.bproto = arg->protoID;
-                    sbMsg.sec_x = arg->target_Sect->CellId.x;
-                    sbMsg.sec_y = arg->target_Sect->CellId.y;
-
-                    _world->NetBroadcastMessage(&sbMsg, sizeof(sbMsg), true);
-                }
-            }
         }
         break;
 

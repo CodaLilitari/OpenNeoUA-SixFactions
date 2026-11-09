@@ -292,6 +292,40 @@ void NC_STACK_yparobo::sub_4F4FF4(int sectID, setTarget_msg *parg67)
     parg67->tgt_pos = World::SectorIDToCenterPos3( pt );
 }
 
+// The station AI (buildRadar, buildPower, buildSafe) and the player's build
+// command start every building of a station here. In a network game only the
+// station's own process gets here: the world update loop (yw.cpp) runs
+// Update() for its own station (_userRobo) and NetUpdate() for every other
+// station, and the station AI runs from Update() only (AI_layer1 ->
+// AI_layer3 -> AI_doWish); the player's commands go to _userRobo only
+// (HandleUserCommands). So a peer never announces a building of a station it
+// does not own, and applying a remote STARTBUILD (yw_net.cpp) calls
+// ypaworld_func148 directly, without announcing it again.
+bool NC_STACK_yparobo::StartBuilding(int buildingID, const Common::Point &cell)
+{
+    ypaworld_arg148 arg148;
+    arg148.owner = _owner;
+    arg148.blg_ID = buildingID;
+    arg148.CellId = cell;
+    arg148.field_C = 0;
+    arg148.field_18 = 0;
+
+    if ( !_world->ypaworld_func148(&arg148) )
+        return false;
+
+    // The construction now runs in this process only; without the broadcast
+    // the peers would get the building's guns when it completes
+    // (UAMSG_BUILDINGVHCL), but never the building.
+    if ( _world->_isNetGame )
+    {
+        uamessage_startBuild sbMsg;
+        NetMsgFillStartBuild(sbMsg, _owner, buildingID, cell.x, cell.y);
+        _world->NetBroadcastMessage(&sbMsg, sizeof(sbMsg), true);
+    }
+
+    return true;
+}
+
 void NC_STACK_yparobo::buildRadar(update_msg *arg)
 {
     Common::Point pt( _roboBuildingCellID % _wrldSectors.x, _roboBuildingCellID / _wrldSectors.x );
@@ -362,15 +396,7 @@ void NC_STACK_yparobo::buildRadar(update_msg *arg)
                 }
                 else
                 {
-                    ypaworld_arg148 arg148;
-
-                    arg148.owner = _owner;
-                    arg148.blg_ID = build_id;
-                    arg148.CellId = pt;
-                    arg148.field_C = 0;
-                    arg148.field_18 = 0;
-
-                    if ( _world->ypaworld_func148(&arg148) )
+                    if ( StartBuilding(build_id, pt) )
                     {
                         const World::TBuildingProto &proto = _world->GetBuildProtos().at(build_id);
 
@@ -524,14 +550,7 @@ void NC_STACK_yparobo::buildPower(update_msg *arg)
                     }
                     else
                     {
-                        ypaworld_arg148 arg148;
-                        arg148.owner = _owner;
-                        arg148.blg_ID = bldid;
-                        arg148.CellId = pt;
-                        arg148.field_C = 0;
-                        arg148.field_18 = 0;
-
-                        if ( _world->ypaworld_func148(&arg148) )
+                        if ( StartBuilding(bldid, pt) )
                         {
                             const World::TBuildingProto &proto = _world->GetBuildProtos().at(bldid);
 
@@ -687,15 +706,7 @@ void NC_STACK_yparobo::buildSafe(update_msg *arg)
                 }
                 else
                 {
-                    ypaworld_arg148 arg148;
-
-                    arg148.owner = _owner;
-                    arg148.blg_ID = build_id;
-                    arg148.CellId = pt;
-                    arg148.field_C = 0;
-                    arg148.field_18 = 0;
-
-                    if ( _world->ypaworld_func148(&arg148) )
+                    if ( StartBuilding(build_id, pt) )
                     {
                         const World::TBuildingProto &proto = _world->GetBuildProtos().at(build_id);
 
