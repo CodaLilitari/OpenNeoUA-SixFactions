@@ -394,3 +394,24 @@ state, authority and admission work described in
 [the rejoin design review](rejoin-design-review.md). A restarted transport is not
 a restored match.
 
+## Retail fight-motivation condition restored (2026-11-09, Red)
+
+`NC_STACK_ypabact::GetFightMotivation` decides whether a squad is fit to
+fight. In the decompiled engine an escaping squad was fit only above half its
+maximum energy and any other squad above a fifth; upstream `7bc426f`
+flattened the condition, so an escaping squad between a fifth and half also
+counted as fit. The retail condition is restored. The decision is now
+`World::SquadFightMotivation` (`src/world/fight_motivation.h`), with the float
+ratio, the double thresholds and the `*arg` output unchanged.
+`test_fight_motivation` covers both branches at and just above 0.2 and 0.5,
+aggression 0 and 100 and a zero maximum.
+
+In play, a squad that falls below a fifth of its energy still retreats, but it
+now regroups until it is above half strength before it stops escaping and
+fights again; a human player's squad reports in (`unit_recovered`) only then.
+This applies to the squads of every station, human, bot or computer, at
+aggression levels other than 0 and 100. Of the two calls in
+`NC_STACK_yparobo::checkCommander` (`src/game/yparobo_ai.cpp`), only the one
+for escaping commanders changes; the call for the others keeps the 0.2 rule.
+No wire or save format changes. Not yet playtested.
+
