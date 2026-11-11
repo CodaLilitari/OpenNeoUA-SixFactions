@@ -123,6 +123,15 @@ public:
 
     virtual void SendData(uint64_t to, void *data, uint32_t sz, uint8_t flags = 0, uint8_t channel = CHANNEL_USR) = 0;
     virtual void BroadcastData(void *data, uint32_t sz, uint8_t flags = 0, uint8_t channel = CHANNEL_USR) = 0;
+    // Whether nothing waits to be sent and no guaranteed packet still waits
+    // for its acknowledgment.
+    virtual bool SendIdle();
+    // Waits up to timeoutMs for SendIdle and returns whether it was reached.
+    // For the owning thread before it disconnects: a disconnect clears the
+    // send queue and a stopping endpoint sends system packets only, so
+    // guaranteed data queued just before is dropped unless it is given this
+    // time to leave and be acknowledged.
+    bool WaitSendIdle(uint32_t timeoutMs);
 
     virtual uint64_t GetMyID() {return 0;};
     virtual std::string GetMyName() {return std::string();};

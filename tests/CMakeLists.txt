@@ -132,6 +132,21 @@ if(OPENNEOUA_ENET_ZND_TEST)
     add_test(NAME enet_znd COMMAND test_enet_znd)
     set_tests_properties(enet_znd PROPERTIES TIMEOUT 60)
 
+    # A guaranteed broadcast sent just before a leave (the quit announcement).
+    add_executable(test_enet_drain test_enet_drain.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/enet_transport.cpp ../src/netlib/enet_znd.cpp
+        ${ENET_ZND_SOURCES})
+    target_include_directories(test_enet_drain PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../src/third_party/enet/include)
+    target_link_libraries(test_enet_drain PRIVATE PkgConfig::NET_SDL)
+    if(WIN32)
+        target_link_libraries(test_enet_drain PRIVATE ws2_32 winmm)
+    endif()
+    foreach(enet_drain_case delivered idle)
+        add_test(NAME enet_drain_${enet_drain_case} COMMAND test_enet_drain ${enet_drain_case})
+        set_tests_properties(enet_drain_${enet_drain_case} PROPERTIES TIMEOUT 120)
+    endforeach()
+
     # Three-party star relay, directed sends and duplicate-callsign refusal.
     add_executable(test_enet_znd_relay test_enet_znd_relay.cpp
         ../src/netlib/zndNet.cpp ../src/netlib/enet_transport.cpp ../src/netlib/enet_znd.cpp
@@ -157,6 +172,16 @@ if(OPENNEOUA_TRANSPORT_TEST)
     target_link_libraries(test_net_transport PRIVATE PkgConfig::NET_SDL)
     add_test(NAME net_transport COMMAND test_net_transport)
     set_tests_properties(net_transport PROPERTIES TIMEOUT 180)
+    # Guaranteed data queued just before a disconnect (the quit announcement).
+    add_executable(test_net_drain test_net_drain.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
+        ../src/netlib/single.cpp ../src/netlib/single_threads.cpp)
+    target_include_directories(test_net_drain PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    target_link_libraries(test_net_drain PRIVATE PkgConfig::NET_SDL)
+    foreach(drain_case delivered dropped idle bounded)
+        add_test(NAME net_drain_${drain_case} COMMAND test_net_drain ${drain_case})
+        set_tests_properties(net_drain_${drain_case} PROPERTIES TIMEOUT 60)
+    endforeach()
     add_executable(test_net_lifecycle test_net_lifecycle.cpp
         ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
         ../src/netlib/single.cpp ../src/netlib/single_threads.cpp)

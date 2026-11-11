@@ -44,6 +44,28 @@ public:
     bool Poll(TransportEvent &out, std::uint32_t timeoutMs);
     std::uint32_t RttMs(std::uint32_t peer) const;
     std::uint16_t BoundPort() const;
+    // Whether every packet handed to ENet has been sent and every reliable
+    // one acknowledged, for all connected peers. An acknowledged packet has
+    // been handed to the remote application: a disconnect that arrives with
+    // it in one receive pass makes ENet drop it undelivered.
+    bool ReliableIdle() const
+    {
+        if (!host_)
+            return true;
+        const auto idle = [](const ENetPeer *peer)
+        {
+            return !peer || peer->state != ENET_PEER_STATE_CONNECTED ||
+                   (enet_list_empty(&peer->outgoingCommands) &&
+                    enet_list_empty(&peer->outgoingSendReliableCommands) &&
+                    enet_list_empty(&peer->sentReliableCommands));
+        };
+        if (!idle(serverPeer_))
+            return false;
+        for (const auto &kv : peers_)
+            if (!idle(kv.first))
+                return false;
+        return true;
+    }
 
     std::uint32_t MyId() const { return myId_; }
     // Host: broadcast to accepted peers except one (0 = nobody excluded).

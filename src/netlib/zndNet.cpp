@@ -728,6 +728,59 @@ void ZNDNet::Send_RetryData(SendingData *data, size_t from, size_t to, bool decr
 
 
 
+bool ZNDNet::SendIdle()
+{
+    bool idle = false;
+
+    // The sender holds sendModifyMutex for a whole pass, in which it moves a
+    // guaranteed packet from the send list to the confirm queue; holding it
+    // here means that move is never seen half done.
+    if (SDL_LockMutex(sendModifyMutex) == 0)
+    {
+        bool queued = true;
+        bool unconfirmed = true;
+
+        if (SDL_LockMutex(sendPktListMutex) == 0)
+        {
+            queued = !sendPktList.empty();
+            SDL_UnlockMutex(sendPktListMutex);
+        }
+
+        if (SDL_LockMutex(confirmQueueMutex) == 0)
+        {
+            unconfirmed = !confirmQueue.empty();
+            SDL_UnlockMutex(confirmQueueMutex);
+        }
+
+        idle = !queued && !unconfirmed;
+        SDL_UnlockMutex(sendModifyMutex);
+    }
+
+    return idle;
+}
+
+bool ZNDNet::WaitSendIdle(uint32_t timeoutMs)
+{
+    const uint32_t start = SDL_GetTicks();
+    int idlePolls = 0;
+
+    for (;;)
+    {
+        // Two idle polls in a row: the update worker takes a timed-out
+        // packet off the confirm queue before it queues the retry, without
+        // sendModifyMutex, so one poll can fall between the two steps.
+        const bool idle = SendIdle();
+        idlePolls = idle ? idlePolls + 1 : 0;
+        if (idlePolls >= 2)
+            return true;
+
+        if (SDL_GetTicks() - start >= timeoutMs)
+            return idle;
+
+        SDL_Delay(5);
+    }
+}
+
 void ZNDNet::Send_Clear(const IPaddress &addr)
 {
     if (SDL_LockMutex(sendModifyMutex) == 0)
