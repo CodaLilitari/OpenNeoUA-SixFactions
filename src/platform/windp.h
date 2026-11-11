@@ -165,6 +165,15 @@ public:
 
     size_t FlushBroadcastBuffer();
 
+    // Gives the guaranteed messages already handed to the transport up to
+    // maxMs to reach the session, and returns whether they did. For
+    // yw_netcleanup, which closes the transport right after the quit
+    // announcement was queued: ZNDNet drops what is still queued when it
+    // disconnects, and an ENet host drops what arrived together with the
+    // disconnect.
+    bool DrainSends(uint32_t maxMs);
+    static constexpr uint32_t QuitDrainMs = 500;
+
     virtual size_t LockSession(int *);
     virtual size_t Reset(IDVPair *stak);
 

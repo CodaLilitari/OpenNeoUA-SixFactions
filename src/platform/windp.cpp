@@ -593,6 +593,20 @@ size_t NC_STACK_windp::FlushBroadcastBuffer()
     return ret;
 }
 
+bool NC_STACK_windp::DrainSends(uint32_t maxMs)
+{
+    FlushBroadcastBuffer();
+
+    if (!zcon)
+        return true;
+
+    // A client that already lost its host has nobody to wait for.
+    if (connType == 2 && !IsConnected())
+        return false;
+
+    return zcon->WaitSendIdle(maxMs);
+}
+
 size_t NC_STACK_windp::LockSession(int *arg)
 {
     // lock session
@@ -1256,7 +1270,11 @@ int yw_DestroyPlayer(NC_STACK_ypaworld *yw, const char *playerName)
 
 void UserData::yw_netcleanup()
 {
-    p_YW->_netDriver->FlushBroadcastBuffer();
+    // The quit announcement (UAMSG_EXIT) was queued moments ago. Without this
+    // wait the session often saw only a dropped connection: ZNDNet's
+    // disconnect clears its send queue, and an ENet host drops what arrives
+    // together with the disconnect.
+    p_YW->_netDriver->DrainSends(NC_STACK_windp::QuitDrainMs);
 
     if( netSelMode ==NETSCREEN_INSESSION || p_YW->_isNetGameStarted )
         yw_DestroyPlayer( p_YW, netPlayerName.c_str() );
