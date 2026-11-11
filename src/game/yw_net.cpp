@@ -112,6 +112,10 @@ void NC_STACK_ypaworld::SendCRC(int lvlid)
 
     crc = fileCrc32( fmt::sprintf("levels:multi/L%02d%02d.ldf", lvlid, lvlid) , crc);
 
+    // Every peer logs its own value: a mismatch only warns in the lobby
+    // (yw_CheckCRCs), so the logs are where two peers' data can be compared.
+    if ( crc != _GameShell->netCRC )
+        log_netlog("Lobby data checksum %08x for level %d\n", crc, lvlid);
     _GameShell->netCRC = crc;
 
     uamessage_crc crcmsg;
