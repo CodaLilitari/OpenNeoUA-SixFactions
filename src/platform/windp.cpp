@@ -1124,6 +1124,11 @@ void UserData::JoinLobbyLessGame()
             isHost = false;
 
             yw_FractionInit();
+
+            // Announce this client's data checksum, as the session join below
+            // (no longer reached) did: without it the host never compares the
+            // client's scripts and map with its own (yw_CheckCRCs).
+            p_YW->SendCRC(netLevelID);
         }
     }
     return;
