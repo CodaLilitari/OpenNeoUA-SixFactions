@@ -415,3 +415,80 @@ aggression levels other than 0 and 100. Of the two calls in
 for escaping commanders changes; the call for the others keeps the 0.2 rule.
 No wire or save format changes. Not yet playtested.
 
+
+## Lobby checksum on join by address, and the quit announcement (2026-11-10, Red)
+
+Two defects in the lobby and at the end of a match, found while porting a
+private mod onto six-factions. Both are older than the six-faction work.
+
+**Data checksum.** Every peer announces a checksum of its multiplayer scripts
+and of the selected map (`SendCRC`); `yw_CheckCRCs` shows "... has game files
+different from yours." in the lobby when two values differ. The warning does
+not keep a match from starting. A client that joins by address goes through
+`UserData::JoinLobbyLessGame`, which returned before the only `SendCRC` call
+of the join. The other peers announce again whenever a player arrives, so
+only the last client to join was never compared. It now sends its checksum
+when its lobby is set up, and every peer writes the value it sends to the
+network log (`Lobby data checksum 6c5e1b5c for level 100`), so that two
+installations can be compared after a run.
+
+**Quit announcement.** A player who leaves through the exit menu broadcasts
+`UAMSG_EXIT` and then closes the transport (`yw_netcleanup`). The message was
+usually lost, and the others saw a dropped connection instead of "... player
+left the game":
+
+- ZNDNet: `ZNDClient::SendDisconnect` clears the send queue and a stopping
+  endpoint sends system packets only.
+- ENet: when the host reads the message and the disconnect in one receive
+  pass, `enet_protocol_handle_disconnect` drops the message before the
+  application sees it.
+
+`ZNDNet::WaitSendIdle` (with `ZNDEnet::SendIdle` for ENet) waits until
+everything handed to the transport has been sent and acknowledged.
+`NC_STACK_windp::DrainSends` calls it from `yw_netcleanup` for at most 500 ms.
+An idle transport returns after about 5 ms, and a client that has already lost
+its host does not wait.
+
+Measured on Linux, level 100, live engine processes:
+
+| Check | Without the change | With it |
+|---|---|---|
+| Last client's checksum line in its log (host and one client, ZNDNet) | missing | present |
+| The same in matches of a host, a client and a bot instance | the last to join logs none, in 2 of 2 matches | all three log it, in 13 of 13 matches (2 ZNDNet, 11 ENet) |
+| Host's lobby warning when the client's `FLAKS.SCR` has one extra line | not shown | shown |
+| Client quit announced to both other instances, ZNDNet | 1 of 6 matches | 6 of 6 |
+| Client quit announced to both other instances, ENet | 3 of 7 matches | 7 of 7 |
+| Loopback: data sent just before an ENet leave reaches the host | 14 to 18 of 20, four runs | 12 of 12, every run |
+
+Six of the seven ENet matches without the change ran on a first version that
+waited on ZNDNet only and behaved on ENet as the old code. A host's own quit
+was already announced on ZNDNet.
+
+Tests: `net_drain_delivered`, `net_drain_dropped` (the control: without the
+wait the host sees the leave and no data), `net_drain_idle`,
+`net_drain_bounded` (the wait ends at its limit while the host's
+acknowledgment is held back, and early once it arrives),
+`enet_drain_delivered`, `enet_drain_idle`. Full run of
+`tools/linux/build.sh` on eb03e32: CTest 39/39 (33 before), the Python suites
+(10, 22, 6, 6 and 13 tests) and the package. The six new tests also passed 15
+runs in a row, and 10 more with four busy loops on the two CPUs. The last two
+ZNDNet and the last two ENet matches of the table ran on that build. Windows
+was not built locally.
+
+Checked and not a defect: a client that has pressed Ready cannot change its
+faction. The lobby update disables every faction button on each frame and
+enables none for a ready client; a capture of both lobbies confirms it.
+
+Left as it is:
+
+- The ENet goodbye packet (`'X'`) is still sent together with the disconnect,
+  and the host can drop it. It then treats the leave as a lost connection and
+  keeps the slot and the callsign for a resume for 60 seconds.
+  `coda/rejoin-protocol2` replaces that packet with a terminal disconnect.
+- `coda/rejoin-protocol2` (94d9408) has neither fix: its
+  `JoinLobbyLessGame` sends no checksum and its `yw_netcleanup` does not wait.
+  Its goodbye calls `enet_peer_disconnect`, which also drops what the client
+  has not sent yet, so the wait is needed there as well. A trial merge of that
+  branch with this one has no conflicts, and the engine files changed here
+  compile on it. On the merge the six new tests pass; without the wait, 0 of
+  20 ENet quits delivered the data there (12 of 12 with it).
