@@ -1,16 +1,16 @@
 {
- "version": 5,
- "pack": "Suno + REAPER candidate packs for four factions: Black Sect, Sulgogars, Ghorkov and Taerkasten",
- "collaboration": "Coda built the REAPER lab, the v02 cuts, the Black Sect and Sulgogar production plan and the reviewed cue contract. Red generated the remaining Black Sect and Sulgogar takes, wrote, generated and selected the Ghorkov and Taerkasten packs and the Black Sect message-19 lines, verified the cuts, rendered them natively in REAPER and integrated them.",
- "listening_status": "Andrei listened to the version 4 Black Sect and Sulgogar reels on 2026-11-02 and called them good. He asked for the message-19 fix that this version makes. The run v04 reels of the Ghorkov and Taerkasten packs and the two new Black Sect lines were then shared with him, and he called them great. After review, version 5 re-cut 53 of those cues (long pauses closed; the quiet decay after the last word, an inhale and low thumps trimmed; same takes and words, so the lines end sooner, by a median 0.14 s). Nobody has heard the re-cut yet. The cues are ASR-verified; a language-ID cue gives only a weak hint of the accent. In-game acceptance remains with Andrei.",
+ "version": 6,
+ "pack": "Suno faction voice packs for Black Sect, Sulgogars, Ghorkov and Taerkasten: REAPER v03-v05 plus FFmpeg v06",
+ "collaboration": "Coda built the REAPER lab, the v02 cuts, the Black Sect and Sulgogar production plan and the reviewed cue contract. Red generated the remaining Black Sect and Sulgogar takes, wrote, generated and selected the Ghorkov and Taerkasten packs and the Black Sect message-19 lines, verified the cuts, rendered them natively in REAPER and integrated them. Coda recovered the existing Taerkasten r2 takes by normal-speed PCM playback capture and finished the two idle cues with FFmpeg. Andrei listened to the exact selected pair and adopted both on 2026-11-13.",
+ "listening_status": "Andrei approved the earlier Black Sect/Sulgogar and v04 Ghorkov/Taerkasten/new Black Sect reels. The 53 retained v5 recuts still await explicit listening acceptance. On 2026-11-13 he listened to the exact selected v06 Taerkasten idle pair and chose: Use both selected takes. That direct human choice adopts these two files only. The designated base.en/small.en/medium.en panel remains incomplete for them; partial base.en/turbo evidence and the idle-2 as/a disagreement remain recorded. No Lily listening approval is claimed. In-game speech-bus acceptance remains pending.",
  "format": "PCM16 mono 22050 Hz",
- "level_policy": "-18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target). Ghorkov and Taerkasten use the -18 LUFS target. Their gains were set on the v04 windows; the v05 re-cut only trims sound outside the words and closes pauses, so the gains were kept.",
+ "level_policy": "v03-v05: -18 LUFS routine / -17 LUFS for Sulgogar events whose duration target starts at 0.8 s, true peak <= -3.5 dBFS before export, gain capped at +12 dB (three quiet Sulgogar calls stay below target). Ghorkov and Taerkasten use the -18 LUFS target. Their gains were set on the v04 windows; the v05 re-cut only trims sound outside the words and closes pauses, so the gains were kept. v06 idle cues: static attenuation targeting -18.3 LUFS on the 48 kHz stereo/dual-mono rendering, with the finishing ceiling set to -1.5 dBTP. The actual final runtime files measure -18.46/-18.41 LUFS dual mono and -3.58/-4.23 dBTP; these recorded values are not listening approval.",
  "black_voice": "Suno v6 (Songs Advanced, spoken word, male) takes separated with Demucs htdemucs vocal stems; four lines are Coda v02 cuts of her own Suno vocal estimates. Message 19 lines: Black Sect Production 08 (Suno v6, Coda's Production 01 prompt), htdemucs vocal stem.",
  "sulg_provenance": "Suno v6 creature-call takes used unseparated; three Coda v02 salvage fragments kept.",
  "ghorkov_voice": "Suno Speech (beta), male, background music off, variety off. Each script puts a short Russian radio phrase and an ellipsis paragraph before every English line; the Russian phrases are cut away and never ship. Six of the twelve takes carried a low drone bed despite music off; 20 of the 32 cues are htdemucs vocal stems of those takes (music_under_voice_db gives the bed level). One cue, enemy_unit_engaged_1 \"Enemy in retreat.\", comes from a dry-run pilot take (pilot_ru8c) with older tone wording whose exact text was not saved.",
- "taerkasten_voice": "Suno Speech (beta), male, background music off, variety off, with a short German phrase before every English line (cut away). Twenty-four of the 30 cues are htdemucs vocal stems of the s1-s4 takes, which carried a drone bed (music_under_voice_db gives its level); the six r1 cues used a plain dry tone and have no bed.",
+ "taerkasten_voice": "Suno Speech (beta), male, background music off, variety off, with German priming phrases removed. Of the 30 v5 cues, 24 use htdemucs vocal stems from s1-s4 takes that carried a drone bed; six r1 cues use a dry tone with no bed. The two v06 idle cues use normal 1x PCM playback capture of existing take 3f2bd9d9-47f1-46c9-9a55-76a7bd509c49 (r2), finished with FFmpeg without stem separation or time-stretch.",
  "accent_method": "Suno ignores accent wording in the tone, so the L1 priming phrase carries the accent. The check is Whisper small language ID. Calibrated on the GMU Speech Accent Archive (six speakers per group, 2 s chunks padded like the final files, per-speaker medians; calibrate_lid.py): native English speakers P(ru) 0.0001-0.0006 and P(de) 0.0002-0.0007, Russian second-language speakers P(ru) 0.0025-0.15, German second-language speakers P(de) 0.0012-0.011. Measured like the final files, a native-English control (the 32 Black Sect files and 25 retail English clips) reads P(ru) median 0.0012 (max 0.0061) and P(de) median 0.0011 (max 0.0064). Ghorkov reads about five times that median, with 15 of 32 lines above every control clip; Taerkasten about twice, with 6 of 30 above, which cannot confirm a German accent. It is a cue, not a measurement of how strong the accent sounds.",
- "selection": "Whisper word alignment locates each line; the cut sits at the silence around its vocal island. An edge audit transcribes and language-identifies every island in the cut (envelope above the cut peak - 30 dB, merged across 0.15 s, at least 0.05 s long). It trims priming phrases and other non-line islands outside the first and last line island; noise islands between the words are kept, and a priming phrase between them rejects the cut. Fainter or shorter sounds, such as soft breaths and low thumps, never form an island. The v05 re-cut removes only sound more than 40 dB below the cut peak, so it keeps such sounds when they are louder; the inhales and thumps the audio review found were cut out with explicit windows. A residue check rejects cuts with sound outside the line's words. A cut is eligible only if base.en, small.en and medium.en, transcribing it in isolation, hear exactly the planned line in at least two of three cases.",
+ "selection": "Automated selection policy used for v03-v05: Whisper word alignment locates each line; the cut sits at the silence around its vocal island. An edge audit transcribes and language-identifies every island in the cut (envelope above the cut peak - 30 dB, merged across 0.15 s, at least 0.05 s long). It trims priming phrases and other non-line islands outside the first and last line island; noise islands between the words are kept, and a priming phrase between them rejects the cut. Fainter or shorter sounds, such as soft breaths and low thumps, never form an island. The v05 re-cut removes only sound more than 40 dB below the cut peak, so it keeps such sounds when they are louder; the inhales and thumps the audio review found were cut out with explicit windows. A residue check rejects cuts with sound outside the line's words. A cut is eligible only if base.en, small.en and medium.en, transcribing it in isolation, hear exactly the planned line in at least two of three cases. The two v06 idle cues are instead adopted by Andrei's direct listening choice on 2026-11-13. Their designated three-model panel remains incomplete; the partial base.en/turbo transcripts do not satisfy or replace that gate.",
  "music_under_voice_db": "Demucs accompaniment (no_vocals) minus vocal-stem level over the shipped cut, pads included, for cues cut from htdemucs vocal stems. The version 4 Black Sect values were measured over the vocal island only.",
  "render": {
   "v03": {
@@ -35,31 +35,21 @@
    "project_sha256": "07005408afc4576f286631a264a9e22fada1b656708599770d0d507aa635323c",
    "master_sha256": "81812aa66a9ef309a4bd66f32aab02356cb5b02d7d2f9898b22dff9d86329e90",
    "method": "Native REAPER 7.79 render through the TwelveTake bridge; the bridge mailbox was driven by file transfer because the device shell was unavailable. Per-cue sample windows cut by cue_export.finalize; ffmpeg pan/resample to PCM16 mono 22050 Hz. 54 cues were re-cut. The other 40 (all 32 Black Sect cues and 8 Ghorkov/Taerkasten cues) re-rendered byte-identical to v04, and the 30 carried Black Sect cues are byte-identical to v03. A second review reverted one re-cut (ghorkov-mp/order_ack_enemy_2.wav), which ships from v04."
+  },
+  "v06": {
+   "run": "v06-taerkasten-idle-candidates-2026-11-09",
+   "export": "FFmpeg-finished-v06-r2",
+   "method": "Headless FFmpeg finishing of selected normal-speed browser PCM playback captures: reviewed source windows, static gain, linear fades, and PCM16 mono 22050 Hz conversion. No speech time-stretch or new generation.",
+   "playback_rate": 1,
+   "native_reaper_render": false,
+   "preserved_project_sha256": "68682720ee5d57f9b1ea080eb4ba5b08a940e8d4b3721eb13990cd3c85eb7f65",
+   "project_note": "The editable REAPER project was preserved; it was not natively saved/rendered for these final files.",
+   "source_provenance": "Rendered Suno browser playback captures; not established original downloaded master.",
+   "adoption": "Andrei directly listened to the exact selected pair and chose both on 2026-11-13. Other v5 recut hearing and in-game acceptance remain open."
   }
  },
- "previous": "Version 4 (Black Sect and Sulgogars only) is in this branch history up to 09f42e7, and version 3 up to 08acec3.",
- "pending": [
-  {
-   "faction": "taerkasten-mp",
-   "event": "unit_idle",
-   "variant": 1,
-   "file": "unit_idle_1.wav",
-   "phrase": "We await orders.",
-   "status": "no file: the engine falls back to the original vanilla voice for this event",
-   "reason": "No cut was heard exactly by at least two of three ASR models. In the downloaded takes the accented 'await' was heard as 'invite' or 'have eight'.",
-   "redo": "Suno batch taerkasten_r2 (takes 3f2bd9d9, 03b0e645) holds both lines but could not be downloaded: the account was out of downloads until 2026-11-30."
-  },
-  {
-   "faction": "taerkasten-mp",
-   "event": "unit_idle",
-   "variant": 2,
-   "file": "unit_idle_2.wav",
-   "phrase": "We wait, still as stone.",
-   "status": "no file: the engine falls back to the original vanilla voice for this event",
-   "reason": "No cut was heard exactly by at least two of three ASR models. In the downloaded takes the accented 'still as stone' was heard as 'still a storm'; the line was reordered.",
-   "redo": "Suno batch taerkasten_r2 (takes 3f2bd9d9, 03b0e645) holds both lines but could not be downloaded: the account was out of downloads until 2026-11-30."
-  }
- ],
+ "previous": "Version 5 contained 126 cues and two Taerkasten idle fallbacks. Version 6 adds only the two directly selected v06 idle files; all previous cue entries and bytes are unchanged. Version 4 (Black Sect and Sulgogars only) is in this branch history up to 09f42e7, and version 3 up to 08acec3.",
+ "pending": [],
  "cues": [
   {
    "faction": "black-sect-mp",
@@ -4220,6 +4210,123 @@
    },
    "cut_method": "island",
    "duration_target": "1.8–2.4 s"
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_idle",
+   "variant": 1,
+   "file": "unit_idle_1.wav",
+   "phrase": "We await orders.",
+   "motif": null,
+   "duration_seconds": 1.66,
+   "bytes": 73284,
+   "sha256": "07c79cd004532b8e64af2ecd2c0c8a40fb3ac3d3a121d55948d70fc18a556511",
+   "integrated_lufs_dual_mono": -18.46,
+   "true_peak_dbfs": -3.58,
+   "target_lufs": -18.3,
+   "gain_db": -1.15,
+   "source": {
+    "file": "suno-3f2bd9d9-47f1-46c9-9a55-76a7bd509c49-playback.wav",
+    "sha256": "9882d005a14bf9c8192b541a26cf3ba2a84e59464c9d695717e198bdfef0c164",
+    "parts": [
+     {
+      "start": 49.21,
+      "end": 50.87,
+      "offset": 0.0
+     }
+    ],
+    "provenance": "PCM recording of rendered Suno browser playback at 1x on 2026-11-09; not established original downloadable master.",
+    "capture_method": "HTMLAudioElement.captureStream with MediaRecorder PCM, from time zero to the target ended event.",
+    "playback_rate": 1
+   },
+   "reviewer": "Coda (saved signal and partial ASR checks); Andrei (direct listening selection, 2026-11-13). No Lily listening approval claimed.",
+   "asr_final_file": {
+    "votes": null,
+    "designated_panel_completed": false,
+    "heard": {
+     "base.en": "We await orders.",
+     "large-v3-turbo": "We await orders."
+    },
+    "note": "Only base.en and large-v3-turbo ran. These results do not complete the designated base.en/small.en/medium.en panel or its two-of-three gate. Direct human listening selection is the adoption basis; idle 2 retains the as/a stone disagreement."
+   },
+   "acceptance": {
+    "basis": "direct human listening selection",
+    "reviewer": "Andrei",
+    "date": "2026-11-13",
+    "decision": "Use both selected takes.",
+    "scope": "These exact two selected v06 runtime files only.",
+    "automated_panel": "Incomplete; not the adoption criterion for this direct human choice.",
+    "in_game_acceptance": "pending"
+   },
+   "origin": "Existing Suno Speech (beta) take 3f2bd9d9-47f1-46c9-9a55-76a7bd509c49, batch taerkasten_r2; recovered by normal-speed playback capture, with no new generation.",
+   "render_run": "v06-taerkasten-idle-candidates-2026-11-09",
+   "edit": "FFmpeg-finished-v06-r2: reviewed source windows, static gain, 5 ms fade-in and 35 ms fade-out; PCM16 mono 22050 Hz. No pause edit. Speech remains at 1x with no time-stretch. Not a native REAPER render.",
+   "signal_check": {
+    "source_saturated_samples_in_selected_window": 0,
+    "output_clipped_samples": 0,
+    "basis": "Saved FFmpeg finishing receipt; not an auditory verdict."
+   }
+  },
+  {
+   "faction": "taerkasten-mp",
+   "event": "unit_idle",
+   "variant": 2,
+   "file": "unit_idle_2.wav",
+   "phrase": "We wait, still as stone.",
+   "motif": null,
+   "duration_seconds": 2.06,
+   "bytes": 90924,
+   "sha256": "fc665ba2b01def90f5130823d25cc0266729dcfc5bf3a2da419bddc07e52ecae",
+   "integrated_lufs_dual_mono": -18.41,
+   "true_peak_dbfs": -4.23,
+   "target_lufs": -18.3,
+   "gain_db": -3.51,
+   "source": {
+    "file": "suno-3f2bd9d9-47f1-46c9-9a55-76a7bd509c49-playback.wav",
+    "sha256": "9882d005a14bf9c8192b541a26cf3ba2a84e59464c9d695717e198bdfef0c164",
+    "parts": [
+     {
+      "start": 16.4,
+      "end": 17.11,
+      "offset": 0.0
+     },
+     {
+      "start": 18.06,
+      "end": 19.31,
+      "offset": 0.81
+     }
+    ],
+    "provenance": "PCM recording of rendered Suno browser playback at 1x on 2026-11-09; not established original downloadable master.",
+    "capture_method": "HTMLAudioElement.captureStream with MediaRecorder PCM, from time zero to the target ended event.",
+    "playback_rate": 1
+   },
+   "reviewer": "Coda (saved signal and partial ASR checks); Andrei (direct listening selection, 2026-11-13). No Lily listening approval claimed.",
+   "asr_final_file": {
+    "votes": null,
+    "designated_panel_completed": false,
+    "heard": {
+     "base.en": "We wait. Still a stone.",
+     "large-v3-turbo": "We wait, still as stone."
+    },
+    "note": "Only base.en and large-v3-turbo ran. These results do not complete the designated base.en/small.en/medium.en panel or its two-of-three gate. Direct human listening selection is the adoption basis; idle 2 retains the as/a stone disagreement."
+   },
+   "acceptance": {
+    "basis": "direct human listening selection",
+    "reviewer": "Andrei",
+    "date": "2026-11-13",
+    "decision": "Use both selected takes.",
+    "scope": "These exact two selected v06 runtime files only.",
+    "automated_panel": "Incomplete; not the adoption criterion for this direct human choice.",
+    "in_game_acceptance": "pending"
+   },
+   "origin": "Existing Suno Speech (beta) take 3f2bd9d9-47f1-46c9-9a55-76a7bd509c49, batch taerkasten_r2; recovered by normal-speed playback capture, with no new generation.",
+   "render_run": "v06-taerkasten-idle-candidates-2026-11-09",
+   "edit": "FFmpeg-finished-v06-r2: reviewed source windows, static gain, 5 ms fade-in and 35 ms fade-out; PCM16 mono 22050 Hz. Silent core gap shortened from 1.10 s to 0.25 s. Speech remains at 1x with no time-stretch. Not a native REAPER render.",
+   "signal_check": {
+    "source_saturated_samples_in_selected_window": 0,
+    "output_clipped_samples": 0,
+    "basis": "Saved FFmpeg finishing receipt; not an auditory verdict."
+   }
   },
   {
    "faction": "taerkasten-mp",

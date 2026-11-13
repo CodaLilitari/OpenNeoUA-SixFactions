@@ -1,12 +1,12 @@
-# Faction voice packs: Suno + REAPER candidate packs (version 5)
+# Faction voice packs: Suno, REAPER and FFmpeg (version 6)
 
 Retail Urban Assault and Metropolis Dawn give every faction's units the same
 vehicle-class voices. This fork gives four factions their own multiplayer unit
 voices: Black Sect (owner 5), Sulgogars (owner 2), Ghorkov (owner 6) and
 Taerkasten (owner 4). Resistance (1) and Mykonians (3) keep the original
-voices. Each pack covers the engine's 16 unit events with two variants each,
-under the filenames the faction voice resolver already uses. Taerkasten's two
-`unit_idle` variants are still pending.
+voices. All four packs now cover the engine's 16 unit events with two variants
+each: 32 cues per faction, 128 total, with no pending idle slots. They use the
+filenames the faction voice resolver already recognizes.
 `docs/faction-audio-manifest.json` records every file's source take, source
 window, gain, loudness, hash and review basis.
 
@@ -18,15 +18,26 @@ Sect lines) were then shared with him, and he replied "Yeah, these are great."
 After review, version 5 re-cut 53 of those cues: long pauses closed, and the
 quiet decay after the last word (40 dB or more below each line's peak), an
 inhale and low thumps trimmed. The takes and words are the same, but the lines
-end sooner, by a median 0.14 s; that is one thing to listen for. Nobody has
-heard the re-cut yet. Speech recognition verifies the words. A language-ID cue
-gives only a weak hint of the accent. In-game acceptance remains with Andrei.
+end sooner, by a median 0.14 s; that is one thing to listen for. Explicit
+listening acceptance of those 53 recuts remains open. On 2026-11-13, Andrei
+listened to the exact selected v06 Taerkasten idle pair and chose both. That
+direct listening decision adopts these two files; it does not complete their
+older automated three-model panel, approve the v5 recuts, or establish in-game
+acceptance. A language-ID cue gives only a weak hint of accent.
 
-## What version 5 changes
+## What version 6 adds
+
+Taerkasten now has both idle cues: "We await orders." and "We wait, still as
+stone." They are the approved 1.66 s and 2.06 s v06 files, finished with FFmpeg
+from normal-speed browser PCM capture of an existing Suno take. The previous
+126 cues are unchanged, including the restored v04 Ghorkov final-consonant cut.
+The source, editing and approval limits are detailed below.
+
+## Earlier version 5 changes
 
 - **Ghorkov:** a new pack of 32 cues.
-- **Taerkasten:** a new pack of 30 of 32 cues. The two `unit_idle` slots are
-  pending (see below), and the idle report plays the original voice meanwhile.
+- **Taerkasten:** initially 30 of 32 cues. Version 6 fills the two `unit_idle`
+  slots that previously used the original voice.
 - **Black Sect, message 19 (`enemy_unit_engaged`):** "Hostile unit fleeing." and
   "Target retreating." replace "Engaging target." and "Weapons on target.". In
   the engine, message 19 is raised when an enemy squad loses heart and escapes
@@ -64,14 +75,33 @@ Order's stone and earth worship and its contempt for the godless: "Restored by
 the stone.", "The godless approach.", "The earth receives us.", "We claim the
 stone.".
 
-**Pending: `unit_idle_1` and `unit_idle_2`.** No downloaded take has a cut of
-either line that two of the three models hear exactly. The accent turns "We
-await orders." into "We invite orders.", and "still as stone" becomes "still a
-storm". The second line has been reordered to "We wait, still as stone.". A
-fresh Suno batch with both lines (`taerkasten_r2`) is generated but could not be
-downloaded: the account was out of downloads until 2026-11-30. Until then, a
-Taerkasten unit's idle report plays the original vanilla voice. The Taerkasten
-reel ends with the two near-miss cuts, for listening only.
+**Version 6 idle cues, accepted by direct listening.** Both selected files come
+from Suno Speech batch `taerkasten_r2`, take
+`3f2bd9d9-47f1-46c9-9a55-76a7bd509c49`, which already existed. The original
+download attempt was unavailable; normal 1x browser PCM playback capture
+recovered the take on 2026-11-09. These are recordings of rendered playback,
+not established original downloadable masters. No new generation was needed.
+
+FFmpeg applied the reviewed windows, static gain and 5 ms/35 ms linear fades.
+The second cue's silent core gap was shortened from 1.10 s to 0.25 s; speech
+was not sped up or time-stretched. The final PCM16 mono 22050 Hz files last
+1.66 s and 2.06 s. Their recorded dual-mono loudness is -18.46/-18.41 LUFS and
+true peak -3.58/-4.23 dBFS. Both selected windows and outputs had zero saturated
+or clipped samples in the saved technical checks. The editable REAPER project
+was preserved, but these files were finished with the authorized FFmpeg
+alternative, not a native REAPER render.
+
+Andrei listened to this exact selected pair on 2026-11-13 and said, "Use both
+selected takes." This is their adoption basis. The original
+base.en/small.en/medium.en automated panel remains incomplete. Available
+base.en and large-v3-turbo transcribed idle 1 exactly; for idle 2, base.en heard
+"We wait. Still a stone." and turbo heard "We wait, still as stone." That
+disagreement is preserved, not counted as a completed two-of-three gate.
+No Lily listening approval is claimed, and in-game speech-bus acceptance is
+still pending.
+
+The older Taerkasten v05 reel ends with two labelled, unshipped near-misses.
+Those are different from this adopted v06 pair and remain outside the pack.
 
 ## Lines checked against the engine
 
@@ -119,7 +149,7 @@ Kept after review:
   Of the two retail clips for this slot, "Enemy tangos engaged!" claims more
   than that, and "Visual ID on enemy." reports only a sighting.
 
-## How the accented voices were made and checked
+## How the v5 accented voices were made and checked
 
 Both packs use Suno Speech (beta): male voice, background music off, variety
 off. The lines were written and judged per event against the engine's trigger
@@ -191,7 +221,7 @@ meanings and the faction lore.
   - Ghorkov: 26 of 32 lines are heard exactly by all three models.
     In each of the other 6, one model mishears part of the line (for example
     "Liberation Force is reporting" and "Returning to the Church").
-  - Taerkasten: 29 of 30 lines are heard exactly by all three models, and the other by two ("Into battle": one model hears "into better").
+  - Taerkasten v5: 29 of 30 lines are heard exactly by all three models, and the other by two ("Into battle": one model hears "into better"). The two v06 idle cues use the separate direct-listening adoption described above.
   - The two new Black Sect lines: both are heard exactly by all three models.
 
 **Re-cut after the audio review.** The first render (run v04) had problems in
@@ -352,17 +382,19 @@ things: each pack covers all 32 event slots once, counting pending slots; the
 filenames use the engine's event keys; the routing table names exactly these
 four packs; and pending slots have no file. Both build scripts run it.
 
-## Where the working material lives
+## Archived production records
 
-- REAPER lab runs: `F:\OpenNeoUA-BlackSect-Lab\audio-reaper\Runs\v03-full-candidate-2026-11-02`,
-  `...\Runs\v04-faction-voices-2026-11-02` and
-  `...\Runs\v05-faction-voices-recut-2026-11-02`. Each holds the project,
-  media, master, cue masters and receipts. The v04 and v05 media copies carry a
-  trailing C2PA provenance chunk added in transfer. Their audio data is
-  byte-identical to the hashed sources whose names they keep.
-- Selection tools, plans, generation receipts and reels: Coda's workspace,
-  `work/audio-workflow-v5` and `outputs/audio/v05-candidate-pack`. The first
-  render's material is in `outputs/audio/v04-candidate-pack`.
+The archived REAPER runs are `v03-full-candidate-2026-11-02`,
+`v04-faction-voices-2026-11-02` and `v05-faction-voices-recut-2026-11-02`.
+Their records retain projects, media, masters, cue masters and receipts. Some
+v04/v05 transferred source copies carry an appended C2PA chunk; their audio
+data remains byte-identical to the hashed sources.
+
+The additional `v06-taerkasten-idle-candidates-2026-11-09` archive preserves
+the full playback capture, editable project, selected and alternate cues,
+`FFmpeg-finished-v06-r2` outputs, technical receipts and comparison reel.
+The public manifest records the adopted files' source windows, hashes,
+rendering method, partial ASR evidence and direct-listening decision.
 
 The audio is Suno output generated under Andrei's account. It is not recovered
 original game audio and not a performance by Coda, Lily or Red.
