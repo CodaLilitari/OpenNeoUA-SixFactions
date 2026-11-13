@@ -251,6 +251,9 @@ protected:
     void buildRobo();
     void buildReconnoitre();
 
+    // ypaworld_func148 for this station; in a network game a building it
+    // starts is broadcast (UAMSG_STARTBUILD), so every peer starts it too.
+    bool StartBuilding(int buildingID, const Common::Point &cell);
     void buildRadar(update_msg *arg);
     void buildPower(update_msg *arg);
     void buildSafe(update_msg *arg);

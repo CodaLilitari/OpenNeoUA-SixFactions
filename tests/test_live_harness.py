@@ -165,6 +165,50 @@ class Launcher(unittest.TestCase):
             self.assertEqual(seen.read_text().split(), ['enet', 'enet', 'zndnet', 'unset'])
 
 
+class Collector(unittest.TestCase):
+    """collect_logs.sh on a lab of two fake runtimes: what net-summary.txt keeps of their logs."""
+
+    def test_net_summary_keeps_each_startbuild_and_each_dropped_message(self):
+        # Per instance, in log order: every line net-summary.txt must keep.
+        kept = {
+            'BOT1': ['netauto: joined 127.0.0.1 after 1 attempt(s)',
+                     'netlog: Connected to 127.0.0.1 as BOT1',
+                     'netlog: STARTBUILD sent: owner 4 proto 30 cell 24,8 (t=111901 ms)',
+                     'netlog: STARTBUILD sent FAILED: owner 4 proto 27 cell 30,10 (t=213902 ms)'],
+            'HOST1': ['netlog: STARTBUILD from BOT1 applied: owner 4 proto 30 cell 24,8 (t=111933 ms)',
+                      'netlog: STARTBUILD from BOT1 refused: owner 4 proto 57 cell 28,7 (t=260219 ms): '
+                      'the cell is under construction already',
+                      # A STARTBUILD that never reaches its handler leaves only these.
+                      'netlog: Rejected malformed network message from BOT1: invalid building prototype '
+                      '(remaining 24)',
+                      'netlog:     rejected message was number 2 and message before was type 1006',
+                      'netlog: Ignored message 1012 from BOT1: no level is loaded (1 ignored so far)',
+                      'netlog: Strange Number of Messages (>100)',
+                      'netlog:     invalid message offset 300 beyond packet size 200',
+                      'netlog:     truncated network message header: 3 byte(s) remain',
+                      'netlog: Error: Message 1012 has strange size 2!'],
+        }
+        noise = ['netlog: ', '--- shadow vehicle 0 was NOT created',
+                 'netlog: +++ D: Havent found vehicle 77 (12s)']
+        with tempfile.TemporaryDirectory(prefix='live-collect-') as d:
+            root = Path(d)
+            lab = root / 'lab'
+            lab.mkdir()
+            runtimes = []
+            for name, lines in kept.items():
+                env = root / f'rt-{name}' / 'Data/Env'
+                env.mkdir(parents=True)
+                (env / 'ypa_log.txt').write_text('\n'.join(noise + lines + noise) + '\n')
+                runtimes.append(str(env.parents[1]))
+            result = subprocess.run(['bash', str(LIVE / 'collect_logs.sh'), str(lab), *runtimes],
+                                    capture_output=True, text=True, timeout=60, check=True)
+            out = Path(result.stdout.strip())
+            summary = (out / 'net-summary.txt').read_text().splitlines()
+            expected = [f'{out}/rt-{name}/Env/ypa_log.txt:{line}'
+                        for name, lines in kept.items() for line in lines]
+            self.assertEqual(sorted(summary), sorted(expected))
+
+
 class RuntimeAssembly(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='live-harness-test-')

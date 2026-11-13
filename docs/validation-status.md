@@ -1,5 +1,36 @@
 # Development validation status
 
+## Combined public source: native Windows integration, November 12–13, 2026
+
+The integration of the public reconnect branch at `94d94088` with the
+bot/lobby-exit work through `9a2bcc73` passed **241/241 native CTests** in
+Release/NDEBUG mode, with the ZNDNet, ENet transport and ENet adapter options
+enabled. The complete source inventory was unchanged during that run.
+The applicable maps, MCP, faction-audio manifest, Windows packaging-helper
+and pure live-harness Python checks passed **53/53**. Six source-revision
+fixtures passed separately with native Windows Git Bash; no WSL was started.
+The full combined game executable, distribution package and actual Windows
+multiplayer acceptance are separate checks beyond this test checkpoint.
+
+The added regressions first reproduced the local-lock drain stalls, false
+idle during retry transfer, and lobby display names leaking into the frozen
+launch roster. The repaired ZND snapshot uses nonblocking coherent locking;
+ENet probes its own adapter mutex. Launch names come from the bound provider
+record, preserving callsigns that legitimately end in `X`. The launch and
+ENet lock fixtures execute extracted production methods with explicitly
+controlled surroundings; they do not replace whole-game validation.
+
+An earlier selected transport run passed 103/108 cases, with five older
+tests timing out. Those paths do not call the changed idle/wait methods.
+One unchanged serial rerun passed those five at their original deadlines,
+and the later complete 241-case run passed without retries or widened
+deadlines. The cause of the earlier timeouts remains unresolved; the final
+pass does not establish that intermittent scheduling or shutdown delays
+have been eliminated. Earlier Linux gameplay results remain evidence for
+their recorded source revisions, not this combined Windows source.
+
+## Original baseline and subsequent development records
+
 Recorded 2026-11-01. These results concern the six-faction extension based on
 upstream `ebf9f9f7abcb49387b2752e5855eb0098bf92ef9`.
 
@@ -394,3 +425,103 @@ state, authority and admission work described in
 [the rejoin design review](rejoin-design-review.md). A restarted transport is not
 a restored match.
 
+## Retail fight-motivation condition restored (2026-11-09, Red)
+
+`NC_STACK_ypabact::GetFightMotivation` decides whether a squad is fit to
+fight. In the decompiled engine an escaping squad was fit only above half its
+maximum energy and any other squad above a fifth; upstream `7bc426f`
+flattened the condition, so an escaping squad between a fifth and half also
+counted as fit. The retail condition is restored. The decision is now
+`World::SquadFightMotivation` (`src/world/fight_motivation.h`), with the float
+ratio, the double thresholds and the `*arg` output unchanged.
+`test_fight_motivation` covers both branches at and just above 0.2 and 0.5,
+aggression 0 and 100 and a zero maximum.
+
+In play, a squad that falls below a fifth of its energy still retreats, but it
+now regroups until it is above half strength before it stops escaping and
+fights again; a human player's squad reports in (`unit_recovered`) only then.
+This applies to the squads of every station, human, bot or computer, at
+aggression levels other than 0 and 100. Of the two calls in
+`NC_STACK_yparobo::checkCommander` (`src/game/yparobo_ai.cpp`), only the one
+for escaping commanders changes; the call for the others keeps the 0.2 rule.
+No wire or save format changes. Not yet playtested.
+
+
+## Lobby checksum on join by address, and the quit announcement (2026-11-10, Red)
+
+Two defects in the lobby and at the end of a match, found while porting a
+private mod onto six-factions. Both are older than the six-faction work.
+
+**Data checksum.** Every peer announces a checksum of its multiplayer scripts
+and of the selected map (`SendCRC`); `yw_CheckCRCs` shows "... has game files
+different from yours." in the lobby when two values differ. The warning does
+not keep a match from starting. A client that joins by address goes through
+`UserData::JoinLobbyLessGame`, which returned before the only `SendCRC` call
+of the join. The other peers announce again whenever a player arrives, so
+only the last client to join was never compared. It now sends its checksum
+when its lobby is set up, and every peer writes the value it sends to the
+network log (`Lobby data checksum 6c5e1b5c for level 100`), so that two
+installations can be compared after a run.
+
+**Quit announcement.** A player who leaves through the exit menu broadcasts
+`UAMSG_EXIT` and then closes the transport (`yw_netcleanup`). The message was
+usually lost, and the others saw a dropped connection instead of "... player
+left the game":
+
+- ZNDNet: `ZNDClient::SendDisconnect` clears the send queue and a stopping
+  endpoint sends system packets only.
+- ENet: when the host reads the message and the disconnect in one receive
+  pass, `enet_protocol_handle_disconnect` drops the message before the
+  application sees it.
+
+`ZNDNet::WaitSendIdle` (with `ZNDEnet::SendIdle` for ENet) polls nonblocking
+transport idle snapshots. `NC_STACK_windp::DrainSends` flushes the existing
+broadcast buffer and calls it from `yw_netcleanup` with a 500 ms additional-wait
+budget. This does not bound the synchronous flush or subsequent cleanup, and
+an idle observation is not a guarantee of remote application handling. An idle
+transport returns after one probe. The loopback checks below establish the
+quit-announcement event ordering observed in those cases.
+
+Measured on Linux, level 100, live engine processes:
+
+| Check | Without the change | With it |
+|---|---|---|
+| Last client's checksum line in its log (host and one client, ZNDNet) | missing | present |
+| The same in matches of a host, a client and a bot instance | the last to join logs none, in 2 of 2 matches | all three log it, in 13 of 13 matches (2 ZNDNet, 11 ENet) |
+| Host's lobby warning when the client's `FLAKS.SCR` has one extra line | not shown | shown |
+| Client quit announced to both other instances, ZNDNet | 1 of 6 matches | 6 of 6 |
+| Client quit announced to both other instances, ENet | 3 of 7 matches | 7 of 7 |
+| Loopback: data sent just before an ENet leave reaches the host | 14 to 18 of 20, four runs | 12 of 12, every run |
+
+Six of the seven ENet matches without the change ran on a first version that
+waited on ZNDNet only and behaved on ENet as the old code. A host's own quit
+was already announced on ZNDNet.
+
+Tests: `net_drain_delivered`, `net_drain_dropped` (the control: without the
+wait the host sees the leave and no data), `net_drain_idle`,
+`net_drain_bounded` (the wait ends at its limit while the host's
+acknowledgment is held back, and early once it arrives),
+`enet_drain_delivered`, `enet_drain_idle`. Full run of
+`tools/linux/build.sh` on eb03e32: CTest 39/39 (33 before), the Python suites
+(10, 22, 6, 6 and 13 tests) and the package. The six new tests also passed 15
+runs in a row, and 10 more with four busy loops on the two CPUs. The last two
+ZNDNet and the last two ENet matches of the table ran on that build. Windows
+was not built locally.
+
+Checked and not a defect: a client that has pressed Ready cannot change its
+faction. The lobby update disables every faction button on each frame and
+enables none for a ready client; a capture of both lobbies confirms it.
+
+Left as it is:
+
+- The ENet goodbye packet (`'X'`) is still sent together with the disconnect,
+  and the host can drop it. It then treats the leave as a lost connection and
+  keeps the slot and the callsign for a resume for 60 seconds.
+  `coda/rejoin-protocol2` replaces that packet with a terminal disconnect.
+- `coda/rejoin-protocol2` (94d9408) has neither fix: its
+  `JoinLobbyLessGame` sends no checksum and its `yw_netcleanup` does not wait.
+  Its goodbye calls `enet_peer_disconnect`, which also drops what the client
+  has not sent yet, so the wait is needed there as well. A trial merge of that
+  branch with this one has no conflicts, and the engine files changed here
+  compile on it. On the merge the six new tests pass; without the wait, 0 of
+  20 ENet quits delivered the data there (12 of 12 with it).

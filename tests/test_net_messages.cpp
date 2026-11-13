@@ -112,6 +112,26 @@ int main()
     for (std::size_t i = 17; i < 24; ++i)
         REQUIRE(bytes[i] == 0);
 
+    // STARTBUILD as a station's process sends it for a building it started
+    // (NC_STACK_yparobo::StartBuilding): owner, building and cell set, every
+    // other member zero, whatever the storage held. The struct has no padding
+    // hole, so the members cover every byte that goes onto the wire.
+    std::unique_ptr<Storage<uamessage_startBuild>> sbStorage(new Storage<uamessage_startBuild>);
+    std::memset(&sbStorage->bytes, 0xA5, sizeof(uamessage_startBuild));
+    uamessage_startBuild *sb = ::new (static_cast<void *>(&sbStorage->bytes)) uamessage_startBuild;
+    NetMsgFillStartBuild(*sb, 6, 12, 63, 7);
+    REQUIRE(sb->msgID == UAMSG_STARTBUILD && sb->tstamp == 0 && sb->msgCnt == 0);
+    REQUIRE(sb->owner == 6 && sb->p[0] == 0 && sb->p[1] == 0 && sb->p[2] == 0);
+    REQUIRE(sb->bproto == 12 && sb->sec_x == 63 && sb->sec_y == 7);
+    REQUIRE(sizeof(uamessage_startBuild) == sizeof(uamessage_base) + sizeof(sb->bproto) +
+                                             sizeof(sb->sec_x) + sizeof(sb->sec_y));
+    // A reused buffer keeps nothing of the previous building.
+    sb->tstamp = 99;
+    sb->msgCnt = 98;
+    NetMsgFillStartBuild(*sb, 1, 0, 0, 0);
+    REQUIRE(sb->msgID == UAMSG_STARTBUILD && sb->tstamp == 0 && sb->msgCnt == 0);
+    REQUIRE(sb->owner == 1 && sb->bproto == 0 && sb->sec_x == 0 && sb->sec_y == 0);
+
     // Scopes: the lobby set is ignored once a level is loaded, everything
     // else except chat needs a loaded level.
     for (std::uint32_t id : {UAMSG_LOAD, UAMSG_FRACTION, UAMSG_WELCOME, UAMSG_READY,
@@ -166,6 +186,6 @@ int main()
     REQUIRE(!NetPositionOnMap(len, 0.0, 1e300, 4, 3));
 
     std::cout << "every wire message clears to zero bytes, padding included; "
-                 "scopes and map positions checked\n";
+                 "STARTBUILD, scopes and map positions checked\n";
     return 0;
 }

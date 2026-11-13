@@ -3206,10 +3206,18 @@ NC_STACK_ypamissile * NC_STACK_ypaworld::ypaworld_func147(ypaworld_arg146 *arg)
 
 size_t NC_STACK_ypaworld::ypaworld_func148(ypaworld_arg148 *arg)
 {
-    if (  !arg->field_C
-       && !_allowMultiBuildLevel
-       && IsAnyBuildingProcess(arg->owner))
-            return false;
+    // World::BuildStart::Check holds the refusals, in this function's order,
+    // and arg->refusal tells the caller which one stopped the building.
+    World::BuildStart::Facts facts;
+    facts.place = arg->field_C != 0;
+    facts.multiBuild = _allowMultiBuildLevel;
+    facts.ownerBuilding = IsAnyBuildingProcess(arg->owner);
+    facts.netGame = _isNetGame;
+
+    // The owner first: the cell is read only when the owner may build.
+    arg->refusal = World::BuildStart::Check(facts);
+    if ( arg->refusal != World::BuildStart::Refusal::None )
+        return 0;
 
     cellArea &cell = _cells(arg->CellId);
 
@@ -3228,19 +3236,20 @@ size_t NC_STACK_ypaworld::ypaworld_func148(ypaworld_arg148 *arg)
     if ( _userUnit  &&  &cell == _userUnit->_pSector )
         UserInSec = true;
 
-    if (cell.IsBorder())
+    facts.border = cell.IsBorder();
+    facts.underConstruction = cell.PurposeType == cellArea::PT_CONSTRUCTING;
+    facts.occupied = UserInSec;
+    facts.protectedCell = cell.PurposeType == cellArea::PT_TECHUPGRADE ||
+                          cell.PurposeType == cellArea::PT_GATECLOSED ||
+                          cell.PurposeType == cellArea::PT_GATEOPENED;
+    facts.deactivatedTech = cell.PurposeType == cellArea::PT_TECHDEACTIVE;
+
+    arg->refusal = World::BuildStart::Check(facts);
+    if ( arg->refusal != World::BuildStart::Refusal::None )
         return 0;
 
-    if ( cell.PurposeType == cellArea::PT_CONSTRUCTING )
-        return 0;
-    else if ( UserInSec  && !arg->field_C )
-        return 0;
-    else if ( cell.PurposeType == cellArea::PT_POWERSTATION )
+    if ( cell.PurposeType == cellArea::PT_POWERSTATION )
         PowerStationErase(&cell);
-    else if ( (cell.PurposeType == cellArea::PT_TECHUPGRADE || cell.PurposeType == cellArea::PT_GATECLOSED || cell.PurposeType == cellArea::PT_GATEOPENED) && !arg->field_C )
-        return 0;
-    else if ( cell.PurposeType == cellArea::PT_TECHDEACTIVE && _isNetGame )
-        return 0;
 
     if ( arg->field_C )
     {
@@ -3251,7 +3260,10 @@ size_t NC_STACK_ypaworld::ypaworld_func148(ypaworld_arg148 *arg)
         DestroyAllGunsInSector(&cell);
 
         if ( !BuildingConstructBegin(&cell, arg->blg_ID, arg->owner, World::CVBuildConstructTime) )
+        {
+            arg->refusal = World::BuildStart::Refusal::ConstructionListed;
             return 0;
+        }
     }
 
     return 1;

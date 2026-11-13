@@ -18,6 +18,11 @@ for a in "$lab"/agent/*; do
     mkdir -p "$out/agent/$(basename "$a")"
     cp -a "$a"/session.json "$a"/response.json "$out/agent/$(basename "$a")/" 2>/dev/null || true
 done
-grep -H -E "netauto:|Connection to|Connected to|READY TO PLAY|Waiting for player|destroy player|kicked off|RESTORE|UPD:|plays |is HOST|is CLIENT|bot:" \
-    "$out"/*/Env/ypa_log.txt > "$out/net-summary.txt" 2>/dev/null || true
+# net-summary.txt: connection, roster and bot lines, each STARTBUILD sent, applied or refused,
+# and the lines of network messages dropped before their handler (rejected as malformed,
+# ignored in this phase of the game, or lost with the rest of a broken packet), which leave
+# no line of their own.
+summary='netauto:|Connection to|Connected to|READY TO PLAY|Waiting for player|destroy player|kicked off|RESTORE|UPD:|plays |is HOST|is CLIENT|bot:|STARTBUILD'
+dropped='Rejected malformed|rejected message was|Ignored message|Strange Number of Messages|invalid message offset|truncated network message|has strange size'
+grep -H -E "$summary|$dropped" "$out"/*/Env/ypa_log.txt > "$out/net-summary.txt" 2>/dev/null || true
 echo "$out"

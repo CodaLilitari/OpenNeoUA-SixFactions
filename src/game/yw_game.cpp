@@ -35,6 +35,7 @@
 #include "system/gametime.h"
 #include "system/system.h"
 #include "world/spin.h"
+#include "world/build_complete.h"
 #include "common/crashdiag.h"
 #include "game/yw_game_impl.h"
 #include "world/collision_shape.h"
@@ -2037,6 +2038,12 @@ void NC_STACK_ypaworld::DestroyUnitsCoveredByBuilding(cellArea *cell, uint8_t bu
         return false;
     };
 
+    // In a network game only this process's own units: every process that
+    // accepted the building's STARTBUILD completes it here too, and a unit's
+    // owner sends the UAMSG_DEAD the others apply
+    // (World::BuildComplete::DestroysCoveredUnit).
+    const int localOwner = _userRobo ? _userRobo->_owner : -1;
+
     // Snapshot/safe iterator is required because ModifyEnergy may immediately
     // remove a killed actor from the sector list.
     for (NC_STACK_ypabact *unit : cell->unitsList.safe_iter())
@@ -2044,6 +2051,9 @@ void NC_STACK_ypaworld::DestroyUnitsCoveredByBuilding(cellArea *cell, uint8_t bu
         if ( !unit || unit->_status == BACT_STATUS_DEAD ||
              (unit->_status_flg & (BACT_STFLAG_DEATH1 | BACT_STFLAG_DEATH2)) ||
              unit->_bact_type == BACT_TYPES_MISSLE )
+            continue;
+
+        if ( !World::BuildComplete::DestroysCoveredUnit(_isNetGame, unit->_owner, localOwner) )
             continue;
 
         bool covered = pointCovered(unit->_position);
@@ -2280,6 +2290,8 @@ void NC_STACK_ypaworld::BuildingConstructUpdate(int dtime)
             // Resolve only actors that would actually be enclosed by the new
             // building collision volume. Do this before sb_0x456384 creates
             // attached building guns/modules so those new actors are untouched.
+            // In a network game a peer may hold the builder's guns already
+            // (UAMSG_BUILDINGVHCL); only this process's own units are resolved.
             DestroyUnitsCoveredByBuilding(&rCell, bldProc.BuildID);
 
             sb_0x456384(bldProc.CellID, bldProc.Owner, bldProc.BuildID, 0);

@@ -934,6 +934,16 @@ size_t NC_STACK_windp::FlushBroadcastBuffer()
     return ret;
 }
 
+bool NC_STACK_windp::DrainSends(uint32_t maxMs)
+{
+    FlushBroadcastBuffer();
+
+    if (!zcon)
+        return true;
+
+    return zcon->WaitSendIdle(maxMs);
+}
+
 size_t NC_STACK_windp::LockSession(int *arg)
 {
     if (!arg || connType != 1 || !zcon)
@@ -1541,6 +1551,11 @@ void UserData::JoinLobbyLessGame()
             isHost = false;
 
             yw_FractionInit();
+
+            // Announce this client's data checksum, as the session join below
+            // (no longer reached) did: without it the host never compares the
+            // client's scripts and map with its own (yw_CheckCRCs).
+            p_YW->SendCRC(netLevelID);
         }
     }
     return;
@@ -1670,7 +1685,10 @@ int yw_DestroyPlayer(NC_STACK_ypaworld *yw, uint64_t playerId)
 
 void UserData::yw_netcleanup()
 {
-    p_YW->_netDriver->FlushBroadcastBuffer();
+    // Give the queued quit announcement a bounded additional drain opportunity
+    // before closing. Shutdown can discard pending data; the preceding flush
+    // and following cleanup retain their existing synchronous behavior.
+    p_YW->_netDriver->DrainSends(NC_STACK_windp::QuitDrainMs);
 
     if( netSelMode ==NETSCREEN_INSESSION || p_YW->_isNetGameStarted )
         yw_DestroyPlayer( p_YW, netSession.LocalPlayerId );

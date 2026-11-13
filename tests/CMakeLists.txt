@@ -68,6 +68,16 @@ add_test(NAME net_messages COMMAND test_net_messages)
 # Exact production pre-dispatch prefix, with a deliberately minimal world fixture.
 # Configure-time extraction and the native C++ test require neither Python nor SDL.
 include(${CMAKE_CURRENT_SOURCE_DIR}/extract_net_ingress.cmake)
+# Complete launch-freeze method; roster validation is a controlled fixture input.
+include(${CMAKE_CURRENT_SOURCE_DIR}/extract_net_launch.cmake)
+add_executable(test_net_launch test_net_launch.cpp)
+target_include_directories(test_net_launch PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR} ${NET_INGRESS_GENERATED_DIR})
+target_compile_definitions(test_net_launch PRIVATE NDEBUG)
+add_test(NAME net_launch COMMAND test_net_launch)
+add_test(NAME net_launch_checks_active COMMAND test_net_launch --verify-failing-check)
+set_tests_properties(net_launch PROPERTIES TIMEOUT 10)
+set_tests_properties(net_launch_checks_active PROPERTIES TIMEOUT 10 WILL_FAIL TRUE)
 add_executable(test_net_ingress_phase test_net_ingress_phase.cpp)
 target_include_directories(test_net_ingress_phase PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR} ${NET_INGRESS_GENERATED_DIR})
@@ -130,10 +140,16 @@ add_executable(test_net_restore test_net_restore.cpp)
 add_test(NAME net_restore COMMAND test_net_restore)
 add_executable(test_net_building_units test_net_building_units.cpp)
 add_test(NAME net_building_units COMMAND test_net_building_units)
+add_executable(test_build_start test_build_start.cpp)
+add_test(NAME build_start COMMAND test_build_start)
+add_executable(test_build_complete test_build_complete.cpp)
+add_test(NAME build_complete COMMAND test_build_complete)
 add_executable(test_world_fork test_world_fork.cpp)
 add_test(NAME world_fork COMMAND test_world_fork)
 add_executable(test_net_bot test_net_bot.cpp)
 add_test(NAME net_bot COMMAND test_net_bot)
+add_executable(test_fight_motivation test_fight_motivation.cpp)
+add_test(NAME fight_motivation COMMAND test_fight_motivation)
 add_executable(test_net_lobby_flags test_net_lobby_flags.cpp)
 add_test(NAME net_lobby_flags COMMAND test_net_lobby_flags)
 add_executable(test_speech_factions test_speech_factions.cpp ../src/world/speech.cpp)
@@ -170,6 +186,17 @@ if(OPENNEOUA_ENET_ZND_TEST)
     if(NOT TARGET PkgConfig::NET_SDL)
         pkg_check_modules(NET_SDL REQUIRED IMPORTED_TARGET sdl2 SDL2_net)
     endif()
+    # Exact adapter idle/wait methods with a real SDL mutex and empty transport.
+    include(${CMAKE_CURRENT_SOURCE_DIR}/extract_enet_drain.cmake)
+    add_executable(test_enet_drain_locking test_enet_drain_locking.cpp)
+    target_include_directories(test_enet_drain_locking PRIVATE ${ENET_DRAIN_GENERATED_DIR})
+    target_link_libraries(test_enet_drain_locking PRIVATE PkgConfig::NET_SDL)
+    target_compile_definitions(test_enet_drain_locking PRIVATE NDEBUG)
+    foreach(enet_wait_ms 0 20)
+        add_test(NAME enet_drain_locking_${enet_wait_ms}
+            COMMAND test_enet_drain_locking ${enet_wait_ms})
+        set_tests_properties(enet_drain_locking_${enet_wait_ms} PROPERTIES TIMEOUT 10)
+    endforeach()
     set(ENET_ZND_SOURCES ../src/third_party/enet/callbacks.c ../src/third_party/enet/compress.c
         ../src/third_party/enet/host.c ../src/third_party/enet/list.c
         ../src/third_party/enet/packet.c ../src/third_party/enet/peer.c
@@ -191,6 +218,21 @@ if(OPENNEOUA_ENET_ZND_TEST)
     endif()
     add_test(NAME enet_znd COMMAND test_enet_znd)
     set_tests_properties(enet_znd PROPERTIES TIMEOUT 60)
+
+    # A guaranteed broadcast sent just before a leave (the quit announcement).
+    add_executable(test_enet_drain test_enet_drain.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/enet_transport.cpp ../src/netlib/enet_znd.cpp
+        ${ENET_ZND_SOURCES})
+    target_include_directories(test_enet_drain PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/../src/third_party/enet/include)
+    target_link_libraries(test_enet_drain PRIVATE PkgConfig::NET_SDL)
+    if(WIN32)
+        target_link_libraries(test_enet_drain PRIVATE ws2_32 winmm)
+    endif()
+    foreach(enet_drain_case delivered idle)
+        add_test(NAME enet_drain_${enet_drain_case} COMMAND test_enet_drain ${enet_drain_case})
+        set_tests_properties(enet_drain_${enet_drain_case} PROPERTIES TIMEOUT 120)
+    endforeach()
 
     # Three-party star relay, directed sends and duplicate-callsign refusal.
     add_executable(test_enet_znd_relay test_enet_znd_relay.cpp
@@ -217,6 +259,30 @@ if(OPENNEOUA_TRANSPORT_TEST)
     target_link_libraries(test_net_transport PRIVATE PkgConfig::NET_SDL)
     add_test(NAME net_transport COMMAND test_net_transport)
     set_tests_properties(net_transport PROPERTIES TIMEOUT 180)
+    # Guaranteed data queued just before a disconnect (the quit announcement).
+    add_executable(test_net_drain test_net_drain.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
+        ../src/netlib/single.cpp ../src/netlib/single_threads.cpp)
+    target_include_directories(test_net_drain PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    target_link_libraries(test_net_drain PRIVATE PkgConfig::NET_SDL)
+    # Nonblocking idle probes and updater-owned retry custody, without sockets.
+    add_executable(test_net_drain_locking test_net_drain_locking.cpp
+        ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
+        ../src/netlib/single.cpp ../src/netlib/single_threads.cpp)
+    target_include_directories(test_net_drain_locking PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    target_link_libraries(test_net_drain_locking PRIVATE PkgConfig::NET_SDL)
+    target_compile_definitions(test_net_drain_locking PRIVATE NDEBUG)
+    foreach(lock_case sender update send-queue confirm-queue retry)
+        foreach(wait_ms 0 20)
+            add_test(NAME net_drain_locking_${lock_case}_${wait_ms}
+                COMMAND test_net_drain_locking ${lock_case} ${wait_ms})
+            set_tests_properties(net_drain_locking_${lock_case}_${wait_ms} PROPERTIES TIMEOUT 10)
+        endforeach()
+    endforeach()
+    foreach(drain_case delivered dropped idle bounded)
+        add_test(NAME net_drain_${drain_case} COMMAND test_net_drain ${drain_case})
+        set_tests_properties(net_drain_${drain_case} PROPERTIES TIMEOUT 60)
+    endforeach()
     add_executable(test_net_lifecycle test_net_lifecycle.cpp
         ../src/netlib/zndNet.cpp ../src/netlib/client.cpp ../src/netlib/client_threads.cpp
         ../src/netlib/single.cpp ../src/netlib/single_threads.cpp)

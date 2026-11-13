@@ -170,6 +170,14 @@ public:
 
     size_t FlushBroadcastBuffer();
 
+    // Flushes the existing broadcast buffer, then gives the transport up to
+    // maxMs of additional waiting to report idle. The result does not prove
+    // remote application handling. The bound covers the added polling wait,
+    // not the synchronous flush or subsequent transport cleanup. Used before
+    // closing after the quit announcement was queued.
+    bool DrainSends(uint32_t maxMs);
+    static constexpr uint32_t QuitDrainMs = 500;
+
     virtual size_t LockSession(int *);
     virtual size_t Reset(IDVPair *stak);
 

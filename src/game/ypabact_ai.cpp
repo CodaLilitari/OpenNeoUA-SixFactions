@@ -1,5 +1,6 @@
 // AI layers, target assessment, path finding, group organisation and combat decisions.
 #include "game/ypabact_internal.h"
+#include "world/fight_motivation.h" // World::SquadFightMotivation (retail retreat rule)
 
 float ypabact_GetAiMaxAltitudeAboveGround()
 {
@@ -2734,42 +2735,31 @@ void NC_STACK_ypabact::sub_4843BC(NC_STACK_ypabact *bact2, int a3)
 
 bool NC_STACK_ypabact::GetFightMotivation(float *arg)
 {
-    if ( _aggr == 100 )
-        return true;
+    int energy = 0;
+    int energyMax = 0;
 
-    if ( _aggr == 0 )
-        return false;
-
-    bact_arg81 arg81;
-    arg81.enrg_sum = 0;
-    arg81.enrg_type = 1;
-
-    GetSummary(&arg81);
-
-    float v11 = arg81.enrg_sum;
-
-    arg81.enrg_sum = 0;
-    arg81.enrg_type = 4;
-
-    GetSummary(&arg81);
-
-    if (arg81.enrg_sum == 0) // Possible devision by zero
-        arg81.enrg_sum = 1;
-
-    v11 = v11 / (float)arg81.enrg_sum;
-
-    if ( arg )
-        *arg = v11;
-
-    if ( (_status_flg & BACT_STFLAG_ESCAPE) && v11 > 0.5 )
+    // Sum the living squad's current (1) and maximum (4) energy only for the
+    // aggression levels that consult it.
+    if ( World::FightMotivationUsesEnergy(_aggr) )
     {
-        return true;
+        bact_arg81 arg81;
+        arg81.enrg_sum = 0;
+        arg81.enrg_type = 1;
+
+        GetSummary(&arg81);
+
+        energy = arg81.enrg_sum;
+
+        arg81.enrg_sum = 0;
+        arg81.enrg_type = 4;
+
+        GetSummary(&arg81);
+
+        energyMax = arg81.enrg_sum;
     }
-    else if ( v11 > 0.2 )
-    {
-        return true;
-    }
-    return false;
+
+    return World::SquadFightMotivation(_aggr, (_status_flg & BACT_STFLAG_ESCAPE) != 0,
+                                       energy, energyMax, arg);
 }
 
 NC_STACK_ypabact *sb_0x493984__sub1(NC_STACK_ypabact *bact)

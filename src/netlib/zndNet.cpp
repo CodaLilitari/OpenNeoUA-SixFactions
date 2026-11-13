@@ -750,6 +750,45 @@ void ZNDNet::Send_RetryData(SendingData *data, size_t from, size_t to, bool decr
 
 
 
+bool ZNDNet::SendIdle()
+{
+    // eSync excludes updater-owned confirm-to-retry transfers; sendModify
+    // excludes the sender's send-to-confirm transfer. Keep both queue locks
+    // through the snapshot, including appends from owner-thread sends.
+    SDL_mutex *locks[] = { eSyncMutex, sendModifyMutex, sendPktListMutex, confirmQueueMutex };
+    size_t acquired = 0;
+    for (SDL_mutex *mutex : locks)
+    {
+        if (SDL_TryLockMutex(mutex) != 0)
+        {
+            while (acquired)
+                SDL_UnlockMutex(locks[--acquired]);
+            return false;
+        }
+        ++acquired;
+    }
+
+    const bool idle = sendPktList.empty() && confirmQueue.empty();
+    while (acquired)
+        SDL_UnlockMutex(locks[--acquired]);
+    return idle;
+}
+
+bool ZNDNet::WaitSendIdle(uint32_t timeoutMs)
+{
+    const uint32_t start = SDL_GetTicks();
+    for (;;)
+    {
+        if (SendIdle())
+            return true;
+        const uint32_t elapsed = SDL_GetTicks() - start;
+        if (elapsed >= timeoutMs)
+            return false;
+        const uint32_t remaining = timeoutMs - elapsed;
+        SDL_Delay(remaining < 5 ? remaining : 5);
+    }
+}
+
 void ZNDNet::Send_Clear(const IPaddress &addr)
 {
     if (SDL_LockMutex(sendModifyMutex) == 0)

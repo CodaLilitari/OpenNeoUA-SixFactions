@@ -955,6 +955,7 @@ bool UserData::FreezeNetLaunch(int level)
             return false;
         next[player.Index] = *row;
         auto &seat = next[player.Index];
+        seat.Name = player.name;
         if (player.ID == netSession.LocalPlayerId)
             seat.NetFraction = SelectedFraction;
         const int owner = World::NetFactions::OwnerOf(seat.NetFraction);

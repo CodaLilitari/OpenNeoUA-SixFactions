@@ -131,6 +131,15 @@ public:
 
     virtual void SendData(uint64_t to, void *data, uint32_t sz, uint8_t flags = 0, uint8_t channel = CHANNEL_USR) = 0;
     virtual void BroadcastData(void *data, uint32_t sz, uint8_t flags = 0, uint8_t channel = CHANNEL_USR) = 0;
+    // Nonblocking snapshot: no queued sends, pending guaranteed packets, or
+    // updater/sender transfer in progress. False also means a lock was busy
+    // or unavailable. Idle does not prove application handling or delivery
+    // of previously discarded packets.
+    virtual bool SendIdle();
+    // Polls for idle for up to timeoutMs of additional waiting. For the
+    // owning thread before disconnect; zero only probes. Concurrent
+    // owner-thread lifecycle changes are not supported.
+    bool WaitSendIdle(uint32_t timeoutMs);
 
     virtual uint64_t GetMyID() {return 0;};
     virtual std::string GetMyName() {return std::string();};

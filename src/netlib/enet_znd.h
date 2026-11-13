@@ -63,6 +63,16 @@ public:
                   std::uint8_t flags = 0, std::uint8_t channel = CHANNEL_USR) override;
     void BroadcastData(void *data, std::uint32_t sz,
                        std::uint8_t flags = 0, std::uint8_t channel = CHANNEL_USR) override;
+    // ENet owns these queues. Probe under its actual adapter lock without
+    // waiting for that lock; false also means that the transport is busy.
+    bool SendIdle() override
+    {
+        if (SDL_TryLockMutex(netMutex_) != 0)
+            return false;
+        const bool idle = transport_.ReliableIdle();
+        UnlockNet();
+        return idle;
+    }
     std::uint64_t GetMyID() override;
     std::string GetMyName() override;
     std::uint64_t GetMySesID() override;
